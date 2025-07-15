@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit System Prompt - Canvas Quiz Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SimpleMDE CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <style>
+        .editor-container {
+            margin: 20px 0;
+        }
+        .btn-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .alert-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h2">
+                        <i class="fas fa-cog text-primary"></i> Edit System Prompt
+                    </h1>
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Questions
+                    </a>
+                </div>
+
+                <!-- Alert container for messages -->
+                <div id="alertContainer" class="alert-container"></div>
+
+                <!-- Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-edit"></i> System Prompt Configuration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="systemPromptForm">
+                            <div class="mb-3">
+                                <label for="systemPromptEditor" class="form-label">
+                                    System Prompt for AI Feedback Generation:
+                                </label>
+                                <textarea id="systemPromptEditor" name="prompt" placeholder="Enter the system prompt that will be used to generate feedback for quiz questions...
+
+Example:
+You are an expert educator creating helpful feedback for quiz questions. Generate constructive, educational feedback that helps students learn from their answers. Be encouraging but informative.">{{ current_prompt if current_prompt else '' }}</textarea>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>About System Prompts:</strong> This prompt will be sent to the AI model when generating feedback for questions. 
+                                Make it clear and specific about the type of feedback you want. You can use Markdown formatting for better structure.
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="btn-container">
+                    <button type="button" class="btn btn-primary" id="saveBtn">
+                        <i class="fas fa-save"></i> Save Prompt
+                    </button>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLlvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+    <!-- SimpleMDE JS -->
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+    
+    <script>
+        // Initialize SimpleMDE markdown editor
+        const simplemde = new SimpleMDE({
+            element: document.getElementById("systemPromptEditor"),
+            spellChecker: false,
+            placeholder: "Enter your system prompt here...",
+            toolbar: [
+                "bold", "italic", "heading", "|",
+                "quote", "unordered-list", "ordered-list", "|",
+                "link", "code", "|",
+                "preview", "guide"
+            ],
+            status: ["lines", "words", "cursor"],
+            insertTexts: {
+                horizontalRule: ["", "\n\n-----\n\n"],
+                image: ["![](http://", ")"],
+                link: ["[", "](http://)"],
+                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
+            },
+        });
+
+        // Helper function to show alerts
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Load current system prompt when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Loading current system prompt...');
+            try {
+                const response = await fetch('/system-prompt/api');
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.prompt) {
+                        simplemde.value(result.prompt);
+                        console.log('System prompt loaded successfully');
+                    }
+                } else {
+                    console.warn('Could not load current system prompt');
+                }
+            } catch (error) {
+                console.error('Error loading system prompt:', error);
+            }
+        });
+
+        // Save button functionality
+        document.getElementById('saveBtn').addEventListener('click', async function() {
+            const saveBtn = this;
+            const originalText = saveBtn.innerHTML;
+            
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                const prompt = simplemde.value();
+                
+                if (!prompt.trim()) {
+                    showAlert('warning', 'Please enter a system prompt before saving.');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('prompt', prompt);
+                
+                const response = await fetch('/system-prompt', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('success', result.message || 'System prompt saved successfully!');
+                    console.log('System prompt saved successfully');
+                } else {
+                    showAlert('danger', result.detail || 'Failed to save system prompt. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving system prompt:', error);
+                showAlert('danger', 'An error occurred while saving. Please try again.');
+            } finally {
+                // Restore button state
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        });
+
+        // Handle Ctrl+S to save
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('saveBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>

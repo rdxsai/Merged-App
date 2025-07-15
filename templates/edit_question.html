@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question - Canvas Quiz Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .form-control:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        .answer-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+        }
+        .answer-weight {
+            background-color: #e9ecef;
+        }
+        .feedback-section {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .progress-container {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .progress-bar-custom {
+            background: linear-gradient(45deg, #0d6efd, #20c997);
+        }
+        .navigation-buttons .btn {
+            min-width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Auto-save indicator -->
+        <div id="autoSaveIndicator" class="auto-save-indicator" style="display: none;">
+            <div class="alert alert-success alert-sm mb-0">
+                <i class="fas fa-check"></i> Saved
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h2">
+                        <i class="fas fa-edit text-primary"></i> Edit Question
+                        <small class="text-muted fs-6">({{ current_position }} of {{ total_questions }})</small>
+                    </h1>
+                        <div class="btn-group navigation-buttons">
+                        {% if prev_question_id %}
+                        <a href="/questions/{{ prev_question_id }}" class="btn btn-outline-secondary" id="prevBtn">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        {% endif %}
+                        
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> List
+                        </a>
+                        
+                        {% if next_question_id %}
+                        <a href="/questions/{{ next_question_id }}" class="btn btn-outline-secondary" id="nextBtn">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Progress indicator -->
+                <div class="progress-container">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Question Progress</span>
+                        <span class="badge bg-primary">{{ current_position }} / {{ total_questions }}</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-custom" role="progressbar" 
+                             style="width: {{ (current_position / total_questions * 100)|round(1) }}%"
+                             aria-valuenow="{{ current_position }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="{{ total_questions }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Preview -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye text-info"></i> Question Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="question-preview">
+                            <div class="mb-3">
+                                <strong>{{ question.question_type.replace('_', ' ').title() }}</strong>
+                                <span class="badge bg-secondary ms-2">{{ question.points_possible }} points</span>
+                            </div>
+                            <div class="question-text-preview mb-3">
+                                {{ question.question_text | striptags | safe }}
+                            </div>
+                            {% if question.answers %}
+                            <div class="answers-preview">
+                                <h6>Answer Options:</h6>
+                                <div class="list-group">
+                                    {% for answer in question.answers %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                                        <div class="ms-2 me-auto">
+                                            <div class="fw-bold">
+                                                {% if answer.weight > 0 %}
+                                                <i class="fas fa-check-circle text-success"></i>
+                                                {% else %}
+                                                <i class="fas fa-circle text-muted"></i>
+                                                {% endif %}
+                                                {{ answer.text }}
+                                            </div>
+                                            {% if answer.html %}
+                                            <small class="text-muted">{{ answer.html | safe }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ answer.weight }}%</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <form id="questionForm">
+                    <!-- Question Basic Info -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-question-circle"></i> Question Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Question ID:</strong></label>
+                                    <input type="text" class="form-control" value="{{ question.id }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Type:</strong></label>
+                                    <input type="text" class="form-control" value="{{ question.question_type.replace('_', ' ').title() }}" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="questionText" class="form-label"><strong>Question Text:</strong></label>
+                                <textarea id="questionText" name="question_text" class="form-control" rows="4">{{ question.question_text }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Points Possible:</strong></label>
+                                    <input type="text" class="form-control" value="{{ question.points_possible }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Quiz ID:</strong></label>
+                                    <input type="text" class="form-control" value="{{ question.quiz_id }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question Feedback -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-lightbulb text-warning"></i> General Question Feedback
+                            </h5>
+                            <button type="button" id="generateFeedbackBtn" class="btn btn-success btn-sm">
+                                <i class="fas fa-magic"></i> Generate AI Feedback
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="generalFeedback" class="form-label">
+                                    <strong>Importance and Relevance:</strong>
+                                </label>
+                                <textarea id="generalFeedback" name="general_feedback" class="form-control" rows="4" 
+                                    placeholder="Explain the importance and relevance of this question. Why is this concept important for students to understand? How does it relate to the course material?">{{ question.neutral_comments }}</textarea>
+                                <div class="form-text">
+                                    This field is for explaining why this question is important and how it relates to the broader course content.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Answers -->
+                    {% if question.answers %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list"></i> Answers ({{ question.answers|length }})
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="answersContainer">
+                                {% for answer in question.answers %}
+                                <div class="answer-item p-3" data-answer-id="{{ answer.id }}">
+                                    <div class="row">
+                                        <div class="col-md-2">
+                                            <label class="form-label">Weight:</label>
+                                            <input type="number" name="answer_weight_{{ answer.id }}" class="form-control answer-weight" value="{{ answer.weight }}" step="0.1">
+                                        </div>
+                                        <div class="col-md-10">
+                                            <label class="form-label">Answer Text:</label>
+                                            <textarea name="answer_text_{{ answer.id }}" class="form-control" rows="2">{{ answer.text }}</textarea>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if answer.html %}
+                                    <div class="mb-2">
+                                        <label class="form-label">HTML:</label>
+                                        <textarea name="answer_html_{{ answer.id }}" class="form-control" rows="2">{{ answer.html }}</textarea>
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="mb-2">
+                                        <label class="form-label">Answer Feedback:</label>
+                                        <textarea name="answer_comments_{{ answer.id }}" class="form-control" rows="3" 
+                                            placeholder="Feedback specific to this answer choice - explain why it's correct/incorrect">{{ answer.comments }}</textarea>
+                                        <div class="form-text">
+                                            Provide specific feedback about why this answer choice is correct or incorrect.
+                                        </div>
+                                    </div>
+
+                                    {% if answer.comments_html %}
+                                    <div class="mb-2">
+                                        <label class="form-label">Answer Feedback HTML:</label>
+                                        <textarea name="answer_comments_html_{{ answer.id }}" class="form-control" rows="2">{{ answer.comments_html }}</textarea>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const questionId = {{ question.id }};
+        let saveTimeout;
+        let isSaving = false;
+        let isGeneratingFeedback = false;
+
+        // Generate AI Feedback
+        document.getElementById('generateFeedbackBtn').addEventListener('click', async () => {
+            if (isGeneratingFeedback) return;
+            
+            const btn = document.getElementById('generateFeedbackBtn');
+            const originalText = btn.innerHTML;
+            
+            console.log('=== AI Feedback Generation Started ===');
+            console.log('Question ID:', questionId);
+            console.log('Button clicked, starting feedback generation...');
+            
+            isGeneratingFeedback = true;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            try {
+                const requestUrl = `/questions/${questionId}/generate-feedback`;
+                console.log('Making request to:', requestUrl);
+                
+                const response = await fetch(requestUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                if (response.ok) {
+                    console.log('✅ Feedback generated successfully');
+                    console.log('Generated feedback:', result.feedback);
+                    
+                    // Update the general feedback field
+                    if (result.feedback.general_feedback) {
+                        document.getElementById('generalFeedback').value = result.feedback.general_feedback;
+                        console.log('Updated general feedback field');
+                    }
+                    
+                    // Update answer-specific feedback fields
+                    if (result.feedback.answer_feedback) {
+                        console.log('Updating answer feedback fields...');
+                        console.log('Available answer feedback keys:', Object.keys(result.feedback.answer_feedback));
+                        
+                        const answerItems = document.querySelectorAll('.answer-item');
+                        console.log(`Found ${answerItems.length} answer items`);
+                        
+                        answerItems.forEach((item, index) => {
+                            const answerId = item.dataset.answerId;
+                            const answerNumber = index + 1;
+                            
+                            console.log(`Processing answer ${answerNumber} (ID: ${answerId})`);
+                            
+                            // Try different keys to match the feedback
+                            const possibleKeys = [
+                                `answer ${answerNumber}`,
+                                `answer${answerNumber}`,
+                                `${answerNumber}`,
+                                answerNumber.toString(),
+                                `answer ${answerNumber}:`, // In case the parsing included colon
+                                `answer${answerNumber}:`
+                            ];
+                            
+                            let feedbackFound = false;
+                            for (const key of possibleKeys) {
+                                console.log(`Trying key: "${key}"`);
+                                if (result.feedback.answer_feedback[key]) {
+                                    const feedbackField = document.querySelector(`textarea[name="answer_comments_${answerId}"]`);
+                                    if (feedbackField) {
+                                        feedbackField.value = result.feedback.answer_feedback[key];
+                                        console.log(`✅ Updated feedback for answer ${answerNumber} with key "${key}"`);
+                                        feedbackFound = true;
+                                        break;
+                                    } else {
+                                        console.warn(`⚠️ Feedback field not found for answer ${answerId}`);
+                                    }
+                                }
+                            }
+                            
+                            if (!feedbackFound) {
+                                console.warn(`⚠️ No feedback found for answer ${answerNumber}`);
+                                // Try to match by looking for any key that contains the answer number
+                                for (const [key, value] of Object.entries(result.feedback.answer_feedback)) {
+                                    if (key.includes(answerNumber.toString())) {
+                                        const feedbackField = document.querySelector(`textarea[name="answer_comments_${answerId}"]`);
+                                        if (feedbackField) {
+                                            feedbackField.value = value;
+                                            console.log(`✅ Updated feedback for answer ${answerNumber} with partial match key "${key}"`);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Trigger auto-save
+                    scheduleAutoSave();
+                    console.log('Auto-save scheduled');
+                    
+                    showSuccessMessage('AI feedback generated successfully!');
+                } else {
+                    console.error('❌ Failed to generate feedback');
+                    console.error('Error details:', result.detail || result.message || 'Unknown error');
+                    showErrorMessage(result.detail || result.message || 'Failed to generate feedback');
+                }
+            } catch (error) {
+                console.error('❌ Exception during feedback generation:', error);
+                console.error('Error type:', error.constructor.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                showErrorMessage('Error generating feedback: ' + error.message);
+            } finally {
+                console.log('=== AI Feedback Generation Completed ===');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                isGeneratingFeedback = false;
+            }
+        });
+
+        // Auto-save functionality
+        function scheduleAutoSave() {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            saveTimeout = setTimeout(autoSave, 1000); // Save after 1 second of inactivity
+        }
+
+        async function autoSave() {
+            if (isSaving) return;
+            
+            isSaving = true;
+            const formData = collectFormData();
+            
+            try {
+                const response = await fetch(`/questions/${questionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showAutoSaveIndicator();
+                } else {
+                    const error = await response.json();
+                    console.error('Save failed:', error);
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        function collectFormData() {
+            const form = document.getElementById('questionForm');
+            const formData = new FormData(form);
+            
+            // Collect basic question data
+            const data = {
+                question_text: formData.get('question_text') || '',
+                correct_comments: '',  // Not used in new design
+                incorrect_comments: '',  // Not used in new design
+                neutral_comments: formData.get('general_feedback') || '',  // General feedback
+                correct_comments_html: '',
+                incorrect_comments_html: '',
+                neutral_comments_html: '',
+                answers: []
+            };
+
+            // Collect answers data
+            const answerItems = document.querySelectorAll('.answer-item');
+            answerItems.forEach(item => {
+                const answerId = item.dataset.answerId;
+                const answer = {
+                    id: parseInt(answerId),
+                    text: formData.get(`answer_text_${answerId}`) || '',
+                    html: formData.get(`answer_html_${answerId}`) || '',
+                    comments: formData.get(`answer_comments_${answerId}`) || '',
+                    comments_html: formData.get(`answer_comments_html_${answerId}`) || '',
+                    weight: parseFloat(formData.get(`answer_weight_${answerId}`)) || 0
+                };
+                data.answers.push(answer);
+            });
+
+            return data;
+        }
+
+        function showAutoSaveIndicator() {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+
+        function showSuccessMessage(message) {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.innerHTML = `
+                <div class="alert alert-success alert-sm mb-0">
+                    <i class="fas fa-check"></i> ${message}
+                </div>
+            `;
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+                indicator.innerHTML = `
+                    <div class="alert alert-success alert-sm mb-0">
+                        <i class="fas fa-check"></i> Saved
+                    </div>
+                `;
+            }, 3000);
+        }
+
+        function showErrorMessage(message) {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.innerHTML = `
+                <div class="alert alert-danger alert-sm mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> ${message}
+                </div>
+            `;
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+                indicator.innerHTML = `
+                    <div class="alert alert-success alert-sm mb-0">
+                        <i class="fas fa-check"></i> Saved
+                    </div>
+                `;
+            }, 5000);
+        }
+
+        // Add event listeners for auto-save
+        document.getElementById('questionForm').addEventListener('input', scheduleAutoSave);
+        document.getElementById('questionForm').addEventListener('change', scheduleAutoSave);
+
+        // Handle textarea changes
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', scheduleAutoSave);
+            textarea.addEventListener('blur', scheduleAutoSave);
+        });
+
+        // Prevent form submission
+        document.getElementById('questionForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            // Only handle keyboard shortcuts if not focused on an input/textarea
+            if (document.activeElement.tagName === 'INPUT' || 
+                document.activeElement.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Ctrl/Cmd + Left Arrow = Previous question
+            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const prevBtn = document.getElementById('prevBtn');
+                if (prevBtn && !prevBtn.disabled) {
+                    prevBtn.click();
+                }
+            }
+            
+            // Ctrl/Cmd + Right Arrow = Next question
+            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
+                e.preventDefault();
+                const nextBtn = document.getElementById('nextBtn');
+                if (nextBtn && !nextBtn.disabled) {
+                    nextBtn.click();
+                }
+            }
+            
+            // Escape = Back to list
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                window.location.href = '/';
+            }
+        });
+
+        // Add keyboard shortcut hints
+        const helpText = document.createElement('div');
+        helpText.className = 'alert alert-light mt-4';
+        helpText.innerHTML = `
+            <small class="text-muted">
+                <strong>Keyboard shortcuts:</strong> 
+                <kbd>Ctrl</kbd>+<kbd>←</kbd> Previous question • 
+                <kbd>Ctrl</kbd>+<kbd>→</kbd> Next question • 
+                <kbd>Esc</kbd> Back to list
+            </small>
+        `;
+        document.querySelector('.container-fluid').appendChild(helpText);
+    </script>
+</body>
+</html>
