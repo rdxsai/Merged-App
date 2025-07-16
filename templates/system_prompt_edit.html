@@ -95,7 +95,15 @@ You are an expert educator creating helpful feedback for quiz questions. Generat
                 "bold", "italic", "heading", "|",
                 "quote", "unordered-list", "ordered-list", "|",
                 "link", "code", "|",
-                "preview", "guide"
+                {
+                    name: "preview",
+                    action: function customPreviewAction(editor) {
+                        SimpleMDE.togglePreview(editor);
+                        updatePreviewButton(editor);
+                    },
+                    className: "fa fa-eye no-disable",
+                    title: "Toggle Preview"
+                }, "guide"
             ],
             status: ["lines", "words", "cursor"],
             insertTexts: {
@@ -105,6 +113,25 @@ You are an expert educator creating helpful feedback for quiz questions. Generat
                 table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
             },
         });
+
+        // Function to update preview button appearance based on current mode
+        function updatePreviewButton(editor) {
+            const toolbar = editor.toolbar;
+            const previewButton = toolbar.find(item => item && item.name === 'preview');
+            
+            if (previewButton) {
+                const isPreviewActive = editor.isPreviewActive();
+                const buttonElement = previewButton;
+                
+                if (isPreviewActive) {
+                    buttonElement.className = "fa fa-pencil no-disable";
+                    buttonElement.title = "Edit (Currently in Preview)";
+                } else {
+                    buttonElement.className = "fa fa-eye no-disable";
+                    buttonElement.title = "Preview (Currently in Edit)";
+                }
+            }
+        }
 
         // Helper function to show alerts
         function showAlert(type, message) {

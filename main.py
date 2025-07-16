@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import time
 import random
+import re
 
 # Load environment variables
 load_dotenv()
@@ -153,6 +154,28 @@ async def make_canvas_request(url: str, headers: Dict[str, str], max_retries: in
                 raise HTTPException(status_code=500, detail=f"Request failed: {e}")
     
     raise HTTPException(status_code=500, detail="Max retries exceeded")
+
+def clean_question_text(text: str) -> str:
+    """Remove unwanted HTML tags from question text, especially link and script tags"""
+    if not text:
+        return text
+    
+    # Remove link tags (CSS files)
+    text = re.sub(r'<link[^>]*?>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove script tags and their content
+    text = re.sub(r'<script[^>]*?>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove style tags and their content
+    text = re.sub(r'<style[^>]*?>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove meta tags
+    text = re.sub(r'<meta[^>]*?>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Clean up any extra whitespace that may have been left behind
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
 
 async def generate_feedback_with_ai(question_data: Dict[str, Any], system_prompt: str) -> Dict[str, Any]:
     """Generate feedback using Azure OpenAI"""
@@ -397,6 +420,11 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
         
         if not data:
             break
+            
+        # Clean question text from unwanted HTML tags
+        for question in data:
+            if 'question_text' in question and question['question_text']:
+                question['question_text'] = clean_question_text(question['question_text'])
             
         all_questions.extend(data)
         

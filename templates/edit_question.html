@@ -6,6 +6,8 @@
     <title>Edit Question - Canvas Quiz Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SimpleMDE CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
     <style>
         .form-control:focus {
             border-color: #0d6efd;
@@ -123,18 +125,29 @@
                                     <div class="list-group-item d-flex justify-content-between align-items-start">
                                         <div class="ms-2 me-auto">
                                             <div class="fw-bold">
-                                                {% if answer.weight > 0 %}
+                                                {% if question.question_type == 'matching_question' %}
+                                                <i class="fas fa-link text-info"></i>
+                                                {% elif answer.weight is defined and answer.weight > 0 %}
                                                 <i class="fas fa-check-circle text-success"></i>
                                                 {% else %}
                                                 <i class="fas fa-circle text-muted"></i>
                                                 {% endif %}
                                                 {{ answer.text }}
+                                                {% if question.question_type == 'matching_question' and answer.right %}
+                                                <br><small class="text-muted">→ {{ answer.right }}</small>
+                                                {% endif %}
                                             </div>
                                             {% if answer.html %}
                                             <small class="text-muted">{{ answer.html | safe }}</small>
                                             {% endif %}
                                         </div>
+                                        {% if question.question_type == 'matching_question' %}
+                                        <span class="badge bg-info rounded-pill">Match</span>
+                                        {% elif answer.weight is defined %}
                                         <span class="badge bg-primary rounded-pill">{{ answer.weight }}%</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary rounded-pill">N/A</span>
+                                        {% endif %}
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -217,15 +230,41 @@
                                 {% for answer in question.answers %}
                                 <div class="answer-item p-3" data-answer-id="{{ answer.id }}">
                                     <div class="row">
-                                        <div class="col-md-2">
+                                        {% if question.question_type != 'matching_question' %}
+                                        <div class="col-md-1">
+                                            <label class="form-label">Correct:</label>
+                                            <div class="text-center">
+                                                <button type="button" class="btn btn-sm correctness-button" 
+                                                        data-answer-id="{{ answer.id }}" 
+                                                        data-question-type="{{ question.question_type }}"
+                                                        style="background-color: {% if answer.weight is defined and answer.weight > 0 %}#28a745{% else %}#dc3545{% endif %}; 
+                                                               color: white; 
+                                                               border: none; 
+                                                               min-width: 60px;"
+                                                        title="Click to toggle correctness">
+                                                    {% if answer.weight is defined and answer.weight > 0 %}True{% else %}False{% endif %}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
                                             <label class="form-label">Weight:</label>
-                                            <input type="number" name="answer_weight_{{ answer.id }}" class="form-control answer-weight" value="{{ answer.weight }}" step="0.1">
+                                            <input type="number" name="answer_weight_{{ answer.id }}" class="form-control answer-weight" value="{{ answer.weight if answer.weight is defined else 0 }}" step="0.1" readonly>
                                         </div>
                                         <div class="col-md-10">
-                                            <label class="form-label">Answer Text:</label>
+                                        {% else %}
+                                        <div class="col-md-12">
+                                        {% endif %}
+                                            <label class="form-label">{% if question.question_type == 'matching_question' %}Left Side (Item to Match):{% else %}Answer Text:{% endif %}</label>
                                             <textarea name="answer_text_{{ answer.id }}" class="form-control" rows="2">{{ answer.text }}</textarea>
                                         </div>
                                     </div>
+                                    
+                                    {% if question.question_type == 'matching_question' and answer.right %}
+                                    <div class="mb-2">
+                                        <label class="form-label">Right Side (Match Target):</label>
+                                        <textarea name="answer_right_{{ answer.id }}" class="form-control" rows="2">{{ answer.right }}</textarea>
+                                    </div>
+                                    {% endif %}
                                     
                                     {% if answer.html %}
                                     <div class="mb-2">
@@ -261,11 +300,146 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SimpleMDE JS -->
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
     <script>
         const questionId = {{ question.id }};
         let saveTimeout;
         let isSaving = false;
         let isGeneratingFeedback = false;
+        
+        // Initialize SimpleMDE editors
+        let questionTextEditor;
+        let generalFeedbackEditor;
+
+        // Initialize editors when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize SimpleMDE for question text
+            questionTextEditor = new SimpleMDE({
+                element: document.getElementById("questionText"),
+                spellChecker: false,
+                placeholder: "Enter your question text here...",
+                toolbar: [
+                    "bold", "italic", "heading", "|",
+                    "quote", "unordered-list", "ordered-list", "|",
+                    "link", "code", "|",
+                    {
+                        name: "preview",
+                        action: function customPreviewAction(editor) {
+                            SimpleMDE.togglePreview(editor);
+                            updatePreviewButton(editor);
+                        },
+                        className: "fa fa-eye no-disable",
+                        title: "Toggle Preview"
+                    }, "guide"
+                ],
+                status: ["lines", "words", "cursor"]
+            });
+            
+            // Initialize SimpleMDE for general feedback
+            generalFeedbackEditor = new SimpleMDE({
+                element: document.getElementById("generalFeedback"),
+                spellChecker: false,
+                placeholder: "Explain the importance and relevance of this question...",
+                toolbar: [
+                    "bold", "italic", "heading", "|",
+                    "quote", "unordered-list", "ordered-list", "|",
+                    "link", "code", "|",
+                    {
+                        name: "preview",
+                        action: function customPreviewAction(editor) {
+                            SimpleMDE.togglePreview(editor);
+                            updatePreviewButton(editor);
+                        },
+                        className: "fa fa-eye no-disable",
+                        title: "Toggle Preview"
+                    }, "guide"
+                ],
+                status: ["lines", "words", "cursor"]
+            });
+            
+            // Add change listeners for auto-save
+            questionTextEditor.codemirror.on("change", scheduleAutoSave);
+            generalFeedbackEditor.codemirror.on("change", scheduleAutoSave);
+            
+            // Add click listeners for correctness buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('correctness-button')) {
+                    handleCorrectnessToggle(e.target);
+                }
+            });
+        });
+
+        // Function to update preview button appearance based on current mode
+        function updatePreviewButton(editor) {
+            const toolbar = editor.toolbar;
+            const previewButton = toolbar.find(item => item && item.name === 'preview');
+            
+            if (previewButton) {
+                const isPreviewActive = editor.isPreviewActive();
+                const buttonElement = previewButton;
+                
+                if (isPreviewActive) {
+                    buttonElement.className = "fa fa-pencil no-disable";
+                    buttonElement.title = "Edit (Currently in Preview)";
+                } else {
+                    buttonElement.className = "fa fa-eye no-disable";
+                    buttonElement.title = "Preview (Currently in Edit)";
+                }
+            }
+        }
+
+        // Handle correctness toggle for answer options
+        function handleCorrectnessToggle(buttonElement) {
+            const answerId = buttonElement.getAttribute('data-answer-id');
+            const questionType = buttonElement.getAttribute('data-question-type');
+            const weightInput = document.querySelector(`input[name="answer_weight_${answerId}"]`);
+            
+            if (!weightInput) return;
+            
+            const currentWeight = parseFloat(weightInput.value) || 0;
+            const isCurrentlyCorrect = currentWeight > 0;
+            
+            if (questionType === 'multiple_choice_question' || questionType === 'true_false_question') {
+                // For multiple choice and true/false: only one answer can be correct
+                // First, set all answers to incorrect (weight = 0)
+                const allWeightInputs = document.querySelectorAll('.answer-weight');
+                const allButtons = document.querySelectorAll('.correctness-button');
+                
+                allWeightInputs.forEach(input => {
+                    input.value = '0';
+                });
+                
+                allButtons.forEach(button => {
+                    button.style.backgroundColor = '#dc3545'; // Red for incorrect
+                    button.textContent = 'False';
+                });
+                
+                // Then set the clicked answer as correct (weight = 100) if it wasn't already correct
+                if (!isCurrentlyCorrect) {
+                    weightInput.value = '100';
+                    buttonElement.style.backgroundColor = '#28a745'; // Green for correct
+                    buttonElement.textContent = 'True';
+                }
+                
+            } else if (questionType === 'multiple_answers_question') {
+                // For multiple answers: toggle individual answers
+                if (isCurrentlyCorrect) {
+                    // Make it incorrect
+                    weightInput.value = '0';
+                    buttonElement.style.backgroundColor = '#dc3545'; // Red for incorrect
+                    buttonElement.textContent = 'False';
+                } else {
+                    // Make it correct
+                    weightInput.value = '100';
+                    buttonElement.style.backgroundColor = '#28a745'; // Green for correct
+                    buttonElement.textContent = 'True';
+                }
+            }
+            
+            // Trigger auto-save
+            scheduleAutoSave();
+        }
 
         // Generate AI Feedback
         document.getElementById('generateFeedbackBtn').addEventListener('click', async () => {
@@ -305,7 +479,7 @@
                     
                     // Update the general feedback field
                     if (result.feedback.general_feedback) {
-                        document.getElementById('generalFeedback').value = result.feedback.general_feedback;
+                        generalFeedbackEditor.value(result.feedback.general_feedback);
                         console.log('Updated general feedback field');
                     }
                     
@@ -430,12 +604,12 @@
             const form = document.getElementById('questionForm');
             const formData = new FormData(form);
             
-            // Collect basic question data
+            // Collect basic question data - use SimpleMDE values
             const data = {
-                question_text: formData.get('question_text') || '',
+                question_text: questionTextEditor.value() || '',
                 correct_comments: '',  // Not used in new design
                 incorrect_comments: '',  // Not used in new design
-                neutral_comments: formData.get('general_feedback') || '',  // General feedback
+                neutral_comments: generalFeedbackEditor.value() || '',  // General feedback
                 correct_comments_html: '',
                 incorrect_comments_html: '',
                 neutral_comments_html: '',
@@ -451,9 +625,21 @@
                     text: formData.get(`answer_text_${answerId}`) || '',
                     html: formData.get(`answer_html_${answerId}`) || '',
                     comments: formData.get(`answer_comments_${answerId}`) || '',
-                    comments_html: formData.get(`answer_comments_html_${answerId}`) || '',
-                    weight: parseFloat(formData.get(`answer_weight_${answerId}`)) || 0
+                    comments_html: formData.get(`answer_comments_html_${answerId}`) || ''
                 };
+                
+                // Only add weight for non-matching questions
+                const weightInput = document.querySelector(`input[name="answer_weight_${answerId}"]`);
+                if (weightInput) {
+                    answer.weight = parseFloat(formData.get(`answer_weight_${answerId}`)) || 0;
+                }
+                
+                // Add right side for matching questions
+                const rightField = formData.get(`answer_right_${answerId}`);
+                if (rightField) {
+                    answer.right = rightField;
+                }
+                
                 data.answers.push(answer);
             });
 
@@ -520,50 +706,50 @@
         });
 
         // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            // Only handle keyboard shortcuts if not focused on an input/textarea
-            if (document.activeElement.tagName === 'INPUT' || 
-                document.activeElement.tagName === 'TEXTAREA') {
-                return;
-            }
-            
-            // Ctrl/Cmd + Left Arrow = Previous question
-            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
-                e.preventDefault();
-                const prevBtn = document.getElementById('prevBtn');
-                if (prevBtn && !prevBtn.disabled) {
-                    prevBtn.click();
-                }
-            }
-            
-            // Ctrl/Cmd + Right Arrow = Next question
-            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
-                e.preventDefault();
-                const nextBtn = document.getElementById('nextBtn');
-                if (nextBtn && !nextBtn.disabled) {
-                    nextBtn.click();
-                }
-            }
-            
-            // Escape = Back to list
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                window.location.href = '/';
-            }
-        });
+        //document.addEventListener('keydown', (e) => {
+//            // Only handle keyboard shortcuts if not focused on an input/textarea
+//            if (document.activeElement.tagName === 'INPUT' ||
+//                document.activeElement.tagName === 'TEXTAREA') {
+//                return;
+//            }
 
-        // Add keyboard shortcut hints
-        const helpText = document.createElement('div');
-        helpText.className = 'alert alert-light mt-4';
-        helpText.innerHTML = `
-            <small class="text-muted">
-                <strong>Keyboard shortcuts:</strong> 
-                <kbd>Ctrl</kbd>+<kbd>←</kbd> Previous question • 
-                <kbd>Ctrl</kbd>+<kbd>→</kbd> Next question • 
-                <kbd>Esc</kbd> Back to list
-            </small>
-        `;
-        document.querySelector('.container-fluid').appendChild(helpText);
+//            // Ctrl/Cmd + Left Arrow = Previous question
+//            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowLeft') {
+//                e.preventDefault();
+//                const prevBtn = document.getElementById('prevBtn');
+//                if (prevBtn && !prevBtn.disabled) {
+//                    prevBtn.click();
+//                }
+//            }
+
+//            // Ctrl/Cmd + Right Arrow = Next question
+//            if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowRight') {
+//                e.preventDefault();
+//                const nextBtn = document.getElementById('nextBtn');
+//                if (nextBtn && !nextBtn.disabled) {
+//                    nextBtn.click();
+//                }
+//            }
+
+//            // Escape = Back to list
+//            if (e.key === 'Escape') {
+//                e.preventDefault();
+//                window.location.href = '/';
+//            }
+//        });
+
+//        // Add keyboard shortcut hints
+//        const helpText = document.createElement('div');
+//        helpText.className = 'alert alert-light mt-4';
+//        helpText.innerHTML = `
+//            <small class="text-muted">
+//                <strong>Keyboard shortcuts:</strong>
+//                <kbd>Ctrl</kbd>+<kbd>←</kbd> Previous question •
+//                <kbd>Ctrl</kbd>+<kbd>→</kbd> Next question •
+//                <kbd>Esc</kbd> Back to list
+//            </small>
+//        `;
+//        document.querySelector('.container-fluid').appendChild(helpText);
     </script>
 </body>
 </html>
