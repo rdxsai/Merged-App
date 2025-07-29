@@ -437,8 +437,43 @@
                 }
             }
             
+            // Update question preview
+            updateQuestionPreview();
+            
             // Trigger auto-save
             scheduleAutoSave();
+        }
+
+        // Update question preview to reflect current answer correctness
+        function updateQuestionPreview() {
+            const previewItems = document.querySelectorAll('.answers-preview .list-group-item');
+            const answerItems = document.querySelectorAll('.answer-item');
+            
+            answerItems.forEach((answerItem, index) => {
+                const answerId = answerItem.dataset.answerId;
+                const weightInput = document.querySelector(`input[name="answer_weight_${answerId}"]`);
+                
+                if (weightInput && previewItems[index]) {
+                    const weight = parseFloat(weightInput.value) || 0;
+                    const isCorrect = weight > 0;
+                    
+                    // Update the icon
+                    const icon = previewItems[index].querySelector('i');
+                    if (icon) {
+                        if (isCorrect) {
+                            icon.className = 'fas fa-check-circle text-success';
+                        } else {
+                            icon.className = 'fas fa-circle text-muted';
+                        }
+                    }
+                    
+                    // Update the weight badge
+                    const badge = previewItems[index].querySelector('.badge');
+                    if (badge) {
+                        badge.textContent = `${weight}%`;
+                    }
+                }
+            });
         }
 
         // Generate AI Feedback
@@ -477,6 +512,25 @@
                     console.log('✅ Feedback generated successfully');
                     console.log('Generated feedback:', result.feedback);
                     
+                    // Log token usage information
+                    if (result.feedback.token_usage) {
+                        console.log('🔢 === AI Token Usage ===');
+                        console.log('📝 Prompt tokens:', result.feedback.token_usage.prompt_tokens);
+                        console.log('🤖 Completion tokens:', result.feedback.token_usage.completion_tokens);
+                        console.log('📊 Total tokens:', result.feedback.token_usage.total_tokens);
+                        
+                        // Calculate cost for GPT-4o mini
+                        const inputCost = (result.feedback.token_usage.prompt_tokens / 1000) * 0.000150;
+                        const outputCost = (result.feedback.token_usage.completion_tokens / 1000) * 0.000600;
+                        const totalCost = inputCost + outputCost;
+                        
+                        console.log('💰 Cost breakdown (GPT-4o mini):');
+                        console.log('   Input cost:', `$${inputCost.toFixed(6)}`);
+                        console.log('   Output cost:', `$${outputCost.toFixed(6)}`);
+                        console.log('   Total cost:', `$${totalCost.toFixed(6)}`);
+                        console.log('========================');
+                    }
+                    
                     // Update the general feedback field
                     if (result.feedback.general_feedback) {
                         generalFeedbackEditor.value(result.feedback.general_feedback);
@@ -509,11 +563,13 @@
                             
                             let feedbackFound = false;
                             for (const key of possibleKeys) {
-                                console.log(`Trying key: "${key}"`);
+                                // console.log(`Trying key: "${key}"`);
                                 if (result.feedback.answer_feedback[key]) {
+                                    const feedbackResult = result.feedback.answer_feedback[key];
+                                    console.log(`Adding feedback for answer ${answerNumber}: ${feedbackResult}`);
                                     const feedbackField = document.querySelector(`textarea[name="answer_comments_${answerId}"]`);
                                     if (feedbackField) {
-                                        feedbackField.value = result.feedback.answer_feedback[key];
+                                        feedbackField.value = feedbackResult;
                                         console.log(`✅ Updated feedback for answer ${answerNumber} with key "${key}"`);
                                         feedbackFound = true;
                                         break;
@@ -528,6 +584,8 @@
                                 // Try to match by looking for any key that contains the answer number
                                 for (const [key, value] of Object.entries(result.feedback.answer_feedback)) {
                                     if (key.includes(answerNumber.toString())) {
+                                        const test = value.split(']**')[1];
+                                        console.log(`Adding feedback for answer ${answerNumber}: ${value} \nTest: ${test}`);
                                         const feedbackField = document.querySelector(`textarea[name="answer_comments_${answerId}"]`);
                                         if (feedbackField) {
                                             feedbackField.value = value;

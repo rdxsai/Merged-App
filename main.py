@@ -300,10 +300,23 @@ Focus on educational value - help students understand the principles behind web 
             logger.info(f"AI response content length: {len(ai_response)} characters")
             logger.debug(f"AI response content: {ai_response}")
             
+            # Extract token usage information
+            token_usage = {}
+            if 'usage' in result:
+                token_usage = {
+                    "prompt_tokens": result['usage'].get('prompt_tokens', 0),
+                    "completion_tokens": result['usage'].get('completion_tokens', 0),
+                    "total_tokens": result['usage'].get('total_tokens', 0)
+                }
+                logger.info(f"Token usage - Prompt: {token_usage['prompt_tokens']}, "
+                           f"Completion: {token_usage['completion_tokens']}, "
+                           f"Total: {token_usage['total_tokens']}")
+            
             # Parse the AI response to extract general feedback and answer-specific feedback
             feedback = {
                 "general_feedback": "",
-                "answer_feedback": {}
+                "answer_feedback": {},
+                "token_usage": token_usage
             }
             
             lines = ai_response.split('\n')
