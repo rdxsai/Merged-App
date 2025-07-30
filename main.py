@@ -361,6 +361,44 @@ def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
     
     return "general"
 
+async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, Any]]:
+    """Search the ChromaDB vector store for relevant chunks"""
+    try:
+        client = chromadb.PersistentClient(path="./vector_store")
+        collection = client.get_collection("quiz_questions")
+        
+        # Generate embedding for the query using Ollama
+        query_embeddings = await get_ollama_embeddings([query])
+        
+        if not query_embeddings:
+            logger.error("Failed to generate query embedding")
+            return []
+        
+        # Search the vector store
+        results = collection.query(
+            query_embeddings=query_embeddings,
+            n_results=n_results,
+            include=["documents", "metadatas", "distances"]
+        )
+        
+        # Format results
+        chunks = []
+        if results and results['documents'] and results['documents'][0]:
+            for i, doc in enumerate(results['documents'][0]):
+                chunk = {
+                    "content": doc,
+                    "metadata": results['metadatas'][0][i] if results['metadatas'] and results['metadatas'][0] else {},
+                    "distance": results['distances'][0][i] if results['distances'] and results['distances'][0] else 0.0
+                }
+                chunks.append(chunk)
+        
+        logger.info(f"Found {len(chunks)} relevant chunks for query: {query[:50]}...")
+        return chunks
+        
+    except Exception as e:
+        logger.error(f"Error searching vector store: {e}")
+        return []
+
 async def generate_feedback_with_ai(question_data: Dict[str, Any], system_prompt: str) -> Dict[str, Any]:
     """Generate feedback using Azure OpenAI"""
     logger.info(f"Starting AI feedback generation for question ID: {question_data.get('id', 'unknown')}")
@@ -923,6 +961,118 @@ async def create_vector_store():
         logger.error(f"Unexpected error creating vector store: {e}")
         logger.error(f"Error type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Failed to create vector store: {str(e)}")
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    """Chat assistant page"""
+    return templates.TemplateResponse("chat.html", {"request": request})
+
+@app.post("/chat/message")
+async def chat_message(request: Request):
+    """Process chat message with RAG using vector store"""
+    try:
+        # Parse request body
+        body = await request.json()
+        user_message = body.get('message', '').strip()
+        
+        if not user_message:
+            raise HTTPException(status_code=400, detail="Message cannot be empty")
+        
+        logger.info(f"=== Chat Message Processing Started ===")
+        logger.info(f"User message: {user_message}")
+        
+        # Search vector store for relevant chunks
+        logger.info("Searching vector store for relevant context...")
+        retrieved_chunks = await search_vector_store(user_message, n_results=3)
+        logger.info(f"Retrieved {len(retrieved_chunks)} chunks")
+        
+        # Build context from retrieved chunks
+        context_parts = []
+        for i, chunk in enumerate(retrieved_chunks):
+            context_parts.append(f"Context {i+1}:\n{chunk['content']}")
+        
+        context = "\n\n".join(context_parts) if context_parts else "No relevant context found."
+        
+        # Create system prompt for chat
+        system_prompt = f"""You are a helpful assistant specializing in web accessibility and quiz questions. 
+You have access to a knowledge base of quiz questions about accessibility topics.
+
+Use the following context to answer the user's question. If the context doesn't contain relevant information, 
+you can still provide general knowledge about accessibility and web development best practices.
+
+Context from knowledge base:
+{context}
+
+Instructions:
+- Be helpful and informative
+- Focus on accessibility and educational content
+- If referencing specific questions, mention the question ID when available
+- Keep responses concise but thorough
+- If you don't know something, say so rather than making up information"""
+
+        # Prepare messages for Azure OpenAI
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+        
+        # Call Azure OpenAI for chat completion
+        logger.info("Calling Azure OpenAI for chat completion...")
+        
+        url = f"{AZURE_OPENAI_ENDPOINT}/us-east/deployments/{AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
+        
+        headers = {
+            "Ocp-Apim-Subscription-Key": AZURE_OPENAI_SUBSCRIPTION_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "messages": messages,
+            "max_tokens": 800,
+            "temperature": 0.7,
+            "top_p": 0.9
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            
+            if response.status_code != 200:
+                error_text = response.text
+                logger.error(f"Azure OpenAI API error: {error_text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"AI service error: {error_text}"
+                )
+            
+            result = response.json()
+            
+            if 'choices' not in result or not result['choices']:
+                raise HTTPException(status_code=500, detail="Invalid response from AI service")
+            
+            ai_response = result['choices'][0]['message']['content']
+            
+            # Log token usage if available
+            if 'usage' in result:
+                usage = result['usage']
+                logger.info(f"Token usage - Prompt: {usage.get('prompt_tokens', 0)}, "
+                           f"Completion: {usage.get('completion_tokens', 0)}, "
+                           f"Total: {usage.get('total_tokens', 0)}")
+        
+        logger.info("Chat message processed successfully")
+        
+        return {
+            "response": ai_response,
+            "retrieved_chunks": retrieved_chunks,
+            "context_used": len(context_parts) > 0
+        }
+        
+    except HTTPException as e:
+        logger.error(f"HTTP Exception in chat_message: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error in chat_message: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"Failed to process chat message: {str(e)}")
 
 @app.get("/test-system-prompt", response_class=HTMLResponse)
 async def test_system_prompt_page(request: Request):
