@@ -149,6 +149,72 @@
                 });
             }
             
+            // Create vector store
+            const createVectorStoreBtn = document.getElementById('createVectorStoreBtn');
+            if (createVectorStoreBtn) {
+                createVectorStoreBtn.addEventListener('click', async () => {
+                    const originalText = createVectorStoreBtn.innerHTML;
+                    
+                    // Show loading state
+                    createVectorStoreBtn.disabled = true;
+                    createVectorStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Vector Store...';
+                    
+                    try {
+                        console.log('🔥 Starting vector store creation...');
+                        
+                        const response = await fetch('/create-vector-store', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        const result = await response.json();
+                        console.log('Vector store response:', result);
+                        
+                        if (response.ok) {
+                            console.log('✅ Vector store created successfully');
+                            console.log('📊 Vector Store Stats:', result.stats);
+                            
+                            // Log detailed statistics
+                            if (result.stats) {
+                                console.log('🔢 === Vector Store Statistics ===');
+                                console.log('📝 Total questions:', result.stats.total_questions);
+                                console.log('🎯 Total embeddings:', result.stats.total_embeddings);
+                                console.log('📐 Embedding dimension:', result.stats.embedding_dimension);
+                                console.log('📂 Storage path:', result.stats.vector_store_path);
+                                console.log('🤖 Embedding model: Ollama nomic-embed-text');
+                                console.log('🏷️ Topics:', result.stats.topics);
+                                console.log('❓ Question types:', result.stats.question_types);
+                                console.log('================================');
+                            }
+                            
+                            showAlert('success', `${result.message}<br><small>Using Ollama nomic-embed-text model • Check console for detailed statistics</small>`);
+                        } else {
+                            console.error('❌ Vector store creation failed:', result.detail);
+                            
+                            // Provide specific help for Ollama-related errors
+                            let errorMessage = result.detail || 'Failed to create vector store';
+                            if (errorMessage.includes('Cannot connect to Ollama')) {
+                                errorMessage += '<br><br><strong>Setup Instructions:</strong><br>' +
+                                              '1. Install Ollama: <code>curl -fsSL https://ollama.ai/install.sh | sh</code><br>' +
+                                              '2. Pull nomic-embed-text model: <code>ollama pull nomic-embed-text</code><br>' +
+                                              '3. Ensure Ollama is running: <code>ollama serve</code>';
+                            }
+                            
+                            showAlert('danger', errorMessage);
+                        }
+                    } catch (error) {
+                        console.error('💥 Vector store creation error:', error);
+                        showAlert('danger', 'Error creating vector store: ' + error.message);
+                    } finally {
+                        // Restore button state
+                        createVectorStoreBtn.disabled = false;
+                        createVectorStoreBtn.innerHTML = originalText;
+                    }
+                });
+            }
+            
             // Save system prompt
             const saveBtn = document.getElementById('saveSystemPromptBtn');
             if (saveBtn) {
@@ -227,6 +293,9 @@
                         <a href="/system-prompt" class="btn btn-outline-primary me-2">
                             <i class="fas fa-cog"></i> System Prompt
                         </a>
+                        <button id="createVectorStoreBtn" class="btn btn-outline-success me-2">
+                            <i class="fas fa-database"></i> Create Vector Store
+                        </button>
                         <button id="fetchBtn" class="btn btn-primary">
                             <i class="fas fa-download"></i> Fetch Questions
                         </button>

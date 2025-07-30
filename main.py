@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 import time
 import random
 import re
+import chromadb
+from bs4 import BeautifulSoup
 
 # Load environment variables
 load_dotenv()
@@ -46,6 +48,10 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "https://itls-openai-
 AZURE_OPENAI_DEPLOYMENT_ID = os.getenv("AZURE_OPENAI_DEPLOYMENT_ID")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2023-12-01-preview")
 AZURE_OPENAI_SUBSCRIPTION_KEY = os.getenv("AZURE_OPENAI_SUBSCRIPTION_KEY")
+
+# Ollama Configuration
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 
 # File paths
 DATA_FILE = "quiz_questions.json"
@@ -176,6 +182,184 @@ def clean_question_text(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     
     return text
+
+def clean_html_for_vector_store(html_text: str) -> str:
+    """Clean HTML tags and normalize text for vector store"""
+    if not html_text:
+        return ""
+    
+    # Parse HTML and extract text
+    soup = BeautifulSoup(html_text, 'html.parser')
+    text = soup.get_text()
+    
+    # Clean up whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
+    """Get embeddings from Ollama using nomic-embed-text model"""
+    embeddings = []
+    
+    # Ensure OLLAMA_HOST has proper protocol
+    ollama_host = OLLAMA_HOST
+    if not ollama_host.startswith(('http://', 'https://')):
+        ollama_host = f"http://{ollama_host}"
+    
+    logger.info(f"Using Ollama host: {ollama_host}")
+    logger.info(f"Using embedding model: {OLLAMA_EMBEDDING_MODEL}")
+    
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            for i, text in enumerate(texts):
+                payload = {
+                    "model": OLLAMA_EMBEDDING_MODEL,
+                    "prompt": text
+                }
+                
+                logger.info(f"Generating embedding {i+1}/{len(texts)} (text length: {len(text)} chars)")
+                
+                url = f"{ollama_host}/api/embeddings"
+                logger.debug(f"Making request to: {url}")
+                
+                response = await client.post(
+                    url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    logger.error(f"Ollama API error (status {response.status_code}): {error_text}")
+                    raise HTTPException(
+                        status_code=response.status_code, 
+                        detail=f"Ollama API error: {error_text}"
+                    )
+                
+                result = response.json()
+                
+                if 'embedding' not in result:
+                    logger.error(f"No embedding in Ollama response: {result}")
+                    raise HTTPException(status_code=500, detail="Invalid response from Ollama - no embedding found")
+                
+                embeddings.append(result['embedding'])
+                
+                # Add small delay to avoid overwhelming Ollama
+                await asyncio.sleep(0.1)
+        
+        logger.info(f"Generated {len(embeddings)} embeddings using Ollama {OLLAMA_EMBEDDING_MODEL} model")
+        return embeddings
+        
+    except httpx.ConnectError as e:
+        logger.error(f"Failed to connect to Ollama at {ollama_host}: {e}")
+        raise HTTPException(
+            status_code=503, 
+            detail=f"Cannot connect to Ollama at {ollama_host}. Please ensure Ollama is running and the {OLLAMA_EMBEDDING_MODEL} model is installed."
+        )
+    except httpx.TimeoutException as e:
+        logger.error(f"Ollama request timeout: {e}")
+        raise HTTPException(status_code=408, detail="Ollama request timed out")
+    except Exception as e:
+        logger.error(f"Error generating embeddings with Ollama: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate embeddings: {str(e)}")
+
+def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> tuple[List[str], List[Dict[str, Any]], List[str]]:
+    """Create comprehensive chunks using Option C strategy"""
+    documents = []
+    metadatas = []
+    ids = []
+    
+    for question in questions:
+        # Extract and clean question text
+        question_text = clean_html_for_vector_store(question.get('question_text', ''))
+        question_type = question.get('question_type', '')
+        general_feedback = clean_html_for_vector_store(question.get('neutral_comments', ''))
+        
+        # Build comprehensive document text
+        doc_parts = []
+        
+        # Add question
+        if question_text:
+            doc_parts.append(f"Question: {question_text}")
+        
+        # Add question type context
+        if question_type:
+            doc_parts.append(f"Question Type: {question_type.replace('_', ' ').title()}")
+        
+        # Process answers
+        correct_answers = []
+        all_answers = []
+        answer_feedback_parts = []
+        
+        for answer in question.get('answers', []):
+            answer_text = clean_html_for_vector_store(answer.get('text', ''))
+            weight = answer.get('weight', 0)
+            is_correct = weight > 0
+            answer_feedback = clean_html_for_vector_store(answer.get('comments', ''))
+            
+            if answer_text:
+                status = "CORRECT" if is_correct else "INCORRECT"
+                all_answers.append(f"- {answer_text} ({status})")
+                
+                if is_correct:
+                    correct_answers.append(answer_text)
+                
+                # Add specific answer feedback if available
+                if answer_feedback:
+                    answer_feedback_parts.append(f"Feedback for '{answer_text}': {answer_feedback}")
+        
+        # Combine all answers
+        if all_answers:
+            doc_parts.append("Answer Options:\n" + "\n".join(all_answers))
+        
+        # Add general feedback
+        if general_feedback:
+            doc_parts.append(f"General Explanation: {general_feedback}")
+        
+        # Add answer-specific feedback
+        if answer_feedback_parts:
+            doc_parts.append("Answer Feedback:\n" + "\n".join(answer_feedback_parts))
+        
+        # Create final document
+        document_text = "\n\n".join(doc_parts)
+        
+        # Create metadata (ChromaDB only accepts str, int, float, bool, or None)
+        metadata = {
+            "question_id": question.get('id'),
+            "question_type": question_type,
+            "points_possible": float(question.get('points_possible', 0)),
+            "correct_answers": " | ".join(correct_answers) if correct_answers else "",  # Convert list to string
+            "answer_count": len(question.get('answers', [])),
+            "has_feedback": bool(general_feedback),
+            "topic": extract_topic_from_text(question_text, general_feedback)
+        }
+        
+        documents.append(document_text)
+        metadatas.append(metadata)
+        ids.append(f"question_{question.get('id')}")
+    
+    return documents, metadatas, ids
+
+def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
+    """Extract topic/theme from question text and feedback"""
+    combined_text = f"{question_text} {feedback}".lower()
+    
+    # Simple keyword-based topic extraction
+    topics = {
+        "accessibility": ["accessibility", "screen reader", "alt text", "wcag", "disability", "inclusive"],
+        "navigation": ["navigation", "menu", "link", "breadcrumb", "sitemap"],
+        "forms": ["form", "input", "label", "validation", "submit"],
+        "media": ["image", "video", "audio", "media", "caption", "transcript"],
+        "color": ["color", "contrast", "visual", "design", "appearance"],
+        "keyboard": ["keyboard", "focus", "tab", "shortcut", "navigation"],
+        "content": ["content", "text", "heading", "structure", "semantic"]
+    }
+    
+    for topic, keywords in topics.items():
+        if any(keyword in combined_text for keyword in keywords):
+            return topic
+    
+    return "general"
 
 async def generate_feedback_with_ai(question_data: Dict[str, Any], system_prompt: str) -> Dict[str, Any]:
     """Generate feedback using Azure OpenAI"""
@@ -656,6 +840,90 @@ async def debug_question(question_id: int):
     except Exception as e:
         return {"error": str(e), "error_type": type(e).__name__}
 
+@app.post("/create-vector-store")
+async def create_vector_store():
+    """Create ChromaDB vector store from quiz questions using Azure embeddings"""
+    logger.info("=== Vector Store Creation Started ===")
+    
+    try:
+        # Load questions
+        logger.info("Loading questions from JSON file...")
+        questions = load_questions()
+        if not questions:
+            raise HTTPException(status_code=400, detail="No questions found to create vector store")
+        
+        logger.info(f"Loaded {len(questions)} questions for vector store creation")
+        
+        # Create comprehensive chunks
+        logger.info("Creating comprehensive chunks from questions...")
+        documents, metadatas, ids = create_comprehensive_chunks(questions)
+        logger.info(f"Created {len(documents)} document chunks")
+        
+        # Generate embeddings using Ollama nomic-embed-text
+        logger.info("Generating embeddings using Ollama nomic-embed-text model...")
+        embeddings = await get_ollama_embeddings(documents)
+        logger.info(f"Generated {len(embeddings)} embeddings")
+        
+        # Initialize ChromaDB
+        logger.info("Initializing ChromaDB client...")
+        client = chromadb.PersistentClient(path="./vector_store")
+        
+        # Delete existing collection if it exists
+        try:
+            client.delete_collection("quiz_questions")
+            logger.info("Deleted existing vector store collection")
+        except Exception:
+            logger.info("No existing collection to delete")
+        
+        # Create new collection
+        collection = client.create_collection(
+            name="quiz_questions",
+            metadata={"description": "Quiz questions with comprehensive content"}
+        )
+        
+        # Add documents to collection
+        logger.info("Adding documents to ChromaDB collection...")
+        collection.add(
+            documents=documents,
+            embeddings=embeddings,
+            metadatas=metadatas,
+            ids=ids
+        )
+        
+        # Create summary statistics
+        topic_counts = {}
+        question_type_counts = {}
+        
+        for metadata in metadatas:
+            topic = metadata.get('topic', 'unknown')
+            question_type = metadata.get('question_type', 'unknown')
+            
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+            question_type_counts[question_type] = question_type_counts.get(question_type, 0) + 1
+        
+        logger.info("Vector store creation completed successfully")
+        
+        return {
+            "success": True,
+            "message": f"Successfully created vector store with {len(documents)} questions",
+            "stats": {
+                "total_questions": len(documents),
+                "total_embeddings": len(embeddings),
+                "embedding_dimension": len(embeddings[0]) if embeddings else 0,
+                "topics": topic_counts,
+                "question_types": question_type_counts,
+                "vector_store_path": "./vector_store"
+            }
+        }
+        
+    except HTTPException as e:
+        logger.error(f"HTTP Exception in create_vector_store: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error creating vector store: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"Failed to create vector store: {str(e)}")
+
 @app.get("/test-system-prompt", response_class=HTMLResponse)
 async def test_system_prompt_page(request: Request):
     """Test page for system prompt functionality"""
@@ -672,8 +940,55 @@ async def debug_config():
         "questions_count": len(load_questions()) if os.path.exists(DATA_FILE) else 0,
         "azure_endpoint": AZURE_OPENAI_ENDPOINT,
         "azure_deployment_id": AZURE_OPENAI_DEPLOYMENT_ID,
-        "azure_api_version": AZURE_OPENAI_API_VERSION
+        "azure_api_version": AZURE_OPENAI_API_VERSION,
+        "ollama_host": OLLAMA_HOST,
+        "ollama_embedding_model": OLLAMA_EMBEDDING_MODEL,
+        "ollama_host_with_protocol": OLLAMA_HOST if OLLAMA_HOST.startswith(('http://', 'https://')) else f"http://{OLLAMA_HOST}"
     }
+
+@app.get("/debug/ollama-test")
+async def test_ollama_connection():
+    """Test Ollama connection and model availability"""
+    ollama_host = OLLAMA_HOST
+    if not ollama_host.startswith(('http://', 'https://')):
+        ollama_host = f"http://{ollama_host}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Test basic connection
+            response = await client.get(f"{ollama_host}/api/tags")
+            
+            if response.status_code == 200:
+                models = response.json()
+                model_names = [model['name'] for model in models.get('models', [])]
+                
+                return {
+                    "ollama_connected": True,
+                    "ollama_host": ollama_host,
+                    "available_models": model_names,
+                    "embedding_model_available": OLLAMA_EMBEDDING_MODEL in model_names,
+                    "configured_model": OLLAMA_EMBEDDING_MODEL
+                }
+            else:
+                return {
+                    "ollama_connected": False,
+                    "error": f"Ollama returned status {response.status_code}",
+                    "ollama_host": ollama_host
+                }
+                
+    except httpx.ConnectError as e:
+        return {
+            "ollama_connected": False,
+            "error": f"Cannot connect to Ollama at {ollama_host}",
+            "ollama_host": ollama_host,
+            "details": str(e)
+        }
+    except Exception as e:
+        return {
+            "ollama_connected": False,
+            "error": f"Unexpected error: {str(e)}",
+            "ollama_host": ollama_host
+        }
 
 @app.put("/questions/{question_id}")
 async def update_question(question_id: int, question_data: QuestionUpdate):
