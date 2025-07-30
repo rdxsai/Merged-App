@@ -26,6 +26,15 @@
         .question-type-badge {
             font-size: 0.8em;
         }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+        }
     </style>
     <script>
         console.log('🚀 Script loaded in head');
@@ -284,26 +293,30 @@
 </head>
 <body>
     
-    <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2"><i class="fas fa-question-circle text-primary"></i> Canvas Quiz Manager</h1>
-                    <div>
-                        <a href="/system-prompt" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-cog"></i> System Prompt
-                        </a>
-                        <a href="/chat" class="btn btn-outline-info me-2">
-                            <i class="fas fa-comments"></i> Chat Assistant
-                        </a>
-                        <button id="createVectorStoreBtn" class="btn btn-outline-success me-2">
-                            <i class="fas fa-database"></i> Create Vector Store
-                        </button>
-                        <button id="fetchBtn" class="btn btn-primary">
-                            <i class="fas fa-download"></i> Fetch Questions
-                        </button>
-                    </div>
+    <!-- Sticky Header -->
+    <div class="sticky-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2 mb-0"><i class="fas fa-question-circle text-primary"></i> Canvas Quiz Manager</h1>
+                <div>
+                    <a href="/system-prompt" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-cog"></i> System Prompt
+                    </a>
+                    <a href="/chat" class="btn btn-outline-info me-2">
+                        <i class="fas fa-comments"></i> Chat Assistant
+                    </a>
+                    <button id="createVectorStoreBtn" class="btn btn-outline-success me-2">
+                        <i class="fas fa-database"></i> Create Vector Store
+                    </button>
+                    <button id="fetchBtn" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Fetch Questions
+                    </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-3">
 
                 <!-- Configuration Info -->
                 <div class="alert alert-info mb-4">
