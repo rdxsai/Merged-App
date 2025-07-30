@@ -134,6 +134,11 @@
                         <i class="fas fa-comments text-info"></i> Chat Assistant
                         <small class="text-muted">- Quiz Knowledge Base</small>
                     </h1>
+                    <div class="mt-1">
+                        <small class="text-muted">
+                            <i class="fas fa-robot"></i> Azure OpenAI: <span id="modelInfo" class="badge bg-light text-dark">Loading...</span>
+                        </small>
+                    </div>
                 </div>
                 <div>
                     <a href="/" class="btn btn-outline-secondary">
@@ -220,7 +225,37 @@
 
             // Focus on input
             messageInput.focus();
+
+            // Load model information
+            loadModelInfo();
         });
+
+        // Load and display model information
+        async function loadModelInfo() {
+            try {
+                const response = await fetch('/debug/config');
+                const config = await response.json();
+                
+                const modelInfo = document.getElementById('modelInfo');
+                
+                if (response.ok && config.azure_configured) {
+                    const deploymentId = config.azure_deployment_id || 'Unknown';
+                    modelInfo.textContent = deploymentId;
+                    modelInfo.className = 'badge bg-success text-white';
+                    modelInfo.title = `Azure OpenAI Deployment: ${deploymentId}`;
+                } else {
+                    modelInfo.textContent = 'Not Configured';
+                    modelInfo.className = 'badge bg-warning text-dark';
+                    modelInfo.title = 'Azure OpenAI is not properly configured';
+                }
+            } catch (error) {
+                console.error('Failed to load model info:', error);
+                const modelInfo = document.getElementById('modelInfo');
+                modelInfo.textContent = 'Error';
+                modelInfo.className = 'badge bg-danger text-white';
+                modelInfo.title = 'Failed to load model information';
+            }
+        }
 
         // Send message function
         async function sendMessage() {
