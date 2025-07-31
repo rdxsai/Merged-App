@@ -56,6 +56,7 @@ OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 # File paths
 DATA_FILE = "quiz_questions.json"
 SYSTEM_PROMPT_FILE = "system_prompt.txt"
+CHAT_SYSTEM_PROMPT_FILE = "chat_system_prompt.txt"
 
 # Pydantic models
 class Answer(BaseModel):
@@ -133,6 +134,47 @@ def save_system_prompt(prompt: str) -> bool:
     except Exception as e:
         logger.error(f"Error saving system prompt: {e}")
         return False
+
+def load_chat_system_prompt() -> str:
+    """Load chat system prompt from text file"""
+    try:
+        if os.path.exists(CHAT_SYSTEM_PROMPT_FILE):
+            with open(CHAT_SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        return get_default_chat_system_prompt()
+    except Exception as e:
+        logger.error(f"Error loading chat system prompt: {e}")
+        return get_default_chat_system_prompt()
+
+def save_chat_system_prompt(prompt: str) -> bool:
+    """Save chat system prompt to text file"""
+    try:
+        with open(CHAT_SYSTEM_PROMPT_FILE, 'w', encoding='utf-8') as f:
+            f.write(prompt)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving chat system prompt: {e}")
+        return False
+
+def get_default_chat_system_prompt() -> str:
+    """Get the default chat system prompt"""
+    return """You are a helpful assistant specializing in web accessibility and quiz questions. 
+You have access to a knowledge base of quiz questions about accessibility topics.
+
+Use the following context to answer the user's question. If the context doesn't contain relevant information, 
+you can still provide general knowledge about accessibility and web development best practices.
+
+Context from knowledge base:
+{context}
+
+Instructions:
+- Be helpful and informative
+- Focus on accessibility and educational content
+- If referencing specific questions, mention the question ID when available
+- Keep responses concise but thorough
+- If you don't know something, say so rather than making up information
+- Provide practical examples when possible
+- Reference WCAG guidelines when relevant"""
 
 async def make_canvas_request(url: str, headers: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
     """Make Canvas API request with retry logic for rate limiting"""
@@ -974,16 +1016,22 @@ async def chat_message(request: Request):
         # Parse request body
         body = await request.json()
         user_message = body.get('message', '').strip()
+        max_chunks = body.get('max_chunks', 3)
+        
+        # Validate max_chunks
+        if not isinstance(max_chunks, int) or max_chunks < 1 or max_chunks > 10:
+            max_chunks = 3
         
         if not user_message:
             raise HTTPException(status_code=400, detail="Message cannot be empty")
         
         logger.info(f"=== Chat Message Processing Started ===")
         logger.info(f"User message: {user_message}")
+        logger.info(f"Max chunks requested: {max_chunks}")
         
         # Search vector store for relevant chunks
         logger.info("Searching vector store for relevant context...")
-        retrieved_chunks = await search_vector_store(user_message, n_results=3)
+        retrieved_chunks = await search_vector_store(user_message, n_results=max_chunks)
         logger.info(f"Retrieved {len(retrieved_chunks)} chunks")
         
         # Build context from retrieved chunks
@@ -993,22 +1041,9 @@ async def chat_message(request: Request):
         
         context = "\n\n".join(context_parts) if context_parts else "No relevant context found."
         
-        # Create system prompt for chat
-        system_prompt = f"""You are a helpful assistant specializing in web accessibility and quiz questions. 
-You have access to a knowledge base of quiz questions about accessibility topics.
-
-Use the following context to answer the user's question. If the context doesn't contain relevant information, 
-you can still provide general knowledge about accessibility and web development best practices.
-
-Context from knowledge base:
-{context}
-
-Instructions:
-- Be helpful and informative
-- Focus on accessibility and educational content
-- If referencing specific questions, mention the question ID when available
-- Keep responses concise but thorough
-- If you don't know something, say so rather than making up information"""
+        # Load custom chat system prompt and inject context
+        chat_system_prompt_template = load_chat_system_prompt()
+        system_prompt = chat_system_prompt_template.format(context=context)
 
         # Prepare messages for Azure OpenAI
         messages = [
@@ -1073,6 +1108,45 @@ Instructions:
         logger.error(f"Unexpected error in chat_message: {e}")
         logger.error(f"Error type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Failed to process chat message: {str(e)}")
+
+@app.get("/chat-system-prompt", response_class=HTMLResponse)
+async def chat_system_prompt_page(request: Request):
+    """Chat system prompt edit page"""
+    current_prompt = load_chat_system_prompt()
+    default_prompt = get_default_chat_system_prompt()
+    
+    return templates.TemplateResponse("chat_system_prompt_edit.html", {
+        "request": request,
+        "current_prompt": current_prompt,
+        "default_prompt": default_prompt
+    })
+
+@app.post("/chat-system-prompt")
+async def save_chat_system_prompt_endpoint(request: Request):
+    """Save chat system prompt"""
+    try:
+        form = await request.form()
+        prompt = form.get('prompt', '').strip()
+        
+        if not prompt:
+            raise HTTPException(status_code=400, detail="System prompt cannot be empty")
+        
+        if save_chat_system_prompt(prompt):
+            logger.info("Chat system prompt saved successfully")
+            return {"success": True, "message": "Chat system prompt saved successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save chat system prompt")
+            
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error saving chat system prompt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat-system-prompt/default")
+async def get_default_chat_system_prompt_endpoint():
+    """Get default chat system prompt"""
+    return {"default_prompt": get_default_chat_system_prompt()}
 
 @app.get("/test-system-prompt", response_class=HTMLResponse)
 async def test_system_prompt_page(request: Request):

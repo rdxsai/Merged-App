@@ -141,6 +141,9 @@
                     </div>
                 </div>
                 <div>
+                    <a href="/chat-system-prompt" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-cog"></i> Edit System Prompt
+                    </a>
                     <a href="/" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> Back to Questions
                     </a>
@@ -182,10 +185,18 @@
             <div class="col-md-4">
                 <div class="chunks-panel">
                     <div class="chunks-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-search"></i> Retrieved Context
-                            <span id="chunksCount" class="badge bg-secondary ms-2">0</span>
-                        </h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-search"></i> Retrieved Context
+                                <span id="chunksCount" class="badge bg-secondary ms-2">0</span>
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-2">Max chunks:</small>
+                                <input type="number" id="maxChunks" class="form-control form-control-sm" 
+                                       value="3" min="1" max="10" style="width: 60px;" 
+                                       title="Number of context chunks to retrieve">
+                            </div>
+                        </div>
                     </div>
                     <div class="chunks-content" id="chunksContent">
                         <div class="text-muted text-center" style="margin-top: 2rem;">
@@ -209,6 +220,7 @@
         const chatMessages = document.getElementById('chatMessages');
         const chunksContent = document.getElementById('chunksContent');
         const chunksCount = document.getElementById('chunksCount');
+        const maxChunksInput = document.getElementById('maxChunks');
 
         // Initialize chat functionality
         document.addEventListener('DOMContentLoaded', function() {
@@ -275,12 +287,19 @@
             try {
                 console.log('🚀 Sending chat message:', message);
 
+                // Get the number of chunks to retrieve
+                const maxChunks = parseInt(maxChunksInput.value) || 3;
+                console.log('📊 Max chunks to retrieve:', maxChunks);
+
                 const response = await fetch('/chat/message', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ 
+                        message: message,
+                        max_chunks: maxChunks
+                    })
                 });
 
                 const result = await response.json();

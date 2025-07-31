@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat System Prompt - Canvas Quiz Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SimpleMDE CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <style>
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+        }
+        .editor-container {
+            min-height: calc(100vh - 200px);
+        }
+        .CodeMirror {
+            min-height: 400px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .save-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Header -->
+    <div class="sticky-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-robot text-info"></i> Chat Assistant System Prompt
+                        <small class="text-muted">- Configure AI Behavior</small>
+                    </h1>
+                </div>
+                <div>
+                    <button id="saveBtn" class="btn btn-success me-2">
+                        <i class="fas fa-save"></i> Save Prompt
+                    </button>
+                    <a href="/chat" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Alert container -->
+        <div id="alertContainer"></div>
+
+        <!-- Save indicator -->
+        <div id="saveIndicator" class="save-indicator" style="display: none;">
+            <div class="alert alert-success alert-sm mb-0">
+                <i class="fas fa-check"></i> Saved
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-0">
+                                    <i class="fas fa-edit"></i> System Prompt Configuration
+                                </h5>
+                                <small class="text-muted">
+                                    This prompt defines how the chat assistant behaves and responds to user queries.
+                                </small>
+                            </div>
+                            <div>
+                                <button id="resetBtn" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-undo"></i> Reset to Default
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="editor-container">
+                            <textarea id="chatSystemPromptEditor" name="prompt">{{ current_prompt if current_prompt else default_prompt }}</textarea>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-lightbulb text-warning"></i> Tips for Writing Effective Prompts:</h6>
+                                    <ul class="small text-muted">
+                                        <li>Define the assistant's role and expertise clearly</li>
+                                        <li>Specify the knowledge domain (accessibility, web development)</li>
+                                        <li>Include instructions for using retrieved context</li>
+                                        <li>Set expectations for response style and length</li>
+                                        <li>Provide guidelines for handling unknown information</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-exclamation-triangle text-warning"></i> Important Notes:</h6>
+                                    <ul class="small text-muted">
+                                        <li>The system will automatically include retrieved context</li>
+                                        <li>Reference {context} placeholder in your prompt</li>
+                                        <li>Keep instructions clear and concise</li>
+                                        <li>Test changes in the chat interface</li>
+                                        <li>Changes take effect immediately after saving</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SimpleMDE JS -->
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+    
+    <script>
+        // Initialize SimpleMDE markdown editor
+        const simplemde = new SimpleMDE({
+            element: document.getElementById("chatSystemPromptEditor"),
+            spellChecker: false,
+            placeholder: "Enter your chat assistant system prompt here...",
+            toolbar: [
+                "bold", "italic", "heading", "|",
+                "quote", "unordered-list", "ordered-list", "|",
+                "link", "code", "|",
+                {
+                    name: "preview",
+                    action: function customPreviewAction(editor) {
+                        SimpleMDE.togglePreview(editor);
+                        updatePreviewButton(editor);
+                    },
+                    className: "fa fa-eye no-disable",
+                    title: "Toggle Preview"
+                }, "guide"
+            ],
+            status: ["lines", "words", "cursor"],
+            insertTexts: {
+                horizontalRule: ["", "\n\n-----\n\n"],
+                image: ["![](http://", ")"],
+                link: ["[", "](http://)"],
+                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
+            },
+        });
+
+        // Function to update preview button appearance based on current mode
+        function updatePreviewButton(editor) {
+            const toolbar = editor.toolbar;
+            const previewButton = toolbar.find(item => item && item.name === 'preview');
+            
+            if (previewButton) {
+                const isPreviewActive = editor.isPreviewActive();
+                const buttonElement = previewButton;
+                
+                if (isPreviewActive) {
+                    buttonElement.className = "fa fa-pencil no-disable";
+                    buttonElement.title = "Edit (Currently in Preview)";
+                } else {
+                    buttonElement.className = "fa fa-eye no-disable";
+                    buttonElement.title = "Preview (Currently in Edit)";
+                }
+            }
+        }
+
+        // Helper function to show alerts
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Show save indicator
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+
+        // Save system prompt
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            
+            try {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                
+                const prompt = simplemde.value();
+                
+                if (!prompt.trim()) {
+                    showAlert('warning', 'System prompt cannot be empty.');
+                    return;
+                }
+                
+                const response = await fetch('/chat-system-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `prompt=${encodeURIComponent(prompt)}`
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('success', result.message || 'Chat system prompt saved successfully!');
+                    showSaveIndicator();
+                } else {
+                    showAlert('danger', result.detail || 'Failed to save system prompt');
+                }
+            } catch (error) {
+                showAlert('danger', 'Error saving system prompt: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        });
+
+        // Reset to default prompt
+        document.getElementById('resetBtn').addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to reset to the default system prompt? This will overwrite your current prompt.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/chat-system-prompt/default');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    simplemde.value(result.default_prompt);
+                    showAlert('info', 'System prompt reset to default. Don\'t forget to save!');
+                } else {
+                    showAlert('danger', 'Failed to load default system prompt');
+                }
+            } catch (error) {
+                showAlert('danger', 'Error loading default prompt: ' + error.message);
+            }
+        });
+
+        // Auto-save functionality (optional)
+        let saveTimeout;
+        simplemde.codemirror.on("change", function() {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            // Auto-save after 5 seconds of inactivity
+            saveTimeout = setTimeout(async () => {
+                const prompt = simplemde.value();
+                if (prompt.trim()) {
+                    try {
+                        const response = await fetch('/chat-system-prompt', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `prompt=${encodeURIComponent(prompt)}`
+                        });
+                        
+                        if (response.ok) {
+                            showSaveIndicator();
+                        }
+                    } catch (error) {
+                        console.error('Auto-save failed:', error);
+                    }
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
