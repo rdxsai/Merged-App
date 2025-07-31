@@ -253,6 +253,69 @@
                 });
             }
             
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            const clearSearchBtn = document.getElementById('clearSearch');
+            const questionCount = document.getElementById('questionCount');
+            const filteredCount = document.getElementById('filteredCount');
+            
+            if (searchInput) {
+                // Search input event listener
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase().trim();
+                    filterQuestions(searchTerm);
+                });
+                
+                // Clear search button
+                if (clearSearchBtn) {
+                    clearSearchBtn.addEventListener('click', function() {
+                        searchInput.value = '';
+                        filterQuestions('');
+                        searchInput.focus();
+                    });
+                }
+                
+                // Search on Enter key
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        searchInput.value = '';
+                        filterQuestions('');
+                    }
+                });
+            }
+            
+            // Filter questions function
+            function filterQuestions(searchTerm) {
+                const questionCards = document.querySelectorAll('#questionsContainer [data-question-id]');
+                let visibleCount = 0;
+                
+                questionCards.forEach(card => {
+                    const questionText = card.querySelector('.question-text')?.textContent.toLowerCase() || '';
+                    const questionType = card.querySelector('.question-type-badge')?.textContent.toLowerCase() || '';
+                    
+                    const matches = searchTerm === '' || 
+                                  questionText.includes(searchTerm) || 
+                                  questionType.includes(searchTerm);
+                    
+                    if (matches) {
+                        card.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Update count badges
+                if (searchTerm === '') {
+                    if (filteredCount) filteredCount.style.display = 'none';
+                } else {
+                    if (filteredCount) {
+                        filteredCount.textContent = `${visibleCount} matches`;
+                        filteredCount.style.display = 'inline';
+                    }
+                }
+            }
+            
             // Delete functionality
             document.addEventListener('click', (e) => {
                 if (e.target.closest('.delete-btn')) {
@@ -334,10 +397,28 @@
                 <!-- Alert container -->
                 <div id="alertContainer"></div>
 
-                <!-- Questions count -->
+                <!-- Search bar -->
                 {% if questions %}
                 <div class="mb-3">
-                    <span class="badge bg-secondary">{{ questions|length }} questions loaded</span>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="searchInput" class="form-control" 
+                                       placeholder="Search questions..." 
+                                       autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <span class="badge bg-secondary" id="questionCount">{{ questions|length }} questions loaded</span>
+                            <span class="badge bg-info ms-2" id="filteredCount" style="display: none;">0 matches</span>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
 
