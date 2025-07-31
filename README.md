@@ -1,0 +1,319 @@
+# Canvas Quiz Manager
+**Creator: Bryce Kayanuma (BrycePK@vt.edu)**
+
+A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation).
+
+## 🌟 Features
+
+### Core Functionality
+- **Canvas Integration**: Fetch quiz questions directly from Canvas LMS API
+- **AI Feedback Generation**: Generate educational feedback using Azure OpenAI
+- **Question Editor**: Edit questions, answers, and feedback with WYSIWYG markdown editors
+- **Answer Management**: Toggle correct/incorrect answers with visual True/False buttons
+- **Real-time Preview**: Live preview updates when answer correctness changes
+
+### Advanced Features
+- **Vector Store**: Create local ChromaDB vector store with Ollama embeddings
+- **RAG Chat Assistant**: Intelligent chat interface with context-aware responses
+- **Comprehensive Search**: Semantic search through quiz content using embeddings
+- **Token Usage Tracking**: Monitor AI API costs with detailed token usage logging
+
+### User Interface
+- **Responsive Design**: Works on desktop and mobile devices
+- **Sticky Headers**: Always accessible navigation and controls
+- **Real-time Updates**: Auto-save functionality and live preview updates
+- **Professional Styling**: Clean, modern interface with Bootstrap 5
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Canvas LMS    │    │  Azure OpenAI   │    │     Ollama      │
+│     API         │    │   (Chat/GPT)    │    │  (Embeddings)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │ Fetch Questions       │ Generate Feedback     │ Create Embeddings
+         │                       │ & Chat Responses      │
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Canvas    │  │    Chat     │  │      Vector Store       │ │
+│  │ Integration │  │   System    │  │    (ChromaDB)           │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Web Interface                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │  Question   │  │    Chat     │  │     System Prompt       │ │
+│  │   Editor    │  │ Assistant   │  │       Editor            │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 📋 Prerequisites
+
+### Required Services
+- **Python 3.11+**
+- **Canvas LMS** account with API access
+- **Azure OpenAI** subscription
+- **Ollama** (for local embeddings)
+
+### API Keys & Configuration
+- Canvas API token
+- Azure OpenAI subscription key and endpoint
+- Course ID and Quiz ID from Canvas
+
+## 🚀 Installation
+
+### 1. Clone Repository
+```bash
+git clone <repository-url>
+cd question_app
+```
+
+### 2. Create Virtual Environment
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+```bash
+pip install fastapi uvicorn httpx python-dotenv jinja2 chromadb beautifulsoup4
+```
+
+### 4. Install and Setup Ollama
+
+#### On macOS/Linux:
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Start Ollama service
+ollama serve
+```
+
+#### On Windows:
+1. Download Ollama from [https://ollama.ai/download](https://ollama.ai/download)
+2. Run the installer
+3. Open Command Prompt/PowerShell and start Ollama:
+```cmd
+ollama serve
+```
+
+#### Pull Required Model:
+```bash
+# Pull the embedding model (required for vector store)
+ollama pull nomic-embed-text
+
+# Verify installation
+ollama list
+```
+
+**Note**: Keep Ollama running in a separate terminal window throughout usage.
+
+### 5. Environment Configuration
+
+Create a `.env` file in the project root:
+
+```env
+# Canvas Configuration
+CANVAS_BASE_URL=https://your-canvas-instance.instructure.com
+CANVAS_API_TOKEN=your_canvas_api_token
+COURSE_ID=your_course_id
+QUIZ_ID=your_quiz_id
+
+# Azure OpenAI Configuration
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT_ID=your-deployment-name
+AZURE_OPENAI_SUBSCRIPTION_KEY=your_subscription_key
+AZURE_OPENAI_API_VERSION=2023-12-01-preview
+
+# Ollama Configuration (Optional - defaults shown)
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+```
+
+### 6. Start Application
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+```
+
+Access the application at: `http://localhost:8080`
+
+## 📖 Usage Guide
+
+### Initial Setup
+
+1. **Configure System Prompt**
+   - Click "Feedback System Prompt" to set up AI feedback generation
+   - Customize the prompt for your specific educational context
+
+2. **Fetch Questions from Canvas**
+   - Click "Fetch Questions" to import quiz questions from Canvas LMS
+   - Questions are automatically cleaned of HTML tags and stored locally
+
+3. **Create Vector Store**
+   - Click "Create Vector Store" to build the searchable knowledge base
+   - This enables the RAG chat assistant functionality
+
+### Question Management
+
+#### Editing Questions
+- Click on any question card to open the editor
+- Edit question text using the WYSIWYG markdown editor
+- Modify answer options and feedback
+
+#### Managing Answer Correctness
+- Use True/False buttons to set correct answers
+- **Multiple Choice/True-False**: Only one answer can be correct
+- **Multiple Answer**: Multiple answers can be correct
+- Preview updates automatically
+
+#### AI Feedback Generation
+- Click "Generate AI Feedback" to create educational explanations
+- Reviews answer correctness and provides context-aware feedback
+- Token usage is logged to browser console
+
+### Chat Assistant
+
+#### Accessing the Chat
+- Click "Chat Assistant" from the main page
+- View the Azure OpenAI model being used in the header
+
+#### Using RAG Features
+- Ask questions about quiz content, accessibility, or best practices
+- **Left Panel**: Chat conversation
+- **Right Panel**: Retrieved context chunks used for responses
+- Context is automatically found using semantic search
+
+#### Example Queries
+```
+"What are the best practices for alt text?"
+"How should forms be made accessible?"
+"Tell me about color contrast requirements"
+"What makes a good accessibility quiz question?"
+```
+
+## 🛠️ Configuration
+
+### Canvas Setup
+1. Generate API token in Canvas: Account → Settings → Approved Integrations
+2. Find Course ID: URL when viewing course (e.g., `/courses/123456`)
+3. Find Quiz ID: URL when viewing quiz (e.g., `/quizzes/789012`)
+
+### Azure OpenAI Setup
+1. Create Azure OpenAI resource in Azure Portal
+2. Deploy a GPT model (GPT-4, GPT-4o-mini recommended)
+3. Get endpoint URL and subscription key from Azure Portal
+4. Note the deployment name for configuration
+
+### Ollama Models
+- **nomic-embed-text**: High-quality embedding model for RAG
+- **Alternative models**: `all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2`
+
+## 🔧 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Main question list page |
+| `/chat` | GET | Chat assistant interface |
+| `/questions/{id}` | GET | Question editor page |
+| `/questions/{id}` | PUT | Update question data |
+| `/questions/{id}/generate-feedback` | POST | Generate AI feedback |
+| `/chat/message` | POST | Process chat message with RAG |
+| `/create-vector-store` | POST | Build ChromaDB vector store |
+| `/fetch-questions` | POST | Import questions from Canvas |
+| `/system-prompt` | GET/POST | System prompt management |
+| `/debug/config` | GET | Configuration status |
+| `/debug/ollama-test` | GET | Test Ollama connectivity |
+
+## 📁 Project Structure
+
+```
+question_app/
+├── main.py                 # FastAPI application
+├── templates/
+│   ├── index.html          # Question list page
+│   ├── edit_question.html  # Question editor
+│   ├── chat.html          # Chat assistant
+│   └── system_prompt_edit.html
+├── quiz_questions.json     # Question data storage
+├── system_prompt.txt      # AI feedback prompt
+├── vector_store/          # ChromaDB database
+├── .env                   # Environment configuration
+└── README.md              # This file
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+#### Ollama Connection Errors
+```bash
+# Check if Ollama is running
+ollama list
+
+# Restart Ollama service
+ollama serve
+
+# Test connectivity
+curl http://localhost:11434/api/tags
+```
+
+#### Vector Store Creation Fails
+1. Ensure Ollama is running and nomic-embed-text is installed
+2. Check vector store permissions in project directory
+3. Verify questions are loaded (`quiz_questions.json` exists)
+
+#### Azure OpenAI Errors
+1. Verify endpoint URL format: `https://your-resource.openai.azure.com`
+2. Check subscription key and deployment ID
+3. Ensure model is deployed and available
+
+#### Canvas API Issues
+1. Verify API token has appropriate permissions
+2. Check Course ID and Quiz ID are correct
+3. Ensure Canvas instance URL is correct
+
+### Debug Endpoints
+- `/debug/config` - Check all configuration status
+- `/debug/ollama-test` - Test Ollama connectivity and models
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support or questions:
+1. Check the troubleshooting section
+2. Review debug endpoints for configuration issues
+3. Ensure all prerequisites are properly installed
+4. Verify environment variables are correctly set
+
+## 🎯 Future Enhancements
+
+- [ ] Multiple quiz support
+- [ ] Batch question processing
+- [ ] Export functionality
+- [ ] Advanced analytics
+- [ ] Custom embedding models
+- [ ] Multi-language support
+- [ ] Question templates
+- [ ] Automated testing framework
+
+---
+
+Built with ❤️ using FastAPI, Azure OpenAI, Ollama, and ChromaDB
