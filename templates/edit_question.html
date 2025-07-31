@@ -40,6 +40,13 @@
         .navigation-buttons .btn {
             min-width: 100px;
         }
+        .tag-suggestion:hover {
+            background-color: #f8f9fa !important;
+        }
+        #tagSuggestions {
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -119,6 +126,15 @@
                                         {% if question.topic == value %}{{ label }}{% endif %}
                                     {% endfor %}
                                 </span>
+                                <span id="tagsPreview" class="ms-2" {% if not question.tags %}style="display: none;"{% endif %}>
+                                    {% if question.tags %}
+                                        {% for tag in question.tags.split(',') %}
+                                            {% if tag.strip() %}
+                                                <span class="badge bg-secondary me-1">{{ tag.strip() }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="question-text-preview mb-3">
                                 {{ question.question_text | striptags | safe }}
@@ -187,15 +203,15 @@
                                 <textarea id="questionText" name="question_text" class="form-control" rows="4">{{ question.question_text }}</textarea>
                             </div>
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label"><strong>Points Possible:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.points_possible }}" readonly>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label"><strong>Quiz ID:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.quiz_id }}" readonly>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label for="topicSelect" class="form-label"><strong>Topic:</strong></label>
                                     <select id="topicSelect" name="topic" class="form-select">
                                         {% for value, label in available_topics %}
@@ -204,6 +220,18 @@
                                         </option>
                                         {% endfor %}
                                     </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="tagsInput" class="form-label"><strong>Tags:</strong></label>
+                                    <div class="position-relative">
+                                        <input type="text" id="tagsInput" name="tags" class="form-control" 
+                                               value="{{ question.tags }}" 
+                                               placeholder="comma, separated, tags"
+                                               autocomplete="off">
+                                        <div id="tagSuggestions" class="position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-sm" 
+                                             style="display: none; z-index: 1000; max-height: 200px; overflow-y: auto;">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -384,6 +412,9 @@
                     handleCorrectnessToggle(e.target);
                 }
             });
+            
+            // Initialize tags preview on page load
+            updateTagsPreview();
         });
 
         // Function to update preview button appearance based on current mode
@@ -500,6 +531,71 @@
                 const selectedOption = topicSelect.options[topicSelect.selectedIndex];
                 const topicLabel = selectedOption.text;
                 topicPreview.innerHTML = `<i class="fas fa-tag"></i> ${topicLabel}`;
+            }
+        }
+        
+        function showTagSuggestions() {
+            const currentValue = tagsInput.value;
+            const lastCommaIndex = currentValue.lastIndexOf(',');
+            const currentTag = (lastCommaIndex >= 0 ? currentValue.slice(lastCommaIndex + 1) : currentValue).trim().toLowerCase();
+            
+            // Filter existing tags based on current input
+            const filteredTags = existingTags.filter(tag => 
+                tag.toLowerCase().includes(currentTag) && 
+                !getCurrentTags().includes(tag)
+            );
+            
+            if (filteredTags.length > 0 && currentTag.length > 0) {
+                tagSuggestions.innerHTML = filteredTags.map(tag => 
+                    `<div class="tag-suggestion px-3 py-2 border-bottom cursor-pointer hover:bg-light" style="cursor: pointer;">${tag}</div>`
+                ).join('');
+                tagSuggestions.style.display = 'block';
+            } else {
+                tagSuggestions.style.display = 'none';
+            }
+        }
+        
+        function getCurrentTags() {
+            const currentValue = tagsInput.value;
+            return currentValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        }
+        
+        function addTagToInput(tag) {
+            const currentValue = tagsInput.value;
+            const lastCommaIndex = currentValue.lastIndexOf(',');
+            
+            let newValue;
+            if (lastCommaIndex >= 0) {
+                // Replace the partial tag after the last comma
+                newValue = currentValue.slice(0, lastCommaIndex + 1) + ' ' + tag;
+            } else {
+                // Replace the entire input if no comma exists
+                newValue = tag;
+            }
+            
+            tagsInput.value = newValue;
+            tagSuggestions.style.display = 'none';
+            tagsInput.focus();
+            
+            // Move cursor to end
+            tagsInput.setSelectionRange(tagsInput.value.length, tagsInput.value.length);
+            
+            updateTagsPreview();
+            scheduleAutoSave();
+        }
+        
+        function updateTagsPreview() {
+            const tagsPreview = document.getElementById('tagsPreview');
+            if (tagsPreview) {
+                const tags = getCurrentTags();
+                if (tags.length > 0) {
+                    tagsPreview.innerHTML = tags.map(tag => 
+                        `<span class="badge bg-secondary me-1">${tag}</span>`
+                    ).join('');
+                    tagsPreview.style.display = 'inline';
+                } else {
+                    tagsPreview.style.display = 'none';
+                }
             }
         }
 
@@ -693,6 +789,7 @@
             const data = {
                 question_text: questionTextEditor.value() || '',
                 topic: document.getElementById('topicSelect')?.value || 'general',
+                tags: document.getElementById('tagsInput')?.value || '',
                 correct_comments: '',  // Not used in new design
                 incorrect_comments: '',  // Not used in new design
                 neutral_comments: generalFeedbackEditor.value() || '',  // General feedback
@@ -786,6 +883,38 @@
             topicSelect.addEventListener('change', function() {
                 updateTopicPreview();
                 scheduleAutoSave();
+            });
+        }
+        
+        // Tag input functionality
+        const tagsInput = document.getElementById('tagsInput');
+        const tagSuggestions = document.getElementById('tagSuggestions');
+        const existingTags = {{ existing_tags | tojson }};
+        
+        if (tagsInput && tagSuggestions) {
+            // Show suggestions on focus and input
+            tagsInput.addEventListener('input', function() {
+                showTagSuggestions();
+                updateTagsPreview();
+                scheduleAutoSave();
+            });
+            
+            tagsInput.addEventListener('focus', function() {
+                showTagSuggestions();
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!tagsInput.contains(e.target) && !tagSuggestions.contains(e.target)) {
+                    tagSuggestions.style.display = 'none';
+                }
+            });
+            
+            // Handle tag suggestions
+            tagSuggestions.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tag-suggestion')) {
+                    addTagToInput(e.target.textContent);
+                }
             });
         }
 

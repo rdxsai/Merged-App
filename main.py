@@ -85,6 +85,7 @@ class Question(BaseModel):
 class QuestionUpdate(BaseModel):
     question_text: str
     topic: str = "general"
+    tags: str = ""
     correct_comments: str = ""
     incorrect_comments: str = ""
     neutral_comments: str = ""
@@ -374,7 +375,8 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> tuple[List[s
             "correct_answers": " | ".join(correct_answers) if correct_answers else "",  # Convert list to string
             "answer_count": len(question.get('answers', [])),
             "has_feedback": bool(general_feedback),
-            "topic": extract_topic_from_text(question_text, general_feedback)
+            "topic": question.get('topic', extract_topic_from_text(question_text, general_feedback)),
+            "tags": question.get('tags', '')
         }
         
         documents.append(document_text)
@@ -403,6 +405,20 @@ def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
             return topic
     
     return "general"
+
+def get_all_existing_tags(questions: List[Dict[str, Any]]) -> List[str]:
+    """Extract all unique tags from existing questions"""
+    all_tags = set()
+    
+    for question in questions:
+        tags = question.get('tags', '')
+        if tags and isinstance(tags, str):
+            # Split by comma and clean up whitespace
+            question_tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            all_tags.update(question_tags)
+    
+    # Return sorted list of unique tags
+    return sorted(list(all_tags))
 
 async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, Any]]:
     """Search the ChromaDB vector store for relevant chunks"""
@@ -778,6 +794,10 @@ async def edit_question(request: Request, question_id: int):
         question['topic'] = extract_topic_from_text(question.get('question_text', ''), 
                                                    question.get('neutral_comments', ''))
     
+    # Ensure question has a tags field (backward compatibility)
+    if 'tags' not in question:
+        question['tags'] = ''
+    
     # Available topic options
     available_topics = [
         ("accessibility", "Accessibility"),
@@ -790,10 +810,14 @@ async def edit_question(request: Request, question_id: int):
         ("general", "General")
     ]
     
+    # Get all existing tags for suggestions
+    existing_tags = get_all_existing_tags(questions)
+    
     return templates.TemplateResponse("edit_question.html", {
         "request": request,
         "question": question,
         "available_topics": available_topics,
+        "existing_tags": existing_tags,
         "prev_question_id": prev_question_id,
         "next_question_id": next_question_id,
         "current_position": current_index + 1,
@@ -992,13 +1016,21 @@ async def create_vector_store():
         # Create summary statistics
         topic_counts = {}
         question_type_counts = {}
+        tag_counts = {}
         
         for metadata in metadatas:
             topic = metadata.get('topic', 'unknown')
             question_type = metadata.get('question_type', 'unknown')
+            tags = metadata.get('tags', '')
             
             topic_counts[topic] = topic_counts.get(topic, 0) + 1
             question_type_counts[question_type] = question_type_counts.get(question_type, 0) + 1
+            
+            # Count individual tags
+            if tags:
+                individual_tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
+                for tag in individual_tags:
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
         
         logger.info("Vector store creation completed successfully")
         
@@ -1011,6 +1043,7 @@ async def create_vector_store():
                 "embedding_dimension": len(embeddings[0]) if embeddings else 0,
                 "topics": topic_counts,
                 "question_types": question_type_counts,
+                "tags": tag_counts,
                 "vector_store_path": "./vector_store"
             }
         }
@@ -1247,6 +1280,7 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
         questions[question_index].update({
             'question_text': question_data.question_text,
             'topic': question_data.topic,
+            'tags': question_data.tags,
             'correct_comments': question_data.correct_comments,
             'incorrect_comments': question_data.incorrect_comments,
             'neutral_comments': question_data.neutral_comments,

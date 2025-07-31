@@ -405,6 +405,7 @@
                             <strong>Q${chunk.metadata.question_id}</strong> • 
                             ${chunk.metadata.question_type.replace('_', ' ')} • 
                             Topic: ${chunk.metadata.topic}
+                            ${chunk.metadata.tags ? `<br><small><strong>Tags:</strong> ${escapeHtml(chunk.metadata.tags)}</small>` : ''}
                             ${chunk.metadata.correct_answers ? `<br><small><strong>Correct:</strong> ${escapeHtml(chunk.metadata.correct_answers)}</small>` : ''}
                         </div>
                         <div class="chunk-content">
