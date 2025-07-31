@@ -201,18 +201,15 @@ Access the application at: `http://localhost:8080`
 ## 🛠️ Configuration
 
 ### Canvas Setup
-1. Generate API token in Canvas: Account → Settings → Approved Integrations
+1. Generate API token in Canvas: Account → Settings → Approved Integrations → New Access Token
 2. Find Course ID: URL when viewing course (e.g., `/courses/123456`)
 3. Find Quiz ID: URL when viewing quiz (e.g., `/quizzes/789012`)
 
 ### Azure OpenAI Setup
-1. Create Azure OpenAI resource in Azure Portal
-2. Deploy a GPT model (GPT-4, GPT-4o-mini recommended)
-3. Get endpoint URL and subscription key from Azure Portal
-4. Note the deployment name for configuration
+1. Add endpoint details to .env file
 
 ### Ollama Models
-- **nomic-embed-text**: High-quality embedding model for RAG
+- **nomic-embed-text**: High-quality embedding model for RAG (Suggested model)
 - **Alternative models**: `all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2`
 
 ## 🔧 API Endpoints
