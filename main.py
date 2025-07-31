@@ -84,6 +84,7 @@ class Question(BaseModel):
 
 class QuestionUpdate(BaseModel):
     question_text: str
+    topic: str = "general"
     correct_comments: str = ""
     incorrect_comments: str = ""
     neutral_comments: str = ""
@@ -772,9 +773,27 @@ async def edit_question(request: Request, question_id: int):
     prev_question_id = question_ids[current_index - 1] if current_index > 0 else None
     next_question_id = question_ids[current_index + 1] if current_index < len(question_ids) - 1 else None
     
+    # Ensure question has a topic field (backward compatibility)
+    if 'topic' not in question:
+        question['topic'] = extract_topic_from_text(question.get('question_text', ''), 
+                                                   question.get('neutral_comments', ''))
+    
+    # Available topic options
+    available_topics = [
+        ("accessibility", "Accessibility"),
+        ("navigation", "Navigation"),
+        ("forms", "Forms"),
+        ("media", "Media"),
+        ("color", "Color & Contrast"),
+        ("keyboard", "Keyboard"),
+        ("content", "Content & Structure"),
+        ("general", "General")
+    ]
+    
     return templates.TemplateResponse("edit_question.html", {
         "request": request,
         "question": question,
+        "available_topics": available_topics,
         "prev_question_id": prev_question_id,
         "next_question_id": next_question_id,
         "current_position": current_index + 1,
@@ -1227,6 +1246,7 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
         # Update the question
         questions[question_index].update({
             'question_text': question_data.question_text,
+            'topic': question_data.topic,
             'correct_comments': question_data.correct_comments,
             'incorrect_comments': question_data.incorrect_comments,
             'neutral_comments': question_data.neutral_comments,

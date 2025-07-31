@@ -113,6 +113,12 @@
                             <div class="mb-3">
                                 <strong>{{ question.question_type.replace('_', ' ').title() }}</strong>
                                 <span class="badge bg-secondary ms-2">{{ question.points_possible }} points</span>
+                                <span class="badge bg-info ms-2" id="topicPreview">
+                                    <i class="fas fa-tag"></i> 
+                                    {% for value, label in available_topics %}
+                                        {% if question.topic == value %}{{ label }}{% endif %}
+                                    {% endfor %}
+                                </span>
                             </div>
                             <div class="question-text-preview mb-3">
                                 {{ question.question_text | striptags | safe }}
@@ -180,14 +186,24 @@
                                 <label for="questionText" class="form-label"><strong>Question Text:</strong></label>
                                 <textarea id="questionText" name="question_text" class="form-control" rows="4">{{ question.question_text }}</textarea>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
                                     <label class="form-label"><strong>Points Possible:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.points_possible }}" readonly>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label"><strong>Quiz ID:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.quiz_id }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="topicSelect" class="form-label"><strong>Topic:</strong></label>
+                                    <select id="topicSelect" name="topic" class="form-select">
+                                        {% for value, label in available_topics %}
+                                        <option value="{{ value }}" {% if question.topic == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -475,6 +491,17 @@
                 }
             });
         }
+        
+        function updateTopicPreview() {
+            const topicSelect = document.getElementById('topicSelect');
+            const topicPreview = document.getElementById('topicPreview');
+            
+            if (topicSelect && topicPreview) {
+                const selectedOption = topicSelect.options[topicSelect.selectedIndex];
+                const topicLabel = selectedOption.text;
+                topicPreview.innerHTML = `<i class="fas fa-tag"></i> ${topicLabel}`;
+            }
+        }
 
         // Generate AI Feedback
         document.getElementById('generateFeedbackBtn').addEventListener('click', async () => {
@@ -665,6 +692,7 @@
             // Collect basic question data - use SimpleMDE values
             const data = {
                 question_text: questionTextEditor.value() || '',
+                topic: document.getElementById('topicSelect')?.value || 'general',
                 correct_comments: '',  // Not used in new design
                 incorrect_comments: '',  // Not used in new design
                 neutral_comments: generalFeedbackEditor.value() || '',  // General feedback
@@ -751,6 +779,15 @@
         // Add event listeners for auto-save
         document.getElementById('questionForm').addEventListener('input', scheduleAutoSave);
         document.getElementById('questionForm').addEventListener('change', scheduleAutoSave);
+        
+        // Topic dropdown change handler
+        const topicSelect = document.getElementById('topicSelect');
+        if (topicSelect) {
+            topicSelect.addEventListener('change', function() {
+                updateTopicPreview();
+                scheduleAutoSave();
+            });
+        }
 
         // Handle textarea changes
         document.querySelectorAll('textarea').forEach(textarea => {
