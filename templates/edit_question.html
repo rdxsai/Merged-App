@@ -62,8 +62,13 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1 class="h2">
+                        {% if is_new_question %}
+                        <i class="fas fa-plus text-success"></i> Create New Question
+                        <small class="text-muted fs-6">({{ total_questions }} questions in database)</small>
+                        {% else %}
                         <i class="fas fa-edit text-primary"></i> Edit Question
                         <small class="text-muted fs-6">({{ current_position }} of {{ total_questions }})</small>
+                        {% endif %}
                     </h1>
                         <div class="btn-group navigation-buttons">
                         {% if prev_question_id %}
@@ -80,6 +85,10 @@
                             <i class="fas fa-list"></i> List
                         </a>
                         
+                        <a href="/questions/new" class="btn btn-success">
+                            <i class="fas fa-plus"></i> New
+                        </a>
+                        
                         {% if next_question_id %}
                         <a href="/questions/{{ next_question_id }}" class="btn btn-outline-secondary" id="nextBtn">
                             Next <i class="fas fa-chevron-right"></i>
@@ -93,6 +102,7 @@
                 </div>
 
                 <!-- Progress indicator -->
+                {% if not is_new_question %}
                 <div class="progress-container">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="text-muted">Question Progress</span>
@@ -107,6 +117,19 @@
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="progress-container">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle"></i> Creating New Question
+                        </h6>
+                        <p class="mb-2">Fill out the question details below. The question will be saved automatically as you type.</p>
+                        <button id="manualSaveBtn" class="btn btn-success btn-sm">
+                            <i class="fas fa-save"></i> Save Question Now
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Question Preview -->
                 <div class="card mb-4">
@@ -133,6 +156,16 @@
                                                 <span class="badge bg-secondary me-1">{{ tag.strip() }}</span>
                                             {% endif %}
                                         {% endfor %}
+                                    {% endif %}
+                                </span>
+                                <span id="objectivePreview" class="ms-2" {% if not question.learning_objective %}style="display: none;"{% endif %}>
+                                    {% if question.learning_objective and learning_objectives %}
+                                        {% set objective_index = question.learning_objective | int %}
+                                        {% if objective_index < learning_objectives|length %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-bullseye"></i> Obj {{ objective_index + 1 }}
+                                            </span>
+                                        {% endif %}
                                     {% endif %}
                                 </span>
                             </div>
@@ -191,7 +224,7 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label"><strong>Question ID:</strong></label>
-                                    <input type="text" class="form-control" value="{{ question.id }}" readonly>
+                                    <input type="text" class="form-control" value="{% if is_new_question %}Will be assigned after saving{% else %}{{ question.id }}{% endif %}" readonly>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label"><strong>Type:</strong></label>
@@ -203,15 +236,17 @@
                                 <textarea id="questionText" name="question_text" class="form-control" rows="4">{{ question.question_text }}</textarea>
                             </div>
                             <div class="row mb-3">
-                                <div class="col-md-3">
+                                <div class="col-md-6">
                                     <label class="form-label"><strong>Points Possible:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.points_possible }}" readonly>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-6">
                                     <label class="form-label"><strong>Quiz ID:</strong></label>
                                     <input type="text" class="form-control" value="{{ question.quiz_id }}" readonly>
                                 </div>
-                                <div class="col-md-3">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
                                     <label for="topicSelect" class="form-label"><strong>Topic:</strong></label>
                                     <select id="topicSelect" name="topic" class="form-select">
                                         {% for value, label in available_topics %}
@@ -221,7 +256,24 @@
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
+                                    <label for="learningObjectiveSelect" class="form-label"><strong>Learning Objective:</strong></label>
+                                    <select id="learningObjectiveSelect" name="learning_objective" class="form-select">
+                                        <option value="">Select Learning Objective...</option>
+                                        {% for objective in learning_objectives %}
+                                        <option value="{{ loop.index0 }}" {% if question.learning_objective == loop.index0|string %}selected{% endif %}>
+                                            Objective {{ loop.index }}: {{ objective.text[:60] }}{% if objective.text|length > 60 %}...{% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if not learning_objectives %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        <a href="/objectives" target="_blank">Create learning objectives</a> to link questions
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
                                     <label for="tagsInput" class="form-label"><strong>Tags:</strong></label>
                                     <div class="position-relative">
                                         <input type="text" id="tagsInput" name="tags" class="form-control" 
@@ -347,10 +399,12 @@
     <!-- SimpleMDE JS -->
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
     <script>
-        const questionId = {{ question.id }};
+        const questionId = {% if is_new_question %}'new'{% else %}{{ question.id }}{% endif %};
         let saveTimeout;
         let isSaving = false;
         let isGeneratingFeedback = false;
+        let isNewQuestion = {{ 'true' if is_new_question else 'false' }};
+        let currentQuestionId = {% if is_new_question %}'new'{% else %}{{ question.id }}{% endif %};
         
         // Initialize SimpleMDE editors
         let questionTextEditor;
@@ -413,8 +467,18 @@
                 }
             });
             
-            // Initialize tags preview on page load
+            // Initialize tags and objective preview on page load
             updateTagsPreview();
+            updateObjectivePreview();
+            
+            // Manual save button for new questions
+            const manualSaveBtn = document.getElementById('manualSaveBtn');
+            if (manualSaveBtn) {
+                manualSaveBtn.addEventListener('click', function() {
+                    console.log('Manual save triggered');
+                    autoSave();
+                });
+            }
         });
 
         // Function to update preview button appearance based on current mode
@@ -438,11 +502,17 @@
 
         // Handle correctness toggle for answer options
         function handleCorrectnessToggle(buttonElement) {
+            console.log('Correctness toggle clicked');
             const answerId = buttonElement.getAttribute('data-answer-id');
             const questionType = buttonElement.getAttribute('data-question-type');
             const weightInput = document.querySelector(`input[name="answer_weight_${answerId}"]`);
             
-            if (!weightInput) return;
+            console.log('Answer ID:', answerId, 'Question Type:', questionType, 'Weight Input:', weightInput);
+            
+            if (!weightInput) {
+                console.error('Weight input not found for answer ID:', answerId);
+                return;
+            }
             
             const currentWeight = parseFloat(weightInput.value) || 0;
             const isCurrentlyCorrect = currentWeight > 0;
@@ -598,6 +668,23 @@
                 }
             }
         }
+        
+        function updateObjectivePreview() {
+            const learningObjectiveSelect = document.getElementById('learningObjectiveSelect');
+            const objectivePreview = document.getElementById('objectivePreview');
+            
+            if (learningObjectiveSelect && objectivePreview) {
+                const selectedValue = learningObjectiveSelect.value;
+                if (selectedValue && selectedValue !== '') {
+                    const selectedOption = learningObjectiveSelect.options[learningObjectiveSelect.selectedIndex];
+                    const objectiveNumber = parseInt(selectedValue) + 1;
+                    objectivePreview.innerHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-bullseye"></i> Obj ${objectiveNumber}</span>`;
+                    objectivePreview.style.display = 'inline';
+                } else {
+                    objectivePreview.style.display = 'none';
+                }
+            }
+        }
 
         // Generate AI Feedback
         document.getElementById('generateFeedbackBtn').addEventListener('click', async () => {
@@ -750,32 +837,68 @@
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
             }
-            saveTimeout = setTimeout(autoSave, 1000); // Save after 1 second of inactivity
+            
+            console.log('Auto-save scheduled. Is new question:', isNewQuestion, 'Current ID:', currentQuestionId);
+            
+            // For new questions, save immediately after a shorter delay
+            const delay = (isNewQuestion && currentQuestionId === 'new') ? 500 : 1000;
+            saveTimeout = setTimeout(autoSave, delay);
         }
 
         async function autoSave() {
             if (isSaving) return;
             
+            console.log('Starting auto-save...');
             isSaving = true;
             const formData = collectFormData();
+            console.log('Form data collected:', formData);
             
             try {
-                const response = await fetch(`/questions/${questionId}`, {
-                    method: 'PUT',
+                let url, method;
+                if (isNewQuestion && currentQuestionId === 'new') {
+                    // Creating a new question
+                    url = '/questions/new';
+                    method = 'POST';
+                    console.log('Creating new question with POST to:', url);
+                } else {
+                    // Updating existing question
+                    url = `/questions/${currentQuestionId}`;
+                    method = 'PUT';
+                    console.log('Updating existing question with PUT to:', url);
+                }
+                
+                console.log('Sending request:', method, url, formData);
+                const response = await fetch(url, {
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 });
 
+                console.log('Response status:', response.status);
                 if (response.ok) {
+                    const result = await response.json();
+                    console.log('Save successful:', result);
                     showAutoSaveIndicator();
+                    
+                    // If it was a new question, update the current question ID and show options
+                    if (isNewQuestion && currentQuestionId === 'new' && result.question_id) {
+                        console.log('New question created with ID:', result.question_id);
+                        currentQuestionId = result.question_id;
+                        isNewQuestion = false;
+                        
+                        // Show success message with navigation options
+                        showQuestionCreatedAlert(result.question_id);
+                    }
                 } else {
                     const error = await response.json();
                     console.error('Save failed:', error);
+                    showAlert('danger', `Save failed: ${error.detail || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Save error:', error);
+                showAlert('danger', `Save error: ${error.message}`);
             } finally {
                 isSaving = false;
             }
@@ -790,6 +913,7 @@
                 question_text: questionTextEditor.value() || '',
                 topic: document.getElementById('topicSelect')?.value || 'general',
                 tags: document.getElementById('tagsInput')?.value || '',
+                learning_objective: document.getElementById('learningObjectiveSelect')?.value || '',
                 correct_comments: '',  // Not used in new design
                 incorrect_comments: '',  // Not used in new design
                 neutral_comments: generalFeedbackEditor.value() || '',  // General feedback
@@ -835,6 +959,104 @@
             setTimeout(() => {
                 indicator.style.display = 'none';
             }, 2000);
+        }
+        
+        // Show alert function
+        function showAlert(type, message) {
+            // Create alert container if it doesn't exist
+            let alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) {
+                alertContainer = document.createElement('div');
+                alertContainer.id = 'alertContainer';
+                document.querySelector('.container-fluid').insertBefore(alertContainer, document.querySelector('.container-fluid').firstChild);
+            }
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+        
+        // Show question created alert with navigation options
+        function showQuestionCreatedAlert(questionId) {
+            // Create alert container if it doesn't exist
+            let alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) {
+                alertContainer = document.createElement('div');
+                alertContainer.id = 'alertContainer';
+                document.querySelector('.container-fluid').insertBefore(alertContainer, document.querySelector('.container-fluid').firstChild);
+            }
+            
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <h6 class="alert-heading">
+                    <i class="fas fa-check-circle"></i> Question Created Successfully!
+                </h6>
+                <p class="mb-3">Your question has been saved with ID: <strong>${questionId}</strong></p>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='/questions/${questionId}'">
+                        <i class="fas fa-edit"></i> Continue Editing
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.location.href='/?t=' + Date.now()">
+                        <i class="fas fa-list"></i> Back to Question List
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="window.location.href='/questions/new'">
+                        <i class="fas fa-plus"></i> Create Another Question
+                    </button>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            // Update the current page to reflect the question has been created
+            updatePageForCreatedQuestion(questionId);
+        }
+        
+        // Update the page UI to reflect that the question has been created
+        function updatePageForCreatedQuestion(questionId) {
+            // Update the header
+            const header = document.querySelector('h1.h2');
+            if (header) {
+                header.innerHTML = `
+                    <i class="fas fa-edit text-primary"></i> Edit Question
+                    <small class="text-muted fs-6">(Question ID: ${questionId})</small>
+                `;
+            }
+            
+            // Update the question ID field
+            const questionIdInput = document.querySelector('input[readonly]');
+            if (questionIdInput && questionIdInput.value.includes('Will be assigned')) {
+                questionIdInput.value = questionId;
+            }
+            
+            // Hide the manual save button
+            const manualSaveBtn = document.getElementById('manualSaveBtn');
+            if (manualSaveBtn) {
+                manualSaveBtn.style.display = 'none';
+            }
+            
+            // Update the progress/info container
+            const progressContainer = document.querySelector('.progress-container');
+            if (progressContainer && progressContainer.querySelector('.alert-info')) {
+                progressContainer.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-check-circle"></i> Question Saved
+                        </h6>
+                        <p class="mb-0">Question has been created and saved. You can continue editing or navigate to other questions.</p>
+                    </div>
+                `;
+            }
         }
 
         function showSuccessMessage(message) {
@@ -882,6 +1104,15 @@
         if (topicSelect) {
             topicSelect.addEventListener('change', function() {
                 updateTopicPreview();
+                scheduleAutoSave();
+            });
+        }
+        
+        // Learning objective dropdown change handler
+        const learningObjectiveSelect = document.getElementById('learningObjectiveSelect');
+        if (learningObjectiveSelect) {
+            learningObjectiveSelect.addEventListener('change', function() {
+                updateObjectivePreview();
                 scheduleAutoSave();
             });
         }

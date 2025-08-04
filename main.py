@@ -86,12 +86,31 @@ class QuestionUpdate(BaseModel):
     question_text: str
     topic: str = "general"
     tags: str = ""
+    learning_objective: str = ""
     correct_comments: str = ""
     incorrect_comments: str = ""
     neutral_comments: str = ""
     correct_comments_html: str = ""
     incorrect_comments_html: str = ""
     neutral_comments_html: str = ""
+    answers: List[Answer] = []
+
+class LearningObjective(BaseModel):
+    text: str
+    blooms_level: str = "understand"
+    priority: str = "medium"
+
+class ObjectivesUpdate(BaseModel):
+    objectives: List[LearningObjective] = []
+
+class NewQuestion(BaseModel):
+    question_text: str
+    question_type: str = "multiple_choice_question"
+    topic: str = "general"
+    tags: str = ""
+    learning_objective: str = ""
+    points_possible: float = 1.0
+    neutral_comments: str = ""
     answers: List[Answer] = []
 
 # Utility functions
@@ -114,6 +133,29 @@ def save_questions(questions: List[Dict[str, Any]]) -> bool:
         return True
     except Exception as e:
         logger.error(f"Error saving questions: {e}")
+        return False
+
+def load_objectives() -> List[Dict[str, Any]]:
+    """Load learning objectives from JSON file"""
+    try:
+        objectives_file = 'learning_objectives.json'
+        if os.path.exists(objectives_file):
+            with open(objectives_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        logger.error(f"Error loading objectives: {e}")
+        return []
+
+def save_objectives(objectives: List[Dict[str, Any]]) -> bool:
+    """Save learning objectives to JSON file"""
+    try:
+        objectives_file = 'learning_objectives.json'
+        with open(objectives_file, 'w', encoding='utf-8') as f:
+            json.dump(objectives, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving objectives: {e}")
         return False
 
 def load_system_prompt() -> str:
@@ -376,7 +418,8 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> tuple[List[s
             "answer_count": len(question.get('answers', [])),
             "has_feedback": bool(general_feedback),
             "topic": question.get('topic', extract_topic_from_text(question_text, general_feedback)),
-            "tags": question.get('tags', '')
+            "tags": question.get('tags', ''),
+            "learning_objective": question.get('learning_objective', '')
         }
         
         documents.append(document_text)
@@ -736,12 +779,21 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
 async def home(request: Request):
     """Home page showing all questions"""
     questions = load_questions()
-    return templates.TemplateResponse("index.html", {
+    
+    # Create response with cache-busting headers
+    response = templates.TemplateResponse("index.html", {
         "request": request, 
         "questions": questions,
         "course_id": COURSE_ID,
         "quiz_id": QUIZ_ID
     })
+    
+    # Add cache-busting headers to prevent browser caching issues
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
+    return response
 
 @app.post("/fetch-questions")
 async def fetch_questions():
@@ -773,6 +825,106 @@ async def delete_question(question_id: int):
         logger.error(f"Error deleting question {question_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/questions/new", response_class=HTMLResponse)
+async def new_question_page(request: Request):
+    """Show new question creation page"""
+    questions = load_questions()
+    
+    # Create a template new question
+    new_question = {
+        'id': 'new',
+        'question_text': 'Enter your question text here...',
+        'question_type': 'multiple_choice_question',
+        'points_possible': 1.0,
+        'quiz_id': QUIZ_ID,
+        'topic': 'general',
+        'tags': '',
+        'learning_objective': '',
+        'neutral_comments': '',
+        'answers': [
+            {'id': 1, 'text': 'Answer option 1', 'weight': 100, 'html': ''},
+            {'id': 2, 'text': 'Answer option 2', 'weight': 0, 'html': ''},
+            {'id': 3, 'text': 'Answer option 3', 'weight': 0, 'html': ''},
+            {'id': 4, 'text': 'Answer option 4', 'weight': 0, 'html': ''}
+        ]
+    }
+    
+    # Available topic options
+    available_topics = [
+        ("accessibility", "Accessibility"),
+        ("navigation", "Navigation"),
+        ("forms", "Forms"),
+        ("media", "Media"),
+        ("color", "Color & Contrast"),
+        ("keyboard", "Keyboard"),
+        ("content", "Content & Structure"),
+        ("general", "General")
+    ]
+    
+    # Get all existing tags for suggestions
+    existing_tags = get_all_existing_tags(questions)
+    
+    # Get learning objectives for dropdown
+    learning_objectives = load_objectives()
+    
+    return templates.TemplateResponse("edit_question.html", {
+        "request": request,
+        "question": new_question,
+        "available_topics": available_topics,
+        "existing_tags": existing_tags,
+        "learning_objectives": learning_objectives,
+        "prev_question_id": None,
+        "next_question_id": None,
+        "current_position": 0,
+        "total_questions": len(questions),
+        "is_new_question": True
+    })
+
+@app.post("/questions/new")
+async def create_new_question(question_data: QuestionUpdate):
+    """Create a new question"""
+    try:
+        questions = load_questions()
+        
+        # Generate new ID (find the highest existing ID and add 1)
+        max_id = max([q.get('id', 0) for q in questions] + [0])
+        new_id = max_id + 1
+        
+        # Create new question object
+        new_question = {
+            'id': new_id,
+            'question_text': question_data.question_text,
+            'question_type': 'multiple_choice_question',  # Default type
+            'points_possible': 1.0,  # Default points
+            'quiz_id': QUIZ_ID,
+            'topic': question_data.topic,
+            'tags': question_data.tags,
+            'learning_objective': question_data.learning_objective,
+            'correct_comments': question_data.correct_comments,
+            'incorrect_comments': question_data.incorrect_comments,
+            'neutral_comments': question_data.neutral_comments,
+            'correct_comments_html': question_data.correct_comments_html,
+            'incorrect_comments_html': question_data.incorrect_comments_html,
+            'neutral_comments_html': question_data.neutral_comments_html,
+            'answers': [answer.model_dump() for answer in question_data.answers]
+        }
+        
+        # Add to questions list
+        questions.append(new_question)
+        
+        if save_questions(questions):
+            logger.info(f"Created new question with ID {new_id}")
+            return {
+                "success": True, 
+                "message": "Question created successfully",
+                "question_id": new_id
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save new question")
+    except Exception as e:
+        logger.error(f"Error creating new question: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/questions/{question_id}", response_class=HTMLResponse)
 async def edit_question(request: Request, question_id: int):
     """Show question edit page"""
@@ -798,6 +950,10 @@ async def edit_question(request: Request, question_id: int):
     if 'tags' not in question:
         question['tags'] = ''
     
+    # Ensure question has a learning_objective field (backward compatibility)
+    if 'learning_objective' not in question:
+        question['learning_objective'] = ''
+    
     # Available topic options
     available_topics = [
         ("accessibility", "Accessibility"),
@@ -813,11 +969,15 @@ async def edit_question(request: Request, question_id: int):
     # Get all existing tags for suggestions
     existing_tags = get_all_existing_tags(questions)
     
+    # Get learning objectives for dropdown
+    learning_objectives = load_objectives()
+    
     return templates.TemplateResponse("edit_question.html", {
         "request": request,
         "question": question,
         "available_topics": available_topics,
         "existing_tags": existing_tags,
+        "learning_objectives": learning_objectives,
         "prev_question_id": prev_question_id,
         "next_question_id": next_question_id,
         "current_position": current_index + 1,
@@ -1205,6 +1365,31 @@ async def test_system_prompt_page(request: Request):
     """Test page for system prompt functionality"""
     return templates.TemplateResponse("test_system_prompt.html", {"request": request})
 
+@app.get("/objectives", response_class=HTMLResponse)
+async def objectives_page(request: Request):
+    """Learning objectives management page"""
+    objectives = load_objectives()
+    return templates.TemplateResponse("objectives.html", {
+        "request": request,
+        "objectives": objectives
+    })
+
+@app.post("/objectives")
+async def save_objectives_endpoint(objectives_data: ObjectivesUpdate):
+    """Save learning objectives"""
+    try:
+        # Convert Pydantic models to dictionaries
+        objectives_list = [obj.model_dump() for obj in objectives_data.objectives]
+        
+        if save_objectives(objectives_list):
+            logger.info(f"Saved {len(objectives_list)} learning objectives")
+            return {"success": True, "message": f"Successfully saved {len(objectives_list)} learning objectives"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save learning objectives")
+    except Exception as e:
+        logger.error(f"Error saving objectives: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/debug/config")
 async def debug_config():
     """Debug endpoint to check configuration"""
@@ -1281,13 +1466,14 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
             'question_text': question_data.question_text,
             'topic': question_data.topic,
             'tags': question_data.tags,
+            'learning_objective': question_data.learning_objective,
             'correct_comments': question_data.correct_comments,
             'incorrect_comments': question_data.incorrect_comments,
             'neutral_comments': question_data.neutral_comments,
             'correct_comments_html': question_data.correct_comments_html,
             'incorrect_comments_html': question_data.incorrect_comments_html,
             'neutral_comments_html': question_data.neutral_comments_html,
-            'answers': [answer.dict() for answer in question_data.answers]
+            'answers': [answer.model_dump() for answer in question_data.answers]
         })
         
         if save_questions(questions):
