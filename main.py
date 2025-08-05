@@ -734,6 +734,90 @@ Focus on educational value - help students understand the principles behind web 
         logger.error(f"Error type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Failed to generate feedback: {str(e)}")
 
+async def fetch_courses() -> List[Dict[str, Any]]:
+    """Fetch all available courses for the user"""
+    if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
+        logger.error("Missing Canvas configuration")
+        raise HTTPException(status_code=400, detail="Canvas API configuration is incomplete")
+    
+    headers = {"Authorization": f"Bearer {CANVAS_API_TOKEN}"}
+    courses = []
+    
+    try:
+        url = f"{CANVAS_BASE_URL}/api/v1/courses"
+        params = {
+            "enrollment_state": "active",
+            "per_page": 100,
+            "include": ["term"]
+        }
+        
+        async with httpx.AsyncClient() as client:
+            logger.info(f"Fetching courses from: {url}")
+            response = await client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            
+            courses_data = response.json()
+            
+            for course in courses_data:
+                courses.append({
+                    "id": course.get("id"),
+                    "name": course.get("name"),
+                    "course_code": course.get("course_code"),
+                    "enrollment_term_id": course.get("enrollment_term_id"),
+                    "term": course.get("term", {}).get("name", "Unknown Term") if course.get("term") else "Unknown Term"
+                })
+            
+            logger.info(f"Fetched {len(courses)} courses")
+            return courses
+            
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Canvas API HTTP error fetching courses: {e}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Canvas API error: {e}")
+    except Exception as e:
+        logger.error(f"Error fetching courses: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch courses: {str(e)}")
+
+async def fetch_quizzes(course_id: str) -> List[Dict[str, Any]]:
+    """Fetch all quizzes for a specific course"""
+    if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
+        logger.error("Missing Canvas configuration")
+        raise HTTPException(status_code=400, detail="Canvas API configuration is incomplete")
+    
+    headers = {"Authorization": f"Bearer {CANVAS_API_TOKEN}"}
+    quizzes = []
+    
+    try:
+        url = f"{CANVAS_BASE_URL}/api/v1/courses/{course_id}/quizzes"
+        params = {"per_page": 100}
+        
+        async with httpx.AsyncClient() as client:
+            logger.info(f"Fetching quizzes for course {course_id} from: {url}")
+            response = await client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            
+            quizzes_data = response.json()
+            
+            for quiz in quizzes_data:
+                quizzes.append({
+                    "id": quiz.get("id"),
+                    "title": quiz.get("title"),
+                    "description": quiz.get("description", ""),
+                    "question_count": quiz.get("question_count", 0),
+                    "published": quiz.get("published", False),
+                    "due_at": quiz.get("due_at"),
+                    "quiz_type": quiz.get("quiz_type", "assignment")
+                })
+            
+            logger.info(f"Fetched {len(quizzes)} quizzes for course {course_id}")
+            return quizzes
+            
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Canvas API HTTP error fetching quizzes: {e}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Canvas API error: {e}")
+    except Exception as e:
+        logger.error(f"Error fetching quizzes for course {course_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch quizzes: {str(e)}")
+
 async def fetch_all_questions() -> List[Dict[str, Any]]:
     """Fetch all questions from Canvas API with pagination"""
     if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN, COURSE_ID, QUIZ_ID]):
@@ -794,6 +878,51 @@ async def home(request: Request):
     response.headers["Expires"] = "0"
     
     return response
+
+@app.get("/api/courses")
+async def get_courses():
+    """Get all available courses"""
+    try:
+        courses = await fetch_courses()
+        return {"success": True, "courses": courses}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching courses: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/courses/{course_id}/quizzes")
+async def get_quizzes(course_id: str):
+    """Get all quizzes for a specific course"""
+    try:
+        quizzes = await fetch_quizzes(course_id)
+        return {"success": True, "quizzes": quizzes}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching quizzes for course {course_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/configuration")
+async def update_configuration(config_data: dict):
+    """Update course and quiz configuration"""
+    try:
+        global COURSE_ID, QUIZ_ID
+        
+        course_id = config_data.get("course_id")
+        quiz_id = config_data.get("quiz_id")
+        
+        if course_id:
+            COURSE_ID = str(course_id)
+        if quiz_id:
+            QUIZ_ID = str(quiz_id)
+            
+        logger.info(f"Updated configuration: Course ID = {COURSE_ID}, Quiz ID = {QUIZ_ID}")
+        return {"success": True, "message": "Configuration updated successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error updating configuration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/fetch-questions")
 async def fetch_questions():

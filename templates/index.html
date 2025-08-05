@@ -91,11 +91,189 @@
             }
         }
         
+        // Course and Quiz Management Functions
+        async function loadCourses() {
+            const courseSelect = document.getElementById('courseSelect');
+            const currentCourseId = document.getElementById('currentCourseId').textContent;
+            
+            try {
+                courseSelect.innerHTML = '<option value="">Loading courses...</option>';
+                
+                const response = await fetch('/api/courses');
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    courseSelect.innerHTML = '<option value="">Select a course</option>';
+                    
+                    result.courses.forEach(course => {
+                        const option = document.createElement('option');
+                        option.value = course.id;
+                        option.textContent = `${course.course_code} - ${course.name}`;
+                        option.setAttribute('data-term', course.term);
+                        
+                        // Select current course if it matches
+                        if (course.id.toString() === currentCourseId) {
+                            option.selected = true;
+                            // Load quizzes for current course
+                            setTimeout(() => loadQuizzes(course.id), 100);
+                        }
+                        
+                        courseSelect.appendChild(option);
+                    });
+                    
+                    console.log(`✅ Loaded ${result.courses.length} courses`);
+                } else {
+                    courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+                    showAlert('danger', result.detail || 'Failed to load courses');
+                }
+            } catch (error) {
+                console.error('Error loading courses:', error);
+                courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+                showAlert('danger', `Error loading courses: ${error.message}`);
+            }
+        }
+        
+        async function loadQuizzes(courseId) {
+            const quizSelect = document.getElementById('quizSelect');
+            const currentQuizId = document.getElementById('currentQuizId').textContent;
+            
+            if (!courseId) {
+                quizSelect.innerHTML = '<option value="">Select a course first</option>';
+                quizSelect.disabled = true;
+                updateApplyButton();
+                return;
+            }
+            
+            try {
+                quizSelect.innerHTML = '<option value="">Loading quizzes...</option>';
+                quizSelect.disabled = false;
+                
+                const response = await fetch(`/api/courses/${courseId}/quizzes`);
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    quizSelect.innerHTML = '<option value="">Select a quiz</option>';
+                    
+                    result.quizzes.forEach(quiz => {
+                        const option = document.createElement('option');
+                        option.value = quiz.id;
+                        option.textContent = `${quiz.title} (${quiz.question_count} questions)`;
+                        option.setAttribute('data-published', quiz.published);
+                        option.setAttribute('data-type', quiz.quiz_type);
+                        
+                        // Select current quiz if it matches
+                        if (quiz.id.toString() === currentQuizId) {
+                            option.selected = true;
+                        }
+                        
+                        quizSelect.appendChild(option);
+                    });
+                    
+                    console.log(`✅ Loaded ${result.quizzes.length} quizzes for course ${courseId}`);
+                } else {
+                    quizSelect.innerHTML = '<option value="">Error loading quizzes</option>';
+                    showAlert('danger', result.detail || 'Failed to load quizzes');
+                }
+            } catch (error) {
+                console.error('Error loading quizzes:', error);
+                quizSelect.innerHTML = '<option value="">Error loading quizzes</option>';
+                showAlert('danger', `Error loading quizzes: ${error.message}`);
+            }
+            
+            updateApplyButton();
+        }
+        
+        function updateApplyButton() {
+            const courseSelect = document.getElementById('courseSelect');
+            const quizSelect = document.getElementById('quizSelect');
+            const applyBtn = document.getElementById('applyConfigBtn');
+            
+            const courseSelected = courseSelect.value !== '';
+            const quizSelected = quizSelect.value !== '';
+            
+            applyBtn.disabled = !(courseSelected && quizSelected);
+        }
+        
+        async function applyConfiguration() {
+            const courseSelect = document.getElementById('courseSelect');
+            const quizSelect = document.getElementById('quizSelect');
+            const applyBtn = document.getElementById('applyConfigBtn');
+            
+            const courseId = courseSelect.value;
+            const quizId = quizSelect.value;
+            
+            if (!courseId || !quizId) {
+                showAlert('warning', 'Please select both a course and a quiz');
+                return;
+            }
+            
+            try {
+                applyBtn.disabled = true;
+                applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+                
+                const response = await fetch('/api/configuration', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        course_id: courseId,
+                        quiz_id: quizId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Update current configuration display
+                    document.getElementById('currentCourseId').textContent = courseId;
+                    document.getElementById('currentQuizId').textContent = quizId;
+                    
+                    showAlert('success', 'Configuration updated successfully! You can now fetch questions.');
+                    console.log('✅ Configuration updated successfully');
+                } else {
+                    showAlert('danger', result.detail || 'Failed to update configuration');
+                }
+            } catch (error) {
+                console.error('Error updating configuration:', error);
+                showAlert('danger', `Error updating configuration: ${error.message}`);
+            } finally {
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Configuration';
+                updateApplyButton();
+            }
+        }
+        
         
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ DOM loaded, initializing...');
             
+            // Load courses on page load
+            loadCourses();
+            
+            // Course selection change event
+            const courseSelect = document.getElementById('courseSelect');
+            if (courseSelect) {
+                courseSelect.addEventListener('change', function() {
+                    const courseId = this.value;
+                    loadQuizzes(courseId);
+                });
+            }
+            
+            // Quiz selection change event
+            const quizSelect = document.getElementById('quizSelect');
+            if (quizSelect) {
+                quizSelect.addEventListener('change', function() {
+                    updateApplyButton();
+                });
+            }
+            
+            // Apply configuration button
+            const applyConfigBtn = document.getElementById('applyConfigBtn');
+            if (applyConfigBtn) {
+                applyConfigBtn.addEventListener('click', applyConfiguration);
+            }
             
             // Modal close functionality
             document.addEventListener('click', (e) => {
@@ -401,9 +579,40 @@
 
     <div class="container-fluid py-3">
 
-                <!-- Configuration Info -->
-                <div class="alert alert-info mb-4">
-                    <strong>Configuration:</strong> Course ID: {{ course_id }}, Quiz ID: {{ quiz_id }}
+                <!-- Configuration Panel -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-cog"></i> Canvas Configuration
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="courseSelect" class="form-label">Course:</label>
+                                <select id="courseSelect" class="form-select">
+                                    <option value="">Loading courses...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="quizSelect" class="form-label">Quiz:</label>
+                                <select id="quizSelect" class="form-select" disabled>
+                                    <option value="">Select a course first</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button id="applyConfigBtn" class="btn btn-primary" disabled>
+                                    <i class="fas fa-check"></i> Apply Configuration
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Current: Course ID: <span id="currentCourseId">{{ course_id }}</span>, 
+                                Quiz ID: <span id="currentQuizId">{{ quiz_id }}</span>
+                            </small>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Loading indicator -->
