@@ -13,12 +13,23 @@
             margin: 20px 0;
         }
         .btn-container {
-            margin-top: 20px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px 20px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
             display: flex;
             gap: 10px;
+            justify-content: center;
         }
         .alert-container {
             margin-top: 20px;
+        }
+        body {
+            padding-bottom: 80px; /* Add space for sticky buttons */
         }
     </style>
 </head>

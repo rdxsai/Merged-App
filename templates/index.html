@@ -35,6 +35,16 @@
             padding: 1rem 0;
             margin-bottom: 1rem;
         }
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+        }
+        .header-buttons .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
     </style>
     <script>
         console.log('🚀 Script loaded in head');
@@ -286,29 +296,7 @@
                 }
             });
             
-            // Dropdown functionality
-            document.addEventListener('click', (e) => {
-                if (e.target.closest('[data-bs-toggle="dropdown"]')) {
-                    e.preventDefault();
-                    const button = e.target.closest('[data-bs-toggle="dropdown"]');
-                    const dropdown = button.nextElementSibling;
-                    
-                    // Close other dropdowns
-                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                        if (menu !== dropdown) menu.classList.remove('show');
-                    });
-                    
-                    // Toggle this dropdown
-                    if (dropdown && dropdown.classList.contains('dropdown-menu')) {
-                        dropdown.classList.toggle('show');
-                    }
-                } else {
-                    // Close all dropdowns
-                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                        menu.classList.remove('show');
-                    });
-                }
-            });
+            // Let Bootstrap handle dropdowns natively - remove custom dropdown handling
             
             // Refresh button
             const refreshBtn = document.getElementById('refreshBtn');
@@ -550,28 +538,36 @@
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="h2 mb-0"><i class="fas fa-question-circle text-primary"></i> Canvas Quiz Manager</h1>
-                <div>
-                    <a href="/questions/new" class="btn btn-success me-2">
+                <div class="header-buttons">
+                    <a href="/questions/new" class="btn btn-success">
                         <i class="fas fa-plus"></i> New Question
                     </a>
-                    <a href="/objectives" class="btn btn-outline-warning me-2">
-                        <i class="fas fa-bullseye"></i> Learning Objectives
-                    </a>
-                    <a href="/system-prompt" class="btn btn-outline-primary me-2">
-                        <i class="fas fa-cog"></i> Feedback System Prompt
-                    </a>
-                    <a href="/chat" class="btn btn-outline-info me-2">
+                    <a href="/chat" class="btn btn-outline-info">
                         <i class="fas fa-comments"></i> Chat Assistant
                     </a>
-                    <button id="createVectorStoreBtn" class="btn btn-outline-success me-2">
-                        <i class="fas fa-database"></i> Create Vector Store
-                    </button>
-                    <button id="refreshBtn" class="btn btn-success me-2">
+                    <button id="refreshBtn" class="btn btn-success">
                         <i class="fas fa-sync-alt"></i> Refresh List
                     </button>
-                    <button id="fetchBtn" class="btn btn-primary">
-                        <i class="fas fa-download"></i> Fetch Questions
-                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="moreOptionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-h"></i> More Options
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="moreOptionsDropdown">
+                            <li><a class="dropdown-item" href="/objectives">
+                                <i class="fas fa-bullseye"></i> Learning Objectives
+                            </a></li>
+                            <li><a class="dropdown-item" href="/system-prompt">
+                                <i class="fas fa-cog"></i> Feedback System Prompt
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item" id="createVectorStoreBtn">
+                                <i class="fas fa-database"></i> Create Vector Store
+                            </button></li>
+                            <li><button class="dropdown-item" id="fetchBtn">
+                                <i class="fas fa-download"></i> Fetch Questions
+                            </button></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
