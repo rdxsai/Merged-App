@@ -456,8 +456,11 @@
                 status: ["lines", "words", "cursor"]
             });
             
-            // Add change listeners for auto-save
-            questionTextEditor.codemirror.on("change", scheduleAutoSave);
+            // Add change listeners for auto-save and preview updates
+            questionTextEditor.codemirror.on("change", function() {
+                updateFullQuestionPreview();
+                scheduleAutoSave();
+            });
             generalFeedbackEditor.codemirror.on("change", scheduleAutoSave);
             
             // Add click listeners for correctness buttons
@@ -554,8 +557,8 @@
                 }
             }
             
-            // Update question preview
-            updateQuestionPreview();
+            // Update the full question preview
+            updateFullQuestionPreview();
             
             // Trigger auto-save
             scheduleAutoSave();
@@ -684,6 +687,63 @@
                     objectivePreview.style.display = 'none';
                 }
             }
+        }
+
+        // Update the entire question preview when changes are made
+        function updateFullQuestionPreview() {
+            // Update question text preview
+            const questionText = questionTextEditor.value();
+            const questionTextPreview = document.querySelector('.question-text-preview');
+            if (questionTextPreview) {
+                questionTextPreview.textContent = questionText.replace(/<[^>]*>/g, ''); // Strip HTML tags
+            }
+            
+            // Update topic, tags, and objective previews
+            updateTopicPreview();
+            updateTagsPreview();
+            updateObjectivePreview();
+            
+            // Update answer previews
+            updateAnswerPreview();
+        }
+        
+        // Update answer preview specifically
+        function updateAnswerPreview() {
+            const answerItems = document.querySelectorAll('.answer-item');
+            const answerPreviewList = document.querySelector('.answers-preview .list-group');
+            
+            if (!answerPreviewList) return;
+            
+            // Clear existing preview items
+            answerPreviewList.innerHTML = '';
+            
+            answerItems.forEach((item, index) => {
+                const answerId = item.dataset.answerId;
+                const answerTextInput = item.querySelector(`textarea[name="answer_text_${answerId}"]`);
+                const weightInput = item.querySelector(`input[name="answer_weight_${answerId}"]`);
+                
+                if (answerTextInput) {
+                    const answerText = answerTextInput.value;
+                    const weight = weightInput ? parseFloat(weightInput.value) || 0 : 0;
+                    const isCorrect = weight > 0;
+                    
+                    // Create preview item
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'list-group-item d-flex justify-content-between align-items-start';
+                    
+                    previewItem.innerHTML = `
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">
+                                <i class="fas ${isCorrect ? 'fa-check-circle text-success' : 'fa-circle text-muted'}"></i>
+                                ${answerText}
+                            </div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${weight}%</span>
+                    `;
+                    
+                    answerPreviewList.appendChild(previewItem);
+                }
+            });
         }
 
         // Generate AI Feedback
@@ -1149,9 +1209,15 @@
             });
         }
 
-        // Handle textarea changes
+        // Handle textarea changes - specifically watch for answer text changes
         document.querySelectorAll('textarea').forEach(textarea => {
-            textarea.addEventListener('input', scheduleAutoSave);
+            textarea.addEventListener('input', function() {
+                // If this is an answer text field, update the preview
+                if (textarea.name && textarea.name.startsWith('answer_text_')) {
+                    updateAnswerPreview();
+                }
+                scheduleAutoSave();
+            });
             textarea.addEventListener('blur', scheduleAutoSave);
         });
 
