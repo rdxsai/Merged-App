@@ -74,15 +74,37 @@ git clone <repository-url>
 cd question_app
 ```
 
-### 2. Create Virtual Environment
+### 2. Install Poetry (Package Manager)
+
+Poetry is the recommended package manager for this project.
+
+#### macOS (using Homebrew):
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+brew install poetry
 ```
 
-### 3. Install Dependencies
+#### Other platforms:
 ```bash
-pip install fastapi uvicorn httpx python-dotenv jinja2 chromadb beautifulsoup4
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+### 3. Install Dependencies with Poetry
+```bash
+# Install all dependencies and create virtual environment
+poetry install
+
+# Activate the virtual environment
+poetry shell
+```
+
+### 3a. Alternative: Using pip (Legacy)
+```bash
+# If you prefer pip, first create a virtual environment:
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ### 4. Install and Setup Ollama
@@ -138,11 +160,87 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ```
 
 ### 6. Start Application
+
+#### Using Poetry (Recommended):
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+# Development mode with auto-reload
+poetry run dev
+
+# OR production mode
+poetry run start
 ```
 
-Access the application at: `http://localhost:8080`
+#### Using uvicorn directly:
+```bash
+# If using Poetry virtual environment
+poetry run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# OR if using traditional virtual environment
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Access the application at: `http://localhost:8000`
+
+## 🔨 Poetry Commands (Recommended)
+
+This project includes convenient Poetry scripts for common tasks:
+
+### Development
+```bash
+# Start in development mode (auto-reload)
+poetry run dev
+
+# Start in production mode
+poetry run start
+```
+
+### Code Quality
+```bash
+# Format code with Black
+poetry run format
+
+# Lint code with flake8
+poetry run lint
+
+# Type checking with mypy
+poetry run type-check
+
+# Run tests
+poetry run test
+```
+
+### Dependency Management
+```bash
+# Show installed packages
+poetry show
+
+# Show dependency tree
+poetry show --tree
+
+# Add a new package
+poetry add package-name
+
+# Add a development package
+poetry add --group dev package-name
+
+# Update dependencies
+poetry update
+
+# Remove a package
+poetry remove package-name
+```
+
+### Virtual Environment
+```bash
+# Show environment info
+poetry env info
+
+# Activate shell
+poetry shell
+
+# Run a command in the environment
+poetry run python script.py
+```
 
 ## 📖 Usage Guide
 
