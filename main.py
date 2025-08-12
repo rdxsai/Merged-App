@@ -16,6 +16,7 @@ import random
 import re
 import chromadb
 from bs4 import BeautifulSoup
+import uvicorn
 
 # TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
 
@@ -1690,6 +1691,16 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
     except Exception as e:
         logger.error(f"Error updating question {question_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+def start():
+    """Entry point for production server"""
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+def dev():
+    """Entry point for development server with reload"""
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
 if __name__ == "__main__":
     import uvicorn

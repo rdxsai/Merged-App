@@ -1,15 +1,15 @@
 [tool.poetry]
-name = "question-app"
+name = "question_app"
 version = "0.1.0"
-description = "Canvas Quiz Manager Application"
-authors = ["Your Name <your.email@example.com>"]
+description = "A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation)."
+authors = ["Bryce Kayanuma <BrycePK@vt.edu>"]
 readme = "README.md"
-package-mode = false
+packages = [{include = "*", from = "."}]  # Include all Python files from root
 
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.104.1"
-uvicorn = "^0.24.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
 python-multipart = "^0.0.6"
 jinja2 = "^3.1.2"
 python-dotenv = "^1.0.0"
@@ -21,33 +21,27 @@ numpy = "<2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
 black = "^23.0.0"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
-mypy = "^1.5.0"
 
 [tool.poetry.scripts]
-start = "uvicorn main:app --host 0.0.0.0 --port 8000"
-dev = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-test = "pytest"
-format = "black ."
-lint = "flake8 ."
-type-check = "mypy ."
+start = "main:start"
+dev = "main:dev"
+format = "questionapp.scripts:format_code"
+sort = "questionapp.scripts:sort_imports"
+lint = "questionapp.scripts:lint"
+test = "questionapp.scripts:test"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
-line-length = 100
+line-length = 88
 target-version = ['py311']
 
 [tool.isort]
 profile = "black"
-line_length = 100
-
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
+multi_line_output = 3
