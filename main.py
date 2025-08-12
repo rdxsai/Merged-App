@@ -1695,12 +1695,12 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
 def start():
     """Entry point for production server"""
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
 
 def dev():
     """Entry point for development server with reload"""
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8080, reload=True)
 
 if __name__ == "__main__":
     import uvicorn
