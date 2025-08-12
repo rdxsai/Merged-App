@@ -11,10 +11,12 @@
         .question-card {
             transition: transform 0.2s;
             cursor: pointer;
+            position: relative;
         }
         .question-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10;
         }
         .question-text {
             max-height: 100px;
@@ -44,6 +46,18 @@
         .header-buttons .btn {
             white-space: nowrap;
             flex-shrink: 0;
+        }
+        .question-card .dropdown {
+            position: relative;
+            z-index: 1050;
+        }
+        .question-card .dropdown-menu {
+            z-index: 1051 !important;
+            position: absolute !important;
+        }
+        .question-card.show .dropdown,
+        .question-card .dropdown.show {
+            z-index: 1052;
         }
     </style>
     <script>
