@@ -178,6 +178,39 @@
                         
                         <hr class="section-divider">
                         
+                        <!-- Chat Welcome Message Editor -->
+                        <div class="mt-4">
+                            <label for="welcomeMessageEditor" class="form-label">
+                                <h6 class="mb-2">
+                                    <i class="fas fa-comment-dots text-primary"></i> Chat Welcome Message
+                                </h6>
+                                <small class="text-muted">Configure the initial message shown to users when they start a new chat session.</small>
+                            </label>
+                            <div class="editor-container">
+                                <textarea id="welcomeMessageEditor" name="welcome_message">{{ current_welcome_message if current_welcome_message else default_welcome_message }}</textarea>
+                            </div>
+                            
+                            <!-- Welcome Message Statistics -->
+                            <div id="welcomeStats" class="prompt-stats">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <strong>Characters:</strong> <span id="welcomeCharCount">0</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Words:</strong> <span id="welcomeWordCount">0</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Lines:</strong> <span id="welcomeLineCount">0</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Last Modified:</strong> <span id="welcomeLastModified">Never</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="section-divider">
+                        
                         <!-- Tips and Guidelines Section -->
                         <div class="tips-section">
                             <div class="row">
@@ -254,11 +287,39 @@ When provided with context from the knowledge base: {context}
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
     
     <script>
-        // Initialize SimpleMDE markdown editor
+        // Initialize SimpleMDE markdown editor for system prompt
         const simplemde = new SimpleMDE({
             element: document.getElementById("chatSystemPromptEditor"),
             spellChecker: false,
             placeholder: "Enter your chat assistant system prompt here...",
+            toolbar: [
+                "bold", "italic", "heading", "|",
+                "quote", "unordered-list", "ordered-list", "|",
+                "link", "code", "|",
+                {
+                    name: "preview",
+                    action: function customPreviewAction(editor) {
+                        SimpleMDE.togglePreview(editor);
+                        updatePreviewButton(editor);
+                    },
+                    className: "fa fa-eye no-disable",
+                    title: "Toggle Preview"
+                }, "guide"
+            ],
+            status: ["lines", "words", "cursor"],
+            insertTexts: {
+                horizontalRule: ["", "\n\n-----\n\n"],
+                image: ["![](http://", ")"],
+                link: ["[", "](http://)"],
+                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
+            },
+        });
+        
+        // Initialize SimpleMDE markdown editor for welcome message
+        const welcomeMde = new SimpleMDE({
+            element: document.getElementById("welcomeMessageEditor"),
+            spellChecker: false,
+            placeholder: "Enter the welcome message shown to users when they start a new chat...",
             toolbar: [
                 "bold", "italic", "heading", "|",
                 "quote", "unordered-list", "ordered-list", "|",
@@ -327,8 +388,41 @@ When provided with context from the knowledge base: {context}
                 indicator.style.display = 'none';
             }, 2000);
         }
+        
+        // Helper function to update text statistics
+        function updateTextStats(text, charId, wordId, lineId, lastModifiedId) {
+            const chars = text.length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const lines = text.split('\n').length;
+            
+            document.getElementById(charId).textContent = chars;
+            document.getElementById(wordId).textContent = words;
+            document.getElementById(lineId).textContent = lines;
+            document.getElementById(lastModifiedId).textContent = new Date().toLocaleString();
+        }
+        
+        // Initialize statistics for both editors
+        function initializeStats() {
+            // Update system prompt stats
+            updateTextStats(
+                simplemde.value(),
+                'charCount',
+                'wordCount', 
+                'lineCount',
+                'lastModified'
+            );
+            
+            // Update welcome message stats
+            updateTextStats(
+                welcomeMde.value(),
+                'welcomeCharCount',
+                'welcomeWordCount',
+                'welcomeLineCount', 
+                'welcomeLastModified'
+            );
+        }
 
-        // Save system prompt
+        // Save both system prompt and welcome message
         document.getElementById('saveBtn').addEventListener('click', async () => {
             const saveBtn = document.getElementById('saveBtn');
             const originalText = saveBtn.innerHTML;
@@ -338,13 +432,15 @@ When provided with context from the knowledge base: {context}
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                 
                 const prompt = simplemde.value();
+                const welcomeMessage = welcomeMde.value();
                 
                 if (!prompt.trim()) {
                     showAlert('warning', 'System prompt cannot be empty.');
                     return;
                 }
                 
-                const response = await fetch('/chat-system-prompt', {
+                // Save system prompt
+                const promptResponse = await fetch('/chat-system-prompt', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -352,46 +448,130 @@ When provided with context from the knowledge base: {context}
                     body: `prompt=${encodeURIComponent(prompt)}`
                 });
                 
-                const result = await response.json();
+                // Save welcome message
+                const welcomeResponse = await fetch('/chat-welcome-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `welcome_message=${encodeURIComponent(welcomeMessage)}`
+                });
                 
-                if (response.ok) {
-                    showAlert('success', result.message || 'Chat system prompt saved successfully!');
-                    showSaveIndicator();
+                const promptResult = await promptResponse.json();
+                const welcomeResult = await welcomeResponse.json();
+                
+                // Show consolidated success/error messages
+                let successMessages = [];
+                let errorMessages = [];
+                
+                if (promptResponse.ok) {
+                    successMessages.push('System prompt saved successfully!');
                 } else {
-                    showAlert('danger', result.detail || 'Failed to save system prompt');
+                    errorMessages.push('Failed to save system prompt: ' + (promptResult.detail || 'Unknown error'));
                 }
+                
+                if (welcomeResponse.ok) {
+                    successMessages.push('Welcome message saved successfully!');
+                } else {
+                    errorMessages.push('Failed to save welcome message: ' + (welcomeResult.detail || 'Unknown error'));
+                }
+                
+                // Display consolidated alerts
+                if (successMessages.length > 0) {
+                    showAlert('success', successMessages.join('<br>'));
+                    if (successMessages.length === 2) {
+                        showSaveIndicator();
+                    }
+                }
+                
+                if (errorMessages.length > 0) {
+                    showAlert('danger', errorMessages.join('<br>'));
+                }
+                
             } catch (error) {
-                showAlert('danger', 'Error saving system prompt: ' + error.message);
+                showAlert('danger', 'Error saving: ' + error.message);
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalText;
             }
         });
 
-        // Reset to default prompt
+        // Reset to default for both editors
         document.getElementById('resetBtn').addEventListener('click', async () => {
-            if (!confirm('Are you sure you want to reset to the default system prompt? This will overwrite your current prompt.')) {
+            if (!confirm('Are you sure you want to reset both the system prompt and welcome message to defaults? This will overwrite your current content.')) {
                 return;
             }
             
             try {
-                const response = await fetch('/chat-system-prompt/default');
-                const result = await response.json();
+                // Fetch default system prompt
+                const promptResponse = await fetch('/chat-system-prompt/default');
+                const promptResult = await promptResponse.json();
                 
-                if (response.ok) {
-                    simplemde.value(result.default_prompt);
-                    showAlert('info', 'System prompt reset to default. Don\'t forget to save!');
+                // Fetch default welcome message
+                const welcomeResponse = await fetch('/chat-welcome-message/default');
+                const welcomeResult = await welcomeResponse.json();
+                
+                let successMessages = [];
+                let errorMessages = [];
+                
+                // Handle system prompt reset
+                if (promptResponse.ok) {
+                    simplemde.value(promptResult.default_prompt);
+                    successMessages.push('System prompt reset to default');
+                    // Update system prompt stats
+                    updateTextStats(
+                        simplemde.value(),
+                        'charCount',
+                        'wordCount',
+                        'lineCount',
+                        'lastModified'
+                    );
                 } else {
-                    showAlert('danger', 'Failed to load default system prompt');
+                    errorMessages.push('Failed to load default system prompt');
                 }
+                
+                // Handle welcome message reset
+                if (welcomeResponse.ok) {
+                    welcomeMde.value(welcomeResult.default_welcome_message || '');
+                    successMessages.push('Welcome message reset to default');
+                    // Update welcome message stats
+                    updateTextStats(
+                        welcomeMde.value(),
+                        'welcomeCharCount',
+                        'welcomeWordCount',
+                        'welcomeLineCount',
+                        'welcomeLastModified'
+                    );
+                } else {
+                    errorMessages.push('Failed to load default welcome message');
+                }
+                
+                // Display consolidated messages
+                if (successMessages.length > 0) {
+                    showAlert('info', successMessages.join('<br>') + '. Don\'t forget to save!');
+                }
+                
+                if (errorMessages.length > 0) {
+                    showAlert('danger', errorMessages.join('<br>'));
+                }
+                
             } catch (error) {
-                showAlert('danger', 'Error loading default prompt: ' + error.message);
+                showAlert('danger', 'Error loading defaults: ' + error.message);
             }
         });
 
         // Auto-save functionality (optional)
         let saveTimeout;
         simplemde.codemirror.on("change", function() {
+            // Update system prompt statistics
+            updateTextStats(
+                simplemde.value(),
+                'charCount',
+                'wordCount',
+                'lineCount',
+                'lastModified'
+            );
+            
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
             }
@@ -417,6 +597,48 @@ When provided with context from the knowledge base: {context}
                 }
             }, 5000);
         });
+        
+        // Welcome message editor change events
+        welcomeMde.codemirror.on("change", function() {
+            // Update welcome message statistics
+            updateTextStats(
+                welcomeMde.value(),
+                'welcomeCharCount',
+                'welcomeWordCount',
+                'welcomeLineCount',
+                'welcomeLastModified'
+            );
+        });
+        
+        // Function to load welcome message from server
+        async function loadWelcomeMessage() {
+            try {
+                const response = await fetch('/chat-welcome-message');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    welcomeMde.value(result.welcome_message || '');
+                    // Update stats after loading
+                    updateTextStats(
+                        welcomeMde.value(),
+                        'welcomeCharCount',
+                        'welcomeWordCount',
+                        'welcomeLineCount',
+                        'welcomeLastModified'
+                    );
+                } else {
+                    console.error('Failed to load welcome message:', result);
+                }
+            } catch (error) {
+                console.error('Error loading welcome message:', error);
+            }
+        }
+        
+        // Initialize statistics and load welcome message on page load
+        setTimeout(async () => {
+            initializeStats();
+            await loadWelcomeMessage();
+        }, 100);
     </script>
 </body>
 </html>

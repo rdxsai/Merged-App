@@ -162,11 +162,7 @@
             <div class="col-md-8">
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
-                        <div class="message system">
-                            <i class="fas fa-robot"></i> 
-                            Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. 
-                            Ask me anything about the quiz questions in your knowledge base!
-                        </div>
+                        <div id="welcomeMessageContainer"></div>
                     </div>
                     <div class="chat-input-area">
                         <div class="d-flex">
@@ -240,7 +236,51 @@
 
             // Load model information
             loadModelInfo();
+            
+            // Load welcome message
+            loadWelcomeMessage();
         });
+
+        // Load and display welcome message
+        async function loadWelcomeMessage() {
+            const welcomeContainer = document.getElementById('welcomeMessageContainer');
+            
+            try {
+                const response = await fetch('/chat-welcome-message');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const text = data.message || data.text || data;
+                    
+                    // Create welcome message with identical styling
+                    const welcomeDiv = document.createElement('div');
+                    welcomeDiv.className = 'message system';
+                    welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> ${text['welcome_message']}`;
+                    
+                    welcomeContainer.appendChild(welcomeDiv);
+                    console.log('✅ Welcome message loaded successfully', text);
+                } else {
+                    console.warn('⚠️ Failed to load welcome message, using fallback');
+                    loadFallbackWelcomeMessage();
+                }
+            } catch (error) {
+                console.error('💥 Error loading welcome message:', error);
+                loadFallbackWelcomeMessage();
+            }
+        }
+        
+        // Load fallback welcome message
+        function loadFallbackWelcomeMessage() {
+            const welcomeContainer = document.getElementById('welcomeMessageContainer');
+            
+            // Create fallback welcome message with identical styling
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'message system';
+            welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. Ask me anything about the quiz questions in your knowledge base!`;
+            
+            welcomeContainer.appendChild(welcomeDiv);
+            console.log('ℹ️ Fallback welcome message loaded');
+        }
 
         // Load and display model information
         async function loadModelInfo() {

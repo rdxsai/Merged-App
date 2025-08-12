@@ -17,6 +17,8 @@ import re
 import chromadb
 from bs4 import BeautifulSoup
 
+# TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
+
 # Load environment variables
 load_dotenv()
 
@@ -57,6 +59,7 @@ OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 DATA_FILE = "quiz_questions.json"
 SYSTEM_PROMPT_FILE = "system_prompt.txt"
 CHAT_SYSTEM_PROMPT_FILE = "chat_system_prompt.txt"
+WELCOME_MESSAGE_FILE = "chat_welcome_message.txt"
 
 # Pydantic models
 class Answer(BaseModel):
@@ -219,6 +222,31 @@ Instructions:
 - If you don't know something, say so rather than making up information
 - Provide practical examples when possible
 - Reference WCAG guidelines when relevant"""
+
+def load_welcome_message() -> str:
+    """Load welcome message from text file"""
+    try:
+        if os.path.exists(WELCOME_MESSAGE_FILE):
+            with open(WELCOME_MESSAGE_FILE, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        return get_default_welcome_message()
+    except Exception as e:
+        logger.error(f"Error loading welcome message: {e}")
+        return get_default_welcome_message()
+
+def save_welcome_message(message: str) -> bool:
+    """Save welcome message to text file"""
+    try:
+        with open(WELCOME_MESSAGE_FILE, 'w', encoding='utf-8') as f:
+            f.write(message)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving welcome message: {e}")
+        return False
+
+def get_default_welcome_message() -> str:
+    """Get the default welcome message"""
+    return "Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. Ask me anything about the quiz questions in your knowledge base!"
 
 async def make_canvas_request(url: str, headers: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
     """Make Canvas API request with retry logic for rate limiting"""
@@ -1488,6 +1516,55 @@ async def save_chat_system_prompt_endpoint(request: Request):
 async def get_default_chat_system_prompt_endpoint():
     """Get default chat system prompt"""
     return {"default_prompt": get_default_chat_system_prompt()}
+
+@app.get("/chat-welcome-message")
+async def get_chat_welcome_message():
+    """Get the current chat welcome message"""
+    try:
+        welcome_message = load_welcome_message()
+        return {"welcome_message": welcome_message}
+    except Exception as e:
+        logger.error(f"Error loading welcome message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat-welcome-message")
+async def save_chat_welcome_message(request: Request):
+    """Save chat welcome message"""
+    try:
+        # Check if it's JSON or form data
+        content_type = request.headers.get("content-type", "")
+        
+        if "application/json" in content_type:
+            body = await request.json()
+            message = body.get('welcome_message', '').strip()
+        else:
+            form = await request.form()
+            message = form.get('welcome_message', '').strip()
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Welcome message cannot be empty")
+        
+        if save_welcome_message(message):
+            logger.info("Welcome message saved successfully")
+            return {"success": True, "message": "Welcome message saved successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save welcome message")
+            
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error saving welcome message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat-welcome-message/default")
+async def get_default_chat_welcome_message():
+    """Get default chat welcome message"""
+    try:
+        default_message = get_default_welcome_message()
+        return {"default_welcome_message": default_message}
+    except Exception as e:
+        logger.error(f"Error loading default welcome message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/test-system-prompt", response_class=HTMLResponse)
 async def test_system_prompt_page(request: Request):
