@@ -47,17 +47,8 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-        .question-card .dropdown {
-            position: relative;
-            z-index: 1050;
-        }
         .question-card .dropdown-menu {
-            z-index: 1051 !important;
-            position: absolute !important;
-        }
-        .question-card.show .dropdown,
-        .question-card .dropdown.show {
-            z-index: 1052;
+            z-index: 1051;
         }
     </style>
     <script>
@@ -310,12 +301,7 @@
                 }
             });
             
-            // Prevent dropdown clicks from bubbling to card body
-            document.addEventListener('click', (e) => {
-                if (e.target.closest('.dropdown')) {
-                    e.stopPropagation();
-                }
-            });
+            // Let Bootstrap handle dropdowns naturally
             
             // Refresh button
             const refreshBtn = document.getElementById('refreshBtn');
