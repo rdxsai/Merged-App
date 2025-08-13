@@ -310,7 +310,12 @@
                 }
             });
             
-            // Let Bootstrap handle dropdowns natively - remove custom dropdown handling
+            // Prevent dropdown clicks from bubbling to card body
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.dropdown')) {
+                    e.stopPropagation();
+                }
+            });
             
             // Refresh button
             const refreshBtn = document.getElementById('refreshBtn');
@@ -679,7 +684,7 @@
                                     {{ question.question_type.replace('_', ' ').title() }}
                                 </span>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu">
