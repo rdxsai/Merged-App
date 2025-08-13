@@ -50,6 +50,9 @@
         .question-card .dropdown-menu {
             z-index: 1051;
         }
+        .dropdown-menu.show {
+            display: block !important;
+        }
     </style>
     <script>
         console.log('🚀 Script loaded in head');
@@ -301,7 +304,44 @@
                 }
             });
             
-            // Let Bootstrap handle dropdowns naturally
+            // Check if Bootstrap is loaded and provide fallback
+            setTimeout(() => {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) {
+                    console.log('⚠️ Bootstrap not loaded, implementing manual dropdown fallback');
+                    
+                    // Manual dropdown implementation
+                    document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(trigger => {
+                        trigger.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Close all other dropdowns first
+                            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                                if (menu !== trigger.nextElementSibling) {
+                                    menu.classList.remove('show');
+                                }
+                            });
+                            
+                            // Toggle current dropdown
+                            const menu = trigger.nextElementSibling;
+                            if (menu && menu.classList.contains('dropdown-menu')) {
+                                menu.classList.toggle('show');
+                            }
+                        });
+                    });
+                    
+                    // Close dropdowns when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (!e.target.closest('.dropdown')) {
+                            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                                menu.classList.remove('show');
+                            });
+                        }
+                    });
+                } else {
+                    console.log('✅ Bootstrap loaded successfully');
+                }
+            }, 100);
             
             // Refresh button
             const refreshBtn = document.getElementById('refreshBtn');
