@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 import uvicorn
 
 # TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
+# TODO: Offload vector store to S3 Vector Bucket
 
 # Load environment variables
 load_dotenv()
@@ -478,6 +479,36 @@ def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
     
     return "general"
 
+def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
+    """Remove weight/correctness indicators, answer text, and other metadata from AI-generated answer feedback"""
+    if not feedback:
+        return feedback
+    
+    # Remove the answer text itself if it appears at the beginning
+    if answer_text:
+        # Escape special regex characters in the answer text
+        escaped_answer_text = re.escape(answer_text.strip())
+        # Remove answer text at the start, possibly followed by separators
+        feedback = re.sub(rf'^\s*{escaped_answer_text}\s*[-–—:;.,]*\s*', '', feedback, flags=re.IGNORECASE)
+    
+    # Remove patterns like "(Weight: 100%)", "(Weight: 0%)", etc.
+    feedback = re.sub(r'\(Weight:\s*\d+%?\)', '', feedback, flags=re.IGNORECASE)
+    
+    # Remove correctness indicators like "[✓ CORRECT]", "[✗ INCORRECT]", etc.
+    feedback = re.sub(r'\[.*?(?:CORRECT|INCORRECT).*?\]', '', feedback, flags=re.IGNORECASE)
+    
+    # Remove standalone correctness indicators
+    feedback = re.sub(r'✓\s*CORRECT\s*[:-]?', '', feedback, flags=re.IGNORECASE)
+    feedback = re.sub(r'✗\s*INCORRECT\s*[:-]?', '', feedback, flags=re.IGNORECASE)
+    
+    # Remove weight percentages at the start of lines
+    feedback = re.sub(r'^\s*\d+%?\s*[:-]?\s*', '', feedback, flags=re.MULTILINE)
+    
+    # Clean up extra whitespace
+    feedback = re.sub(r'\s+', ' ', feedback).strip()
+    
+    return feedback
+
 def get_all_existing_tags(questions: List[Dict[str, Any]]) -> List[str]:
     """Extract all unique tags from existing questions"""
     all_tags = set()
@@ -582,38 +613,49 @@ Answer Choices:
         user_message += f"{i}. {answer['text']} (Weight: {answer['weight']}%) [{correct_indicator}]\n"
     
     user_message += """
-Please provide comprehensive educational feedback following these guidelines:
-
-1. GENERAL FEEDBACK: 
-   - Explain why this accessibility concept is important for creating inclusive web experiences
-   - Describe how this relates to users with different types of disabilities
-   - Reference relevant WCAG guidelines, success criteria, or accessibility standards
-   - Connect to broader principles of inclusive design and user experience
-   - Explain real-world implications and potential impact on users
-
-2. ANSWER FEEDBACK: 
-   For each answer choice, provide detailed educational explanations:
-   
-   **For CORRECT answers:**
-   - Explain WHY this is the best practice for accessibility
-   - Describe how it helps users with disabilities
-   - Reference specific WCAG guidelines or standards it addresses
-   - Provide implementation context and additional considerations
-   
-   **For INCORRECT answers:**
-   - Explain WHY this approach creates accessibility barriers
-   - Describe which user groups would be most affected
-   - Reference WCAG guidelines or standards it violates
-   - Suggest what the correct approach should be instead
-   - Explain potential legal or compliance implications
-
 Format your response as:
-   Answer 1: [detailed educational feedback for first answer choice]
-   Answer 2: [detailed educational feedback for second answer choice]
-   [etc.]
 
-Focus on educational value - help students understand the principles behind web accessibility, not just the mechanics.
+Answer 1: [feedback for answer 1]
+Answer 2: [feedback for answer 2]
+Answer 3: [feedback for answer 3] (if applicable)
+Answer 4: [feedback for answer 4] (if applicable)
+
+Please provide specific educational feedback for each answer choice explaining why it is correct or incorrect.
 """
+
+#     user_message += """
+# Please provide comprehensive educational feedback following these guidelines:
+#
+# 1. GENERAL FEEDBACK:
+#    - Explain why this accessibility concept is important for creating inclusive web experiences
+#    - Describe how this relates to users with different types of disabilities
+#    - Reference relevant WCAG guidelines, success criteria, or accessibility standards
+#    - Connect to broader principles of inclusive design and user experience
+#    - Explain real-world implications and potential impact on users
+#
+# 2. ANSWER FEEDBACK:
+#    For each answer choice, provide detailed educational explanations:
+#
+#    **For CORRECT answers:**
+#    - Explain WHY this is the best practice for accessibility
+#    - Describe how it helps users with disabilities
+#    - Reference specific WCAG guidelines or standards it addresses
+#    - Provide implementation context and additional considerations
+#
+#    **For INCORRECT answers:**
+#    - Explain WHY this approach creates accessibility barriers
+#    - Describe which user groups would be most affected
+#    - Reference WCAG guidelines or standards it violates
+#    - Suggest what the correct approach should be instead
+#    - Explain potential legal or compliance implications
+#
+# Format your response as:
+#    Answer 1: [detailed educational feedback for first answer choice]
+#    Answer 2: [detailed educational feedback for second answer choice]
+#    [etc.]
+#
+# Focus on educational value - help students understand the principles behind web accessibility, not just the mechanics.
+# """
     
     payload = {
         "messages": [
@@ -702,7 +744,18 @@ Focus on educational value - help students understand the principles behind web 
                     # Check if this line contains answer feedback
                     if 'answer' in line.lower() and ':' in line:
                         if current_answer_key and current_answer_text:
-                            feedback['answer_feedback'][current_answer_key] = ' '.join(current_answer_text)
+                            # Extract answer number from key and get corresponding answer text
+                            answer_text = ""
+                            try:
+                                match = re.search(r'\d+', current_answer_key)
+                                if match:
+                                    answer_number = int(match.group()) - 1  # Convert to 0-based index
+                                    if 0 <= answer_number < len(question_context['answers']):
+                                        answer_text = question_context['answers'][answer_number]['text']
+                            except (ValueError, IndexError):
+                                pass
+                            
+                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
                         
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -717,7 +770,18 @@ Focus on educational value - help students understand the principles behind web 
                     if 'answer' in line.lower() and ':' in line:
                         # Save previous answer if exists
                         if current_answer_key and current_answer_text:
-                            feedback['answer_feedback'][current_answer_key] = ' '.join(current_answer_text)
+                            # Extract answer number from key and get corresponding answer text
+                            answer_text = ""
+                            try:
+                                match = re.search(r'\d+', current_answer_key)
+                                if match:
+                                    answer_number = int(match.group()) - 1  # Convert to 0-based index
+                                    if 0 <= answer_number < len(question_context['answers']):
+                                        answer_text = question_context['answers'][answer_number]['text']
+                            except (ValueError, IndexError):
+                                pass
+                            
+                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
                         
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -728,12 +792,37 @@ Focus on educational value - help students understand the principles behind web 
                         # Continue adding to current answer feedback
                         current_answer_text.append(line)
                 elif not current_section:
-                    # Before any section is found, assume it's general feedback
-                    general_feedback_lines.append(line)
+                    # Check if this line looks like an answer before defaulting to general feedback
+                    if 'answer' in line.lower() and ':' in line and re.search(r'answer\s*\d+\s*:', line, re.IGNORECASE):
+                        # This looks like "Answer 1:", "Answer 2:", etc. - switch to answers section
+                        current_section = 'answers'
+                        logger.info(f"Auto-detected answer section at line {line_num}: {line}")
+                        
+                        # Process this line as an answer
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            current_answer_key = parts[0].strip().lower()
+                            current_answer_text = [parts[1].strip()] if parts[1].strip() else []
+                            logger.debug(f"Found answer key: {current_answer_key}")
+                    else:
+                        # Before any section is found, assume it's general feedback
+                        general_feedback_lines.append(line)
             
             # Save the last answer if exists
             if current_answer_key and current_answer_text:
-                feedback['answer_feedback'][current_answer_key] = ' '.join(current_answer_text)
+                # Extract answer number from key and get corresponding answer text
+                answer_text = ""
+                try:
+                    # Extract number from keys like "answer 1", "answer1", "1", etc.
+                    match = re.search(r'\d+', current_answer_key)
+                    if match:
+                        answer_number = int(match.group()) - 1  # Convert to 0-based index
+                        if 0 <= answer_number < len(question_context['answers']):
+                            answer_text = question_context['answers'][answer_number]['text']
+                except (ValueError, IndexError):
+                    pass
+                
+                feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
             
             # Combine general feedback lines
             feedback['general_feedback'] = ' '.join(general_feedback_lines)
