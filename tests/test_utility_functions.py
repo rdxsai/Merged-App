@@ -1,0 +1,327 @@
+"""
+Unit tests for utility functions
+"""
+import pytest
+import tempfile
+import os
+import json
+from unittest.mock import patch, mock_open
+from main import (
+    load_questions, save_questions, load_objectives, save_objectives,
+    load_system_prompt, save_system_prompt, clean_question_text,
+    clean_html_for_vector_store, extract_topic_from_text,
+    clean_answer_feedback, get_all_existing_tags
+)
+
+
+class TestFileOperations:
+    """Test file loading and saving operations"""
+
+    def test_load_questions_empty_file(self):
+        """Test loading questions from empty file"""
+        with patch('builtins.open', mock_open(read_data='[]')):
+            with patch('os.path.exists', return_value=True):
+                result = load_questions()
+                assert result == []
+
+    def test_load_questions_file_not_exists(self):
+        """Test loading questions when file doesn't exist"""
+        with patch('os.path.exists', return_value=False):
+            result = load_questions()
+            assert result == []
+
+    def test_load_questions_with_data(self):
+        """Test loading questions with actual data"""
+        sample_data = [
+            {"id": 1, "question_text": "Test question 1"},
+            {"id": 2, "question_text": "Test question 2"}
+        ]
+        with patch('builtins.open', mock_open(read_data=json.dumps(sample_data))):
+            with patch('os.path.exists', return_value=True):
+                result = load_questions()
+                assert result == sample_data
+
+    def test_save_questions_success(self):
+        """Test saving questions successfully"""
+        questions = [{"id": 1, "question_text": "Test"}]
+        mock_file = mock_open()
+        with patch('builtins.open', mock_file):
+            result = save_questions(questions)
+            assert result is True
+            mock_file.assert_called_once()
+
+    def test_save_questions_failure(self):
+        """Test saving questions with error"""
+        questions = [{"id": 1, "question_text": "Test"}]
+        with patch('builtins.open', side_effect=Exception("Write error")):
+            result = save_questions(questions)
+            assert result is False
+
+    def test_load_objectives_empty_file(self):
+        """Test loading objectives from empty file"""
+        with patch('builtins.open', mock_open(read_data='[]')):
+            with patch('os.path.exists', return_value=True):
+                result = load_objectives()
+                assert result == []
+
+    def test_load_objectives_with_data(self):
+        """Test loading objectives with actual data"""
+        sample_data = [
+            {"text": "Objective 1", "blooms_level": "understand"},
+            {"text": "Objective 2", "blooms_level": "apply"}
+        ]
+        with patch('builtins.open', mock_open(read_data=json.dumps(sample_data))):
+            with patch('os.path.exists', return_value=True):
+                result = load_objectives()
+                assert result == sample_data
+
+    def test_save_objectives_success(self):
+        """Test saving objectives successfully"""
+        objectives = [{"text": "Test objective", "blooms_level": "understand"}]
+        mock_file = mock_open()
+        with patch('builtins.open', mock_file):
+            result = save_objectives(objectives)
+            assert result is True
+
+    def test_load_system_prompt_empty_file(self):
+        """Test loading system prompt from empty file"""
+        with patch('builtins.open', mock_open(read_data='')):
+            with patch('os.path.exists', return_value=True):
+                result = load_system_prompt()
+                assert result == ""
+
+    def test_load_system_prompt_with_content(self):
+        """Test loading system prompt with content"""
+        prompt_content = "You are a helpful assistant."
+        with patch('builtins.open', mock_open(read_data=prompt_content)):
+            with patch('os.path.exists', return_value=True):
+                result = load_system_prompt()
+                assert result == prompt_content
+
+    def test_save_system_prompt_success(self):
+        """Test saving system prompt successfully"""
+        prompt = "Test system prompt"
+        mock_file = mock_open()
+        with patch('builtins.open', mock_file):
+            result = save_system_prompt(prompt)
+            assert result is True
+
+
+class TestTextCleaning:
+    """Test text cleaning and processing functions"""
+
+    def test_clean_question_text_empty(self):
+        """Test cleaning empty question text"""
+        result = clean_question_text("")
+        assert result == ""
+
+    def test_clean_question_text_none(self):
+        """Test cleaning None question text"""
+        result = clean_question_text(None)
+        assert result is None
+
+    def test_clean_question_text_remove_links(self):
+        """Test removing link tags from question text"""
+        text = '<link rel="stylesheet" href="style.css">What is the capital?'
+        result = clean_question_text(text)
+        assert 'link' not in result
+        assert 'What is the capital?' in result
+
+    def test_clean_question_text_remove_scripts(self):
+        """Test removing script tags from question text"""
+        text = '<script>alert("test");</script>What is the capital?'
+        result = clean_question_text(text)
+        assert 'script' not in result
+        assert 'alert' not in result
+        assert 'What is the capital?' in result
+
+    def test_clean_question_text_remove_styles(self):
+        """Test removing style tags from question text"""
+        text = '<style>body { color: red; }</style>What is the capital?'
+        result = clean_question_text(text)
+        assert 'style' not in result
+        assert 'color: red' not in result
+        assert 'What is the capital?' in result
+
+    def test_clean_html_for_vector_store_empty(self):
+        """Test cleaning empty HTML for vector store"""
+        result = clean_html_for_vector_store("")
+        assert result == ""
+
+    def test_clean_html_for_vector_store_with_html(self):
+        """Test cleaning HTML for vector store"""
+        html = '<p>This is a <strong>test</strong> question.</p>'
+        result = clean_html_for_vector_store(html)
+        assert result == "This is a test question."
+
+    def test_clean_html_for_vector_store_complex(self):
+        """Test cleaning complex HTML for vector store"""
+        html = '''
+        <div class="question">
+            <h2>Question Title</h2>
+            <p>This is the <em>question</em> text with <a href="#">links</a>.</p>
+        </div>
+        '''
+        result = clean_html_for_vector_store(html)
+        assert "Question Title" in result
+        assert "This is the question text with links." in result
+        assert "<" not in result  # No HTML tags should remain
+
+
+class TestTopicExtraction:
+    """Test topic extraction functionality"""
+
+    def test_extract_topic_accessibility(self):
+        """Test extracting accessibility topic"""
+        text = "What is the best practice for screen reader accessibility?"
+        result = extract_topic_from_text(text)
+        assert result == "accessibility"
+
+    def test_extract_topic_navigation(self):
+        """Test extracting navigation topic"""
+        text = "How should you implement navigation menus?"
+        result = extract_topic_from_text(text)
+        assert result == "navigation"
+
+    def test_extract_topic_forms(self):
+        """Test extracting forms topic"""
+        text = "What is the proper way to label form inputs?"
+        result = extract_topic_from_text(text)
+        assert result == "forms"
+
+    def test_extract_topic_media(self):
+        """Test extracting media topic"""
+        text = "How do you make images accessible with alt text?"
+        result = extract_topic_from_text(text)
+        assert result == "media"
+
+    def test_extract_topic_color(self):
+        """Test extracting color topic"""
+        text = "What is the minimum color contrast ratio?"
+        result = extract_topic_from_text(text)
+        assert result == "color"
+
+    def test_extract_topic_keyboard(self):
+        """Test extracting keyboard topic"""
+        text = "How do you implement keyboard navigation?"
+        result = extract_topic_from_text(text)
+        assert result == "keyboard"
+
+    def test_extract_topic_content(self):
+        """Test extracting content topic"""
+        text = "What are semantic HTML elements?"
+        result = extract_topic_from_text(text)
+        assert result == "content"
+
+    def test_extract_topic_general(self):
+        """Test extracting general topic for unknown content"""
+        text = "What is the weather like today?"
+        result = extract_topic_from_text(text)
+        assert result == "general"
+
+    def test_extract_topic_with_feedback(self):
+        """Test extracting topic with feedback text"""
+        question = "What is accessibility?"
+        feedback = "This relates to screen readers and WCAG guidelines."
+        result = extract_topic_from_text(question, feedback)
+        assert result == "accessibility"
+
+
+class TestAnswerFeedbackCleaning:
+    """Test answer feedback cleaning functionality"""
+
+    def test_clean_answer_feedback_empty(self):
+        """Test cleaning empty feedback"""
+        result = clean_answer_feedback("")
+        assert result == ""
+
+    def test_clean_answer_feedback_remove_weight(self):
+        """Test removing weight indicators from feedback"""
+        feedback = "This is correct (Weight: 100%)"
+        result = clean_answer_feedback(feedback)
+        assert "(Weight: 100%)" not in result
+        assert "This is correct" in result
+
+    def test_clean_answer_feedback_remove_correctness_indicators(self):
+        """Test removing correctness indicators from feedback"""
+        feedback = "[✓ CORRECT] This is the right answer"
+        result = clean_answer_feedback(feedback)
+        assert "[✓ CORRECT]" not in result
+        assert "This is the right answer" in result
+
+    def test_clean_answer_feedback_remove_answer_text(self):
+        """Test removing answer text from feedback"""
+        answer_text = "Paris"
+        feedback = "Paris: This is the capital of France"
+        result = clean_answer_feedback(feedback, answer_text)
+        assert "Paris:" not in result
+        assert "This is the capital of France" in result
+
+    def test_clean_answer_feedback_complex(self):
+        """Test cleaning complex feedback with multiple elements"""
+        answer_text = "Paris"
+        feedback = "Paris (Weight: 100%) [✓ CORRECT]: This is the capital of France"
+        result = clean_answer_feedback(feedback, answer_text)
+        assert "Paris" not in result
+        assert "(Weight: 100%)" not in result
+        assert "[✓ CORRECT]" not in result
+        assert "This is the capital of France" in result
+
+
+class TestTagExtraction:
+    """Test tag extraction functionality"""
+
+    def test_get_all_existing_tags_empty(self):
+        """Test getting tags from empty questions list"""
+        questions = []
+        result = get_all_existing_tags(questions)
+        assert result == []
+
+    def test_get_all_existing_tags_no_tags(self):
+        """Test getting tags from questions with no tags"""
+        questions = [
+            {"id": 1, "question_text": "Test question 1"},
+            {"id": 2, "question_text": "Test question 2"}
+        ]
+        result = get_all_existing_tags(questions)
+        assert result == []
+
+    def test_get_all_existing_tags_single_tag(self):
+        """Test getting tags from questions with single tags"""
+        questions = [
+            {"id": 1, "tags": "accessibility"},
+            {"id": 2, "tags": "html"}
+        ]
+        result = get_all_existing_tags(questions)
+        assert result == ["accessibility", "html"]
+
+    def test_get_all_existing_tags_multiple_tags(self):
+        """Test getting tags from questions with multiple tags"""
+        questions = [
+            {"id": 1, "tags": "accessibility,html,wcag"},
+            {"id": 2, "tags": "forms,validation,html"}
+        ]
+        result = get_all_existing_tags(questions)
+        expected = ["accessibility", "forms", "html", "validation", "wcag"]
+        assert result == expected
+
+    def test_get_all_existing_tags_duplicate_tags(self):
+        """Test getting tags with duplicates"""
+        questions = [
+            {"id": 1, "tags": "accessibility,html"},
+            {"id": 2, "tags": "html,forms"},
+            {"id": 3, "tags": "accessibility,forms"}
+        ]
+        result = get_all_existing_tags(questions)
+        expected = ["accessibility", "forms", "html"]
+        assert result == expected
+
+    def test_get_all_existing_tags_with_whitespace(self):
+        """Test getting tags with whitespace"""
+        questions = [
+            {"id": 1, "tags": " accessibility , html "},
+            {"id": 2, "tags": "  forms  ,  validation  "}
+        ]
+        result = get_all_existing_tags(questions)
+        expected = ["accessibility", "forms", "html", "validation"]
+        assert result == expected
