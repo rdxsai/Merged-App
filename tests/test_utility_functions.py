@@ -14,12 +14,18 @@ from main import (
     clean_question_text,
     extract_topic_from_text,
     get_all_existing_tags,
+    get_default_chat_system_prompt,
+    get_default_welcome_message,
+    load_chat_system_prompt,
     load_objectives,
     load_questions,
     load_system_prompt,
+    load_welcome_message,
+    save_chat_system_prompt,
     save_objectives,
     save_questions,
     save_system_prompt,
+    save_welcome_message,
 )
 
 
@@ -352,9 +358,105 @@ class TestTagExtraction:
     def test_get_all_existing_tags_with_whitespace(self):
         """Test getting tags with whitespace"""
         questions = [
-            {"id": 1, "tags": " accessibility , html "},
-            {"id": 2, "tags": "  forms  ,  validation  "},
+            {"id": 1, "tags": "accessibility , html , wcag"},
+            {"id": 2, "tags": "forms, validation , html"},
         ]
         result = get_all_existing_tags(questions)
-        expected = ["accessibility", "forms", "html", "validation"]
+        expected = ["accessibility", "forms", "html", "validation", "wcag"]
         assert result == expected
+
+
+class TestChatUtilityFunctions:
+    """Test chat-related utility functions"""
+
+    def test_load_chat_system_prompt_empty_file(self):
+        """Test loading chat system prompt from empty file"""
+        with patch("builtins.open", mock_open(read_data="")):
+            with patch("os.path.exists", return_value=True):
+                result = load_chat_system_prompt()
+                assert result == ""
+
+    def test_load_chat_system_prompt_with_content(self):
+        """Test loading chat system prompt with content"""
+        prompt_content = "You are a helpful chat assistant."
+        with patch("builtins.open", mock_open(read_data=prompt_content)):
+            with patch("os.path.exists", return_value=True):
+                result = load_chat_system_prompt()
+                assert result == prompt_content
+
+    def test_load_chat_system_prompt_file_not_exists(self):
+        """Test loading chat system prompt when file doesn't exist"""
+        with patch("os.path.exists", return_value=False):
+            result = load_chat_system_prompt()
+            # Should return default prompt when file doesn't exist
+            assert isinstance(result, str)
+            assert len(result) > 0
+
+    def test_save_chat_system_prompt_success(self):
+        """Test saving chat system prompt successfully"""
+        prompt = "Test chat system prompt"
+        mock_file = mock_open()
+        with patch("builtins.open", mock_file):
+            result = save_chat_system_prompt(prompt)
+            assert result is True
+            mock_file.assert_called_once()
+
+    def test_save_chat_system_prompt_failure(self):
+        """Test saving chat system prompt with error"""
+        prompt = "Test chat system prompt"
+        with patch("builtins.open", side_effect=Exception("Write error")):
+            result = save_chat_system_prompt(prompt)
+            assert result is False
+
+    def test_get_default_chat_system_prompt(self):
+        """Test getting default chat system prompt"""
+        result = get_default_chat_system_prompt()
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "context" in result  # Should contain context placeholder
+
+    def test_load_welcome_message_empty_file(self):
+        """Test loading welcome message from empty file"""
+        with patch("builtins.open", mock_open(read_data="")):
+            with patch("os.path.exists", return_value=True):
+                result = load_welcome_message()
+                assert result == ""
+
+    def test_load_welcome_message_with_content(self):
+        """Test loading welcome message with content"""
+        message_content = "Welcome to the chat assistant!"
+        with patch("builtins.open", mock_open(read_data=message_content)):
+            with patch("os.path.exists", return_value=True):
+                result = load_welcome_message()
+                assert result == message_content
+
+    def test_load_welcome_message_file_not_exists(self):
+        """Test loading welcome message when file doesn't exist"""
+        with patch("os.path.exists", return_value=False):
+            result = load_welcome_message()
+            # Should return default message when file doesn't exist
+            assert isinstance(result, str)
+            assert len(result) > 0
+
+    def test_save_welcome_message_success(self):
+        """Test saving welcome message successfully"""
+        message = "Test welcome message"
+        mock_file = mock_open()
+        with patch("builtins.open", mock_file):
+            result = save_welcome_message(message)
+            assert result is True
+            mock_file.assert_called_once()
+
+    def test_save_welcome_message_failure(self):
+        """Test saving welcome message with error"""
+        message = "Test welcome message"
+        with patch("builtins.open", side_effect=Exception("Write error")):
+            result = save_welcome_message(message)
+            assert result is False
+
+    def test_get_default_welcome_message(self):
+        """Test getting default welcome message"""
+        result = get_default_welcome_message()
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "assistant" in result.lower()  # Should mention assistant functionality

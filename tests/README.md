@@ -11,31 +11,37 @@ This directory contains comprehensive tests for the Question App, a FastAPI-base
 - **`test_api_endpoints.py`** - Tests for API endpoints and HTTP responses
 - **`test_ai_integration.py`** - Tests for AI integration features
 - **`test_integration.py`** - Integration tests for complete workflows
+- **`azure_openai_test_script.py`** - Standalone Azure OpenAI connectivity testing script
 
 ### Test Categories
 
 #### Unit Tests (`@pytest.mark.unit`)
+
 - Test individual functions and components in isolation
 - Mock external dependencies
 - Fast execution
 - High code coverage
 
 #### Integration Tests (`@pytest.mark.integration`)
+
 - Test complete workflows and system interactions
 - May use real file operations and mocked external services
 - Test data consistency and error handling
 
 #### AI Integration Tests (`@pytest.mark.ai`)
+
 - Test AI service integrations (Azure OpenAI, Ollama)
 - Mock AI service responses
 - Test feedback generation and parsing
 
 #### API Tests (`@pytest.mark.api`)
+
 - Test HTTP endpoints and responses
 - Test request/response formats
 - Test error handling and status codes
 
 #### Slow Tests (`@pytest.mark.slow`)
+
 - Tests that take longer to execute
 - Can be skipped with `--fast` flag
 - Include performance and large dataset tests
@@ -45,11 +51,13 @@ This directory contains comprehensive tests for the Question App, a FastAPI-base
 ### Prerequisites
 
 1. Install test dependencies:
+
 ```bash
 poetry install --with dev
 ```
 
 2. Ensure you have the required packages:
+
 - pytest
 - pytest-asyncio
 - httpx (for async HTTP testing)
@@ -125,21 +133,28 @@ python -m pytest -m "unit or api"
 ### Current Coverage Areas
 
 1. **Utility Functions**
+
    - File operations (load/save questions, objectives, prompts)
+   - Chat utility functions (system prompts, welcome messages)
    - Text cleaning and processing
    - Topic extraction
    - Answer feedback cleaning
    - Tag extraction
 
 2. **API Endpoints**
+
    - Home page and navigation
    - Question CRUD operations
    - System prompt management
-   - Chat functionality
+   - Chat functionality and endpoints
+   - Chat system prompt management
+   - Chat welcome message management
    - Learning objectives management
-   - Debug endpoints
+   - Debug endpoints (config, question, Ollama test)
+   - System prompt testing page
 
 3. **AI Integration**
+
    - Azure OpenAI feedback generation
    - Ollama embeddings
    - Vector store operations

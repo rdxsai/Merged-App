@@ -4,6 +4,7 @@ Tests for API endpoints
 import json
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -422,3 +423,163 @@ class TestDebugEndpoints:
             assert response.status_code == 200
             data = response.json()
             assert data["question_found"] is False
+
+    @pytest.mark.asyncio
+    async def test_debug_ollama_test_success(self, client):
+        """Test successful Ollama connection test"""
+        mock_models = {
+            "models": [
+                {"name": "nomic-embed-text"},
+                {"name": "llama2"},
+                {"name": "mistral"}
+            ]
+        }
+
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_models
+            mock_get.return_value = mock_response
+
+            response = client.get("/debug/ollama-test")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["ollama_connected"] is True
+            assert "nomic-embed-text" in data["available_models"]
+            assert data["embedding_model_available"] is True
+
+    @pytest.mark.asyncio
+    async def test_debug_ollama_test_connection_error(self, client):
+        """Test Ollama connection test with connection error"""
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_get.side_effect = httpx.ConnectError("Connection failed")
+
+            response = client.get("/debug/ollama-test")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["ollama_connected"] is False
+            assert "Cannot connect to Ollama" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_debug_ollama_test_api_error(self, client):
+        """Test Ollama connection test with API error"""
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 500
+            mock_get.return_value = mock_response
+
+            response = client.get("/debug/ollama-test")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["ollama_connected"] is False
+            assert "Ollama returned status 500" in data["error"]
+
+
+class TestChatSystemPromptAPI:
+    """Test chat system prompt API endpoints"""
+
+    def test_get_chat_system_prompt_page(self, client):
+        """Test getting chat system prompt edit page"""
+        with patch("main.load_chat_system_prompt", return_value="Test chat prompt"):
+            with patch("main.get_default_chat_system_prompt", return_value="Default chat prompt"):
+                response = client.get("/chat-system-prompt")
+                assert response.status_code == 200
+                assert "text/html" in response.headers["content-type"]
+
+    def test_save_chat_system_prompt_success(self, client):
+        """Test successful chat system prompt save"""
+        with patch("main.save_chat_system_prompt", return_value=True):
+            response = client.post(
+                "/chat-system-prompt", data={"prompt": "New chat system prompt"}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+
+    def test_save_chat_system_prompt_empty(self, client):
+        """Test chat system prompt save with empty prompt"""
+        response = client.post("/chat-system-prompt", data={"prompt": ""})
+        assert response.status_code == 400
+
+    def test_save_chat_system_prompt_failure(self, client):
+        """Test chat system prompt save failure"""
+        with patch("main.save_chat_system_prompt", return_value=False):
+            response = client.post(
+                "/chat-system-prompt", data={"prompt": "New chat system prompt"}
+            )
+            assert response.status_code == 500
+
+    def test_get_default_chat_system_prompt(self, client):
+        """Test getting default chat system prompt"""
+        with patch("main.get_default_chat_system_prompt", return_value="Default prompt"):
+            response = client.get("/chat-system-prompt/default")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["default_prompt"] == "Default prompt"
+
+
+class TestChatWelcomeMessageAPI:
+    """Test chat welcome message API endpoints"""
+
+    def test_get_chat_welcome_message(self, client):
+        """Test getting current chat welcome message"""
+        with patch("main.load_welcome_message", return_value="Welcome to the chat!"):
+            response = client.get("/chat-welcome-message")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["welcome_message"] == "Welcome to the chat!"
+
+    def test_save_chat_welcome_message_json_success(self, client):
+        """Test successful chat welcome message save with JSON"""
+        with patch("main.save_welcome_message", return_value=True):
+            response = client.post(
+                "/chat-welcome-message",
+                json={"welcome_message": "New welcome message"},
+                headers={"content-type": "application/json"}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+
+    def test_save_chat_welcome_message_form_success(self, client):
+        """Test successful chat welcome message save with form data"""
+        with patch("main.save_welcome_message", return_value=True):
+            response = client.post(
+                "/chat-welcome-message",
+                data={"welcome_message": "New welcome message"}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+
+    def test_save_chat_welcome_message_empty(self, client):
+        """Test chat welcome message save with empty message"""
+        response = client.post("/chat-welcome-message", json={"welcome_message": ""})
+        assert response.status_code == 400
+
+    def test_save_chat_welcome_message_failure(self, client):
+        """Test chat welcome message save failure"""
+        with patch("main.save_welcome_message", return_value=False):
+            response = client.post(
+                "/chat-welcome-message",
+                json={"welcome_message": "New welcome message"}
+            )
+            assert response.status_code == 500
+
+    def test_get_default_chat_welcome_message(self, client):
+        """Test getting default chat welcome message"""
+        with patch("main.get_default_welcome_message", return_value="Default welcome"):
+            response = client.get("/chat-welcome-message/default")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["default_welcome_message"] == "Default welcome"
+
+
+class TestSystemPromptTestAPI:
+    """Test system prompt testing API endpoints"""
+
+    def test_get_test_system_prompt_page(self, client):
+        """Test getting system prompt test page"""
+        response = client.get("/test-system-prompt")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]

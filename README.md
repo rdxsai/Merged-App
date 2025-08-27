@@ -470,7 +470,7 @@ curl http://localhost:11434/api/tags
 
 ### Testing Tools
 
-- `test_azure_openai.py` - Comprehensive Azure OpenAI connectivity and functionality testing
+- `tests/azure_openai_test_script.py` - Comprehensive Azure OpenAI connectivity and functionality testing
 - `poetry run pytest` - Run the full test suite
 
 ## 🤝 Contributing
