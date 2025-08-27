@@ -17,7 +17,19 @@ def client():
 
 
 class TestHomeEndpoint:
-    """Test the home page endpoint"""
+    """
+    Test the home page endpoint.
+
+    This test class covers the main home page functionality including
+    page loading, content rendering, and error handling. It tests
+    both empty and populated question scenarios.
+
+    Test Coverage:
+        - Home page loads successfully
+        - Page renders with sample questions
+        - Proper content type headers
+        - Template rendering functionality
+    """
 
     def test_home_page_loads(self, client):
         """Test that home page loads successfully"""

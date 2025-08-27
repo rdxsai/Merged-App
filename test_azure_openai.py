@@ -37,7 +37,8 @@ def load_config() -> Dict[str, str]:
     Load and validate Azure OpenAI configuration from environment variables.
 
     This function reads the required Azure OpenAI configuration from environment
-    variables and provides default values where appropriate.
+    variables and provides default values where appropriate. It handles missing
+    configuration gracefully and provides sensible defaults.
 
     Returns:
         Dict[str, str]: Configuration dictionary containing:
@@ -46,9 +47,29 @@ def load_config() -> Dict[str, str]:
             - 'api_version': API version string
             - 'subscription_key': Azure subscription key
 
+    Raises:
+        No exceptions are raised. Missing values are handled gracefully.
+
     Note:
         The function uses default values for endpoint and API version if not
-        specified in environment variables.
+        specified in environment variables. Missing deployment_id or
+        subscription_key will result in None values.
+
+    Example:
+        >>> config = load_config()
+        >>> print(f"Endpoint: {config['endpoint']}")
+        >>> print(f"Deployment ID: {config['deployment_id']}")
+        >>> if config['subscription_key']:
+        ...     print("Subscription key is configured")
+        ... else:
+        ...     print("Subscription key is missing")
+        Endpoint: https://itls-openai-connect.azure-api.net
+        Deployment ID: gpt-4
+        Subscription key is configured
+
+    See Also:
+        :func:`validate_config`: Validate the loaded configuration
+        :func:`print_config`: Display configuration details
     """
     config = {
         "endpoint": os.getenv(

@@ -234,12 +234,30 @@ def load_questions() -> List[Dict[str, Any]]:
     """
     Load questions from the JSON data file.
 
+    This function reads the quiz questions from the JSON data file and returns
+    them as a list of dictionaries. It handles various error conditions gracefully
+    including missing files, permission errors, and JSON parsing errors.
+
     Returns:
         List[Dict[str, Any]]: List of question dictionaries loaded from the file.
         Returns an empty list if the file doesn't exist or there's an error.
 
+    Raises:
+        No exceptions are raised. All errors are logged and handled gracefully.
+
     Note:
         The function handles file I/O errors gracefully and logs any issues.
+        If the file doesn't exist, an empty list is returned rather than an error.
+
+    Example:
+        >>> questions = load_questions()
+        >>> print(f"Loaded {len(questions)} questions")
+        Loaded 15 questions
+        
+        >>> # Handle empty file case
+        >>> if not questions:
+        ...     print("No questions found, starting with empty list")
+        ...     questions = []
     """
     try:
         if os.path.exists(DATA_FILE):
@@ -255,14 +273,37 @@ def save_questions(questions: List[Dict[str, Any]]) -> bool:
     """
     Save questions to the JSON data file.
 
+    This function writes the quiz questions to the JSON data file with proper
+    formatting and error handling. It ensures the data is saved with UTF-8
+    encoding and proper JSON formatting.
+
     Args:
         questions (List[Dict[str, Any]]): List of question dictionaries to save.
 
     Returns:
         bool: True if the save operation was successful, False otherwise.
 
+    Raises:
+        No exceptions are raised. All errors are logged and handled gracefully.
+
     Note:
         The function handles file I/O errors gracefully and logs any issues.
+        Data is saved with UTF-8 encoding and proper JSON formatting.
+
+    Example:
+        >>> sample_questions = [
+        ...     {"id": 1, "question_text": "What is 2+2?", "answers": []},
+        ...     {"id": 2, "question_text": "What is the capital of France?", "answers": []}
+        ... ]
+        >>> success = save_questions(sample_questions)
+        >>> if success:
+        ...     print("Questions saved successfully")
+        ... else:
+        ...     print("Failed to save questions")
+        Questions saved successfully
+
+    See Also:
+        :func:`load_questions`: Load questions from the JSON file
     """
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -615,14 +656,17 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
     Get embeddings from Ollama using the nomic-embed-text model.
 
     This function generates vector embeddings for a list of text inputs using
-    the local Ollama service with the nomic-embed-text model.
+    the local Ollama service with the nomic-embed-text model. It handles
+    connection management, error handling, and request throttling automatically.
 
     Args:
         texts (List[str]): List of text strings to generate embeddings for.
+                          Empty strings are allowed but will result in zero vectors.
 
     Returns:
         List[List[float]]: List of embedding vectors, where each vector is a
         list of floats representing the text in high-dimensional space.
+        Returns empty list if all requests fail.
 
     Raises:
         HTTPException: If there are connection issues, timeouts, or API errors
@@ -632,6 +676,21 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
         The function includes a small delay between requests to avoid overwhelming
         the Ollama service. It also handles various error conditions including
         connection failures, timeouts, and invalid responses.
+
+    Example:
+        >>> texts = [
+        ...     "What is the capital of France?",
+        ...     "Explain the concept of accessibility in web design"
+        ... ]
+        >>> embeddings = await get_ollama_embeddings(texts)
+        >>> print(f"Generated {len(embeddings)} embeddings")
+        >>> print(f"Each embedding has {len(embeddings[0])} dimensions")
+        Generated 2 embeddings
+        Each embedding has 768 dimensions
+
+    See Also:
+        :func:`search_vector_store`: Use embeddings for semantic search
+        :func:`create_comprehensive_chunks`: Prepare text for embedding
     """
     embeddings = []
 
@@ -1032,12 +1091,15 @@ async def generate_feedback_with_ai(
 
     This function sends a question to Azure OpenAI with a system prompt to
     generate comprehensive educational feedback including general feedback
-    and answer-specific feedback for each answer option.
+    and answer-specific feedback for each answer option. It handles API
+    communication, response parsing, and error conditions gracefully.
 
     Args:
         question_data (Dict[str, Any]): Question data including text, type,
-                                      points, and answer options.
+                                      points, and answer options. Must contain
+                                      'question_text' and 'answers' keys.
         system_prompt (str): The system prompt to guide the AI's response.
+                            Should provide context about the educational role.
 
     Returns:
         Dict[str, Any]: Generated feedback containing:
@@ -1053,6 +1115,24 @@ async def generate_feedback_with_ai(
         The function validates Azure OpenAI configuration, constructs a detailed
         prompt with question context, and parses the AI response to extract
         structured feedback. It includes comprehensive error handling and logging.
+
+    Example:
+        >>> question_data = {
+        ...     "id": 1,
+        ...     "question_text": "What is the capital of France?",
+        ...     "answers": [
+        ...         {"id": 1, "text": "London", "weight": 0.0},
+        ...         {"id": 2, "text": "Paris", "weight": 100.0}
+        ...     ]
+        ... }
+        >>> system_prompt = "You are an educational assistant helping with quiz feedback."
+        >>> feedback = await generate_feedback_with_ai(question_data, system_prompt)
+        >>> print(feedback["general_feedback"])
+        >>> print(feedback["answer_feedback"])
+
+    See Also:
+        :func:`get_ollama_embeddings`: Generate embeddings for vector search
+        :func:`search_vector_store`: Search for similar questions
     """
     logger.info(
         f"Starting AI feedback generation for question ID: {question_data.get('id', 'unknown')}"

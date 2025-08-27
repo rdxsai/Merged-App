@@ -69,14 +69,33 @@ def check_black():
 
     This function runs Black in check mode to verify that all Python files
     in the current directory are properly formatted according to Black's
-    style guidelines.
+    style guidelines. It provides detailed output showing what changes
+    would be made.
 
     Returns:
         bool: True if all files are properly formatted, False otherwise
 
+    Raises:
+        No exceptions are raised. All errors are handled and reported.
+
     Note:
         This function only checks formatting without making any changes.
-        Use format_code() to actually format the files.
+        Use format_code() to actually format the files. The function
+        shows a diff of what changes would be made if formatting is needed.
+
+    Example:
+        >>> is_formatted = check_black()
+        >>> if is_formatted:
+        ...     print("All files are properly formatted")
+        ... else:
+        ...     print("Some files need formatting - run format_code() to fix")
+        🔍 Black code formatting check...
+        ✅ Black code formatting check passed
+        All files are properly formatted
+
+    See Also:
+        :func:`run_command`: Helper function for executing shell commands
+        :func:`format_code`: Actually format the code (in format_code.py)
     """
     return run_command("black --check --diff .", "Black code formatting check")
 

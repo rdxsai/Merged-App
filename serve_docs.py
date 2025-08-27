@@ -35,10 +35,22 @@ class DocumentationHandler(SimpleHTTPRequestHandler):
     Custom HTTP request handler for serving documentation.
 
     This class extends SimpleHTTPRequestHandler to provide custom logging
-    and serve documentation files from the correct directory.
+    and serve documentation files from the correct directory. It includes
+    enhanced request logging with emoji indicators for better visibility.
 
     Attributes:
         directory (str): The directory containing the documentation files
+
+    Methods:
+        log_message: Override to provide custom logging format with emojis
+
+    Example:
+        >>> handler = DocumentationHandler(request, client_address, server)
+        >>> # Handler will automatically log requests with emoji indicators
+        📄 127.0.0.1 - - [01/Jan/2024 12:00:00] "GET /index.html HTTP/1.1" 200 -
+
+    See Also:
+        :func:`start_server`: Main function that uses this handler
     """
 
     def __init__(self, *args, **kwargs):

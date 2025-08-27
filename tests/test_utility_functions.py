@@ -24,7 +24,21 @@ from main import (
 
 
 class TestFileOperations:
-    """Test file loading and saving operations"""
+    """
+    Test file loading and saving operations.
+
+    This test class covers all file I/O operations including loading and
+    saving questions, objectives, and system prompts. It tests both
+    successful operations and error handling scenarios.
+
+    Test Coverage:
+        - Loading from existing files
+        - Loading from non-existent files
+        - Saving data successfully
+        - Error handling during file operations
+        - JSON parsing and serialization
+        - File encoding and formatting
+    """
 
     def test_load_questions_empty_file(self):
         """Test loading questions from empty file"""

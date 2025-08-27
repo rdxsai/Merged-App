@@ -25,18 +25,36 @@ def run_command(command: str, description: str) -> bool:
     Run a command and handle the result.
 
     This function executes a shell command and provides formatted output
-    for both success and failure cases.
+    for both success and failure cases. It captures all output streams
+    and provides detailed error reporting for debugging.
 
     Args:
-        command: The shell command to execute
-        description: Human-readable description of what the command does
+        command (str): The shell command to execute
+        description (str): Human-readable description of what the command does
 
     Returns:
         bool: True if command succeeded, False if it failed
 
+    Raises:
+        No exceptions are raised. All errors are captured and reported.
+
     Note:
         The function captures both stdout and stderr for comprehensive
-        error reporting.
+        error reporting. Commands are executed with shell=True for
+        compatibility with complex commands.
+
+    Example:
+        >>> success = run_command("python --version", "Check Python version")
+        >>> if success:
+        ...     print("Python version check passed")
+        ... else:
+        ...     print("Python version check failed")
+        🔍 Check Python version...
+        ✅ Check Python version passed
+        Python version check passed
+
+    See Also:
+        :func:`format_code`: Main formatting function that uses this helper
     """
     print(f"🔍 {description}...")
     try:
@@ -57,7 +75,40 @@ def run_command(command: str, description: str) -> bool:
 
 
 def format_code():
-    """Format code with Black and isort."""
+    """
+    Format code with Black and isort.
+
+    This function orchestrates the code formatting process by running Black
+    for code formatting and isort for import sorting. It provides comprehensive
+    error reporting and ensures both tools complete successfully.
+
+    Returns:
+        bool: True if all formatting operations succeeded, False otherwise
+
+    Raises:
+        No exceptions are raised. All errors are handled and reported.
+
+    Note:
+        The function runs Black first for code formatting, then isort for
+        import organization. Both tools must succeed for the function to
+        return True.
+
+    Example:
+        >>> success = format_code()
+        >>> if success:
+        ...     print("Code formatting completed successfully")
+        ... else:
+        ...     print("Code formatting failed - check output above")
+        🎨 Formatting code...
+        🔍 Black code formatting...
+        ✅ Black code formatting passed
+        🔍 Isort import sorting...
+        ✅ Isort import sorting passed
+        Code formatting completed successfully
+
+    See Also:
+        :func:`run_command`: Helper function for executing shell commands
+    """
     print("🎨 Formatting code...")
 
     # Format with Black

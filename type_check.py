@@ -31,14 +31,31 @@ def run_mypy() -> bool:
 
     This function executes mypy with strict settings to perform comprehensive
     static type checking on the codebase. It uses strict mode for maximum
-    type safety detection.
+    type safety detection and provides detailed error reporting.
 
     Returns:
         bool: True if mypy check passed, False if it failed or mypy not found
 
+    Raises:
+        No exceptions are raised. All errors are handled and reported.
+
     Note:
         The function provides detailed error output and installation guidance
-        if mypy is not available.
+        if mypy is not available. It uses strict mode which catches more
+        type-related issues.
+
+    Example:
+        >>> success = run_mypy()
+        >>> if success:
+        ...     print("Type checking passed!")
+        ... else:
+        ...     print("Type checking failed - check output above")
+        🔍 Running mypy type checking...
+        ✅ Type checking passed!
+        Type checking passed!
+
+    See Also:
+        :func:`run_pyright`: Alternative type checker using pyright
     """
     print("🔍 Running mypy type checking...")
 

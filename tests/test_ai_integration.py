@@ -15,11 +15,39 @@ from main import (
 
 
 class TestAIFeedbackGeneration:
-    """Test AI feedback generation functionality"""
+    """
+    Test AI feedback generation functionality.
+
+    This test class covers the AI-powered feedback generation features including
+    successful API calls, error handling, configuration validation, and response
+    parsing. It uses mocked Azure OpenAI responses to test various scenarios.
+
+    Test Coverage:
+        - Successful feedback generation with valid responses
+        - Missing configuration handling
+        - API error responses
+        - Network timeouts
+        - Response parsing and validation
+    """
 
     @pytest.mark.asyncio
     async def test_generate_feedback_success(self, sample_questions):
-        """Test successful AI feedback generation"""
+        """
+        Test successful AI feedback generation.
+
+        This test verifies that the AI feedback generation works correctly
+        with a valid Azure OpenAI response. It checks that the response
+        is properly parsed and contains the expected feedback structure.
+
+        Args:
+            sample_questions: Fixture providing sample question data
+
+        Assertions:
+            - Response contains general_feedback
+            - Response contains answer_feedback
+            - Response contains token_usage
+            - Token usage matches expected values
+        """
         question_data = sample_questions[0]
         system_prompt = "You are a helpful assistant for quiz questions."
 

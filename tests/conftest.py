@@ -20,7 +20,25 @@ from main import app
 
 @pytest.fixture
 def client():
-    """Create a test client for the FastAPI app"""
+    """
+    Create a test client for the FastAPI app.
+
+    This fixture provides a TestClient instance configured for testing
+    the Canvas Quiz Manager FastAPI application. It allows for making
+    HTTP requests to the application during testing.
+
+    Returns:
+        TestClient: A configured test client for the FastAPI app
+
+    Example:
+        >>> def test_home_page(client):
+        ...     response = client.get("/")
+        ...     assert response.status_code == 200
+        ...     assert "text/html" in response.headers["content-type"]
+
+    See Also:
+        :func:`sample_questions`: Fixture providing test question data
+    """
     return TestClient(app)
 
 

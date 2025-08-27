@@ -9,12 +9,14 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
 
    modules
    api
+   api_examples
    installation
    usage
    configuration
    development
    development_tools
    testing
+   troubleshooting
 
 Overview
 --------
