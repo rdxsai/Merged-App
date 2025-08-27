@@ -49,6 +49,9 @@ open docs/_build/html/index.html
 ## Code Quality Tools
 
 ```bash
+# Format code (recommended)
+poetry run format
+
 # Run linting and formatting checks
 poetry run lint
 

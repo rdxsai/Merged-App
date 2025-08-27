@@ -82,6 +82,10 @@ The project uses Black for code formatting:
 
 .. code-block:: bash
 
+   # Format code with Black and isort (recommended)
+   poetry run format
+
+   # Or format with Black only
    poetry run black .
 
 Import Sorting
@@ -282,9 +286,8 @@ Feature Development
    .. code-block:: bash
 
       poetry run pytest
-      poetry run black .
-      poetry run isort .
-      poetry run flake8 .
+      poetry run format
+      poetry run lint
 
 4. **Commit changes**
 

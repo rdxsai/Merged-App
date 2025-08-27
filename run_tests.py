@@ -22,27 +22,27 @@ Author: Bryce Kayanuma <BrycePK@vt.edu>
 Version: 0.1.0
 """
 
-import sys
-import subprocess
 import argparse
+import subprocess
+import sys
 from typing import List, Optional
 
 
 def run_command(cmd: List[str], description: str) -> bool:
     """
     Run a command and handle errors with enhanced output parsing.
-    
+
     This function executes a subprocess command and provides enhanced output
     parsing for test results, including automatic summary extraction and
     formatted error reporting.
-    
+
     Args:
         cmd: List of command arguments to execute
         description: Human-readable description of the command being run
-        
+
     Returns:
         bool: True if command succeeded (return code 0), False otherwise
-        
+
     Note:
         The function automatically parses test output to extract summary
         information and provides formatted error messages for debugging.
@@ -51,25 +51,25 @@ def run_command(cmd: List[str], description: str) -> bool:
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}")
-    
+
     try:
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
-        
+
         # Parse test results
         has_passed = "passed" in result.stdout
         has_failed = "failed" in result.stdout
         if has_passed and has_failed:
             # Extract summary information
-            lines = result.stdout.split('\n')
+            lines = result.stdout.split("\n")
             summary_line = None
             for line in lines:
                 if "passed" in line and ("failed" in line or "error" in line):
                     summary_line = line
                     break
-            
+
             if summary_line:
                 print(f"📊 Test Summary: {summary_line.strip()}")
-        
+
         if result.returncode == 0:
             print("✅ SUCCESS")
             if result.stdout:
@@ -94,11 +94,11 @@ def run_command(cmd: List[str], description: str) -> bool:
 def main() -> int:
     """
     Main test runner function.
-    
+
     This function parses command line arguments and executes the appropriate
     test suite based on the specified options. It supports multiple test
     types, coverage reporting, and various execution modes.
-    
+
     Command Line Arguments:
         --type: Test type to run (unit, integration, all, ai, api)
         --coverage: Enable coverage reporting
@@ -107,10 +107,10 @@ def main() -> int:
         --parallel: Run tests in parallel
         --watch: Watch for file changes
         --debug: Enable debug output
-        
+
     Returns:
         int: Exit code (0 for success, 1 for failure)
-        
+
     Note:
         The function provides helpful tips for fixing test issues when
         tests fail.
@@ -119,70 +119,56 @@ def main() -> int:
         description="Run tests for Canvas Quiz Manager application"
     )
     parser.add_argument(
-        "--type", 
+        "--type",
         choices=["unit", "integration", "all", "ai", "api"],
         default="all",
-        help="Type of tests to run"
+        help="Type of tests to run",
     )
     parser.add_argument(
-        "--coverage",
-        action="store_true",
-        help="Run tests with coverage report"
+        "--coverage", action="store_true", help="Run tests with coverage report"
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Verbose output"
-    )
-    parser.add_argument(
-        "--fast",
-        action="store_true",
-        help="Skip slow tests"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Verbose output")
+    parser.add_argument("--fast", action="store_true", help="Skip slow tests")
     parser.add_argument(
         "--parallel",
         action="store_true",
-        help="Run tests in parallel (requires pytest-xdist)"
+        help="Run tests in parallel (requires pytest-xdist)",
     )
     parser.add_argument(
-        "--watch",
-        action="store_true",
-        help="Watch for file changes and re-run tests"
+        "--watch", action="store_true", help="Watch for file changes and re-run tests"
     )
     parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Run tests with debug output"
+        "--debug", action="store_true", help="Run tests with debug output"
     )
-    
+
     args = parser.parse_args()
-    
+
     print("🧪 Canvas Quiz Manager - Test Runner")
     print("=" * 50)
-    
+
     # Base pytest command
     cmd = ["python", "-m", "pytest"]
-    
+
     # Add coverage if requested
     if args.coverage:
         cmd.extend(["--cov=main", "--cov-report=html", "--cov-report=term"])
-    
+
     # Add verbose flag
     if args.verbose:
         cmd.append("-v")
-    
+
     # Add debug flag
     if args.debug:
         cmd.extend(["-s", "--tb=long"])
-    
+
     # Add parallel execution
     if args.parallel:
         cmd.extend(["-n", "auto"])
-    
+
     # Add watch mode
     if args.watch:
         cmd.append("--f")
-    
+
     # Add test type filters
     if args.type == "unit":
         cmd.extend(["-m", "unit"])
@@ -192,14 +178,14 @@ def main() -> int:
         cmd.extend(["-m", "ai"])
     elif args.type == "api":
         cmd.extend(["-m", "api"])
-    
+
     # Skip slow tests if requested
     if args.fast:
         cmd.extend(["-m", "not slow"])
-    
+
     # Run the tests
     success = run_command(cmd, f"Running {args.type} tests")
-    
+
     if success:
         print("\n🎉 All tests passed!")
         return 0

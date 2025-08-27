@@ -21,8 +21,11 @@ The project includes comprehensive code quality tools accessible via Poetry scri
    # Check code quality without fixing
    poetry run lint --check-only
 
-   # Format code automatically
+   # Format code automatically (with linting)
    poetry run lint --format
+
+   # Format code only (no linting checks)
+   poetry run format
 
 The linting system includes:
 
@@ -231,6 +234,24 @@ The linting script provides comprehensive code quality checking.
 - Installation guidance
 - Configurable options
 
+format_code.py
+~~~~~~~~~~~~~
+
+The dedicated formatting script provides code formatting without linting checks.
+
+**Key Functions:**
+
+- ``run_command()``: Shell command execution with error handling
+- ``format_code()``: Automatic code formatting with Black and isort
+
+**Features:**
+
+- Black code formatting
+- Isort import sorting
+- Focused formatting without linting interference
+- Comprehensive error reporting
+- Clean, simple interface
+
 Integration
 ----------
 
@@ -265,7 +286,7 @@ Example workflow:
 .. code-block:: bash
 
    # Quick development cycle
-   poetry run lint --format
+   poetry run format
    poetry run type-check
    poetry run test --type unit --fast
 
@@ -283,7 +304,8 @@ Common Issues
 
 **Linting Errors:**
 
-- Run ``poetry run lint --format`` to auto-fix formatting issues
+- Run ``poetry run format`` to auto-fix formatting issues (recommended)
+- Run ``poetry run lint --format`` to auto-fix formatting issues with linting
 - Check for missing dependencies with ``poetry install``
 - Verify Python version compatibility
 

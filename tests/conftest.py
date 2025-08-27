@@ -1,20 +1,19 @@
 """
 Pytest configuration and fixtures for question app tests
 """
-import sys
-import os
-import pytest
 import asyncio
-import tempfile
 import json
-from typing import Dict, Any, List
-from fastapi.testclient import TestClient
+import os
+import sys
+import tempfile
+from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 # Import the main app
-sys.path.insert(0, os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
-))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app
 
@@ -52,7 +51,7 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "html": "<p>London</p>",
                     "comments": "London is the capital of England, not France.",
                     "comments_html": "<p>London is the capital of England, not France.</p>",
-                    "weight": 0.0
+                    "weight": 0.0,
                 },
                 {
                     "id": 2,
@@ -60,7 +59,7 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "html": "<p>Paris</p>",
                     "comments": "Correct! Paris is the capital of France.",
                     "comments_html": "<p>Correct! Paris is the capital of France.</p>",
-                    "weight": 100.0
+                    "weight": 100.0,
                 },
                 {
                     "id": 3,
@@ -68,9 +67,9 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "html": "<p>Berlin</p>",
                     "comments": "Berlin is the capital of Germany, not France.",
                     "comments_html": "<p>Berlin is the capital of Germany, not France.</p>",
-                    "weight": 0.0
-                }
-            ]
+                    "weight": 0.0,
+                },
+            ],
         },
         {
             "id": 2,
@@ -95,7 +94,7 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "html": "<p>alt</p>",
                     "comments": "Correct! The alt attribute provides alternative text for images.",
                     "comments_html": "<p>Correct! The alt attribute provides alternative text for images.</p>",
-                    "weight": 100.0
+                    "weight": 100.0,
                 },
                 {
                     "id": 2,
@@ -103,10 +102,10 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "html": "<p>title</p>",
                     "comments": "The title attribute provides tooltips, not accessibility for screen readers.",
                     "comments_html": "<p>The title attribute provides tooltips, not accessibility for screen readers.</p>",
-                    "weight": 0.0
-                }
-            ]
-        }
+                    "weight": 0.0,
+                },
+            ],
+        },
     ]
 
 
@@ -117,25 +116,25 @@ def sample_objectives() -> List[Dict[str, Any]]:
         {
             "text": "Understand basic accessibility principles",
             "blooms_level": "understand",
-            "priority": "high"
+            "priority": "high",
         },
         {
             "text": "Apply WCAG guidelines in web development",
             "blooms_level": "apply",
-            "priority": "medium"
-        }
+            "priority": "medium",
+        },
     ]
 
 
 @pytest.fixture
 def temp_data_file():
     """Create a temporary data file for testing"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         json.dump([], f)
         temp_file = f.name
-    
+
     yield temp_file
-    
+
     # Cleanup
     if os.path.exists(temp_file):
         os.unlink(temp_file)
@@ -144,12 +143,12 @@ def temp_data_file():
 @pytest.fixture
 def temp_system_prompt_file():
     """Create a temporary system prompt file for testing"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("You are a helpful assistant for quiz questions.")
         temp_file = f.name
-    
+
     yield temp_file
-    
+
     # Cleanup
     if os.path.exists(temp_file):
         os.unlink(temp_file)
@@ -168,9 +167,9 @@ def mock_env_vars():
         "AZURE_OPENAI_API_VERSION": "2023-12-01-preview",
         "AZURE_OPENAI_SUBSCRIPTION_KEY": "test_key",
         "OLLAMA_HOST": "http://localhost:11434",
-        "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text"
+        "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
     }
-    
+
     with patch.dict(os.environ, env_vars):
         yield env_vars
 
@@ -178,7 +177,7 @@ def mock_env_vars():
 @pytest.fixture
 def mock_httpx_client():
     """Mock httpx client for testing HTTP requests"""
-    with patch('httpx.AsyncClient') as mock_client:
+    with patch("httpx.AsyncClient") as mock_client:
         mock_client.return_value.__aenter__.return_value = mock_client.return_value
         mock_client.return_value.__aexit__.return_value = None
         yield mock_client.return_value
@@ -187,7 +186,7 @@ def mock_httpx_client():
 @pytest.fixture
 def mock_chromadb():
     """Mock ChromaDB for testing vector store operations"""
-    with patch('chromadb.PersistentClient') as mock_client:
+    with patch("chromadb.PersistentClient") as mock_client:
         mock_collection = MagicMock()
         mock_client.return_value.get_collection.return_value = mock_collection
         mock_client.return_value.create_collection.return_value = mock_collection
@@ -208,9 +207,5 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+    config.addinivalue_line("markers", "unit: marks tests as unit tests")

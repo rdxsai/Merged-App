@@ -1,16 +1,25 @@
 """
 Unit tests for utility functions
 """
-import pytest
-import tempfile
-import os
 import json
-from unittest.mock import patch, mock_open
+import os
+import tempfile
+from unittest.mock import mock_open, patch
+
+import pytest
+
 from main import (
-    load_questions, save_questions, load_objectives, save_objectives,
-    load_system_prompt, save_system_prompt, clean_question_text,
-    clean_html_for_vector_store, extract_topic_from_text,
-    clean_answer_feedback, get_all_existing_tags
+    clean_answer_feedback,
+    clean_html_for_vector_store,
+    clean_question_text,
+    extract_topic_from_text,
+    get_all_existing_tags,
+    load_objectives,
+    load_questions,
+    load_system_prompt,
+    save_objectives,
+    save_questions,
+    save_system_prompt,
 )
 
 
@@ -19,14 +28,14 @@ class TestFileOperations:
 
     def test_load_questions_empty_file(self):
         """Test loading questions from empty file"""
-        with patch('builtins.open', mock_open(read_data='[]')):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data="[]")):
+            with patch("os.path.exists", return_value=True):
                 result = load_questions()
                 assert result == []
 
     def test_load_questions_file_not_exists(self):
         """Test loading questions when file doesn't exist"""
-        with patch('os.path.exists', return_value=False):
+        with patch("os.path.exists", return_value=False):
             result = load_questions()
             assert result == []
 
@@ -34,10 +43,10 @@ class TestFileOperations:
         """Test loading questions with actual data"""
         sample_data = [
             {"id": 1, "question_text": "Test question 1"},
-            {"id": 2, "question_text": "Test question 2"}
+            {"id": 2, "question_text": "Test question 2"},
         ]
-        with patch('builtins.open', mock_open(read_data=json.dumps(sample_data))):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+            with patch("os.path.exists", return_value=True):
                 result = load_questions()
                 assert result == sample_data
 
@@ -45,7 +54,7 @@ class TestFileOperations:
         """Test saving questions successfully"""
         questions = [{"id": 1, "question_text": "Test"}]
         mock_file = mock_open()
-        with patch('builtins.open', mock_file):
+        with patch("builtins.open", mock_file):
             result = save_questions(questions)
             assert result is True
             mock_file.assert_called_once()
@@ -53,14 +62,14 @@ class TestFileOperations:
     def test_save_questions_failure(self):
         """Test saving questions with error"""
         questions = [{"id": 1, "question_text": "Test"}]
-        with patch('builtins.open', side_effect=Exception("Write error")):
+        with patch("builtins.open", side_effect=Exception("Write error")):
             result = save_questions(questions)
             assert result is False
 
     def test_load_objectives_empty_file(self):
         """Test loading objectives from empty file"""
-        with patch('builtins.open', mock_open(read_data='[]')):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data="[]")):
+            with patch("os.path.exists", return_value=True):
                 result = load_objectives()
                 assert result == []
 
@@ -68,10 +77,10 @@ class TestFileOperations:
         """Test loading objectives with actual data"""
         sample_data = [
             {"text": "Objective 1", "blooms_level": "understand"},
-            {"text": "Objective 2", "blooms_level": "apply"}
+            {"text": "Objective 2", "blooms_level": "apply"},
         ]
-        with patch('builtins.open', mock_open(read_data=json.dumps(sample_data))):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+            with patch("os.path.exists", return_value=True):
                 result = load_objectives()
                 assert result == sample_data
 
@@ -79,22 +88,22 @@ class TestFileOperations:
         """Test saving objectives successfully"""
         objectives = [{"text": "Test objective", "blooms_level": "understand"}]
         mock_file = mock_open()
-        with patch('builtins.open', mock_file):
+        with patch("builtins.open", mock_file):
             result = save_objectives(objectives)
             assert result is True
 
     def test_load_system_prompt_empty_file(self):
         """Test loading system prompt from empty file"""
-        with patch('builtins.open', mock_open(read_data='')):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data="")):
+            with patch("os.path.exists", return_value=True):
                 result = load_system_prompt()
                 assert result == ""
 
     def test_load_system_prompt_with_content(self):
         """Test loading system prompt with content"""
         prompt_content = "You are a helpful assistant."
-        with patch('builtins.open', mock_open(read_data=prompt_content)):
-            with patch('os.path.exists', return_value=True):
+        with patch("builtins.open", mock_open(read_data=prompt_content)):
+            with patch("os.path.exists", return_value=True):
                 result = load_system_prompt()
                 assert result == prompt_content
 
@@ -102,7 +111,7 @@ class TestFileOperations:
         """Test saving system prompt successfully"""
         prompt = "Test system prompt"
         mock_file = mock_open()
-        with patch('builtins.open', mock_file):
+        with patch("builtins.open", mock_file):
             result = save_system_prompt(prompt)
             assert result is True
 
@@ -124,24 +133,24 @@ class TestTextCleaning:
         """Test removing link tags from question text"""
         text = '<link rel="stylesheet" href="style.css">What is the capital?'
         result = clean_question_text(text)
-        assert 'link' not in result
-        assert 'What is the capital?' in result
+        assert "link" not in result
+        assert "What is the capital?" in result
 
     def test_clean_question_text_remove_scripts(self):
         """Test removing script tags from question text"""
         text = '<script>alert("test");</script>What is the capital?'
         result = clean_question_text(text)
-        assert 'script' not in result
-        assert 'alert' not in result
-        assert 'What is the capital?' in result
+        assert "script" not in result
+        assert "alert" not in result
+        assert "What is the capital?" in result
 
     def test_clean_question_text_remove_styles(self):
         """Test removing style tags from question text"""
-        text = '<style>body { color: red; }</style>What is the capital?'
+        text = "<style>body { color: red; }</style>What is the capital?"
         result = clean_question_text(text)
-        assert 'style' not in result
-        assert 'color: red' not in result
-        assert 'What is the capital?' in result
+        assert "style" not in result
+        assert "color: red" not in result
+        assert "What is the capital?" in result
 
     def test_clean_html_for_vector_store_empty(self):
         """Test cleaning empty HTML for vector store"""
@@ -150,18 +159,18 @@ class TestTextCleaning:
 
     def test_clean_html_for_vector_store_with_html(self):
         """Test cleaning HTML for vector store"""
-        html = '<p>This is a <strong>test</strong> question.</p>'
+        html = "<p>This is a <strong>test</strong> question.</p>"
         result = clean_html_for_vector_store(html)
         assert result == "This is a test question."
 
     def test_clean_html_for_vector_store_complex(self):
         """Test cleaning complex HTML for vector store"""
-        html = '''
+        html = """
         <div class="question">
             <h2>Question Title</h2>
             <p>This is the <em>question</em> text with <a href="#">links</a>.</p>
         </div>
-        '''
+        """
         result = clean_html_for_vector_store(html)
         assert "Question Title" in result
         assert "This is the question text with links." in result
@@ -294,17 +303,14 @@ class TestTagExtraction:
         """Test getting tags from questions with no tags"""
         questions = [
             {"id": 1, "question_text": "Test question 1"},
-            {"id": 2, "question_text": "Test question 2"}
+            {"id": 2, "question_text": "Test question 2"},
         ]
         result = get_all_existing_tags(questions)
         assert result == []
 
     def test_get_all_existing_tags_single_tag(self):
         """Test getting tags from questions with single tags"""
-        questions = [
-            {"id": 1, "tags": "accessibility"},
-            {"id": 2, "tags": "html"}
-        ]
+        questions = [{"id": 1, "tags": "accessibility"}, {"id": 2, "tags": "html"}]
         result = get_all_existing_tags(questions)
         assert result == ["accessibility", "html"]
 
@@ -312,7 +318,7 @@ class TestTagExtraction:
         """Test getting tags from questions with multiple tags"""
         questions = [
             {"id": 1, "tags": "accessibility,html,wcag"},
-            {"id": 2, "tags": "forms,validation,html"}
+            {"id": 2, "tags": "forms,validation,html"},
         ]
         result = get_all_existing_tags(questions)
         expected = ["accessibility", "forms", "html", "validation", "wcag"]
@@ -323,7 +329,7 @@ class TestTagExtraction:
         questions = [
             {"id": 1, "tags": "accessibility,html"},
             {"id": 2, "tags": "html,forms"},
-            {"id": 3, "tags": "accessibility,forms"}
+            {"id": 3, "tags": "accessibility,forms"},
         ]
         result = get_all_existing_tags(questions)
         expected = ["accessibility", "forms", "html"]
@@ -333,7 +339,7 @@ class TestTagExtraction:
         """Test getting tags with whitespace"""
         questions = [
             {"id": 1, "tags": " accessibility , html "},
-            {"id": 2, "tags": "  forms  ,  validation  "}
+            {"id": 2, "tags": "  forms  ,  validation  "},
         ]
         result = get_all_existing_tags(questions)
         expected = ["accessibility", "forms", "html", "validation"]

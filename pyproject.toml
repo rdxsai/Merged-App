@@ -38,6 +38,7 @@ docs-simple = "build_docs_simple:main"
 serve-docs = "serve_docs:main"
 docs-serve = "docs_and_serve:main"
 lint = "lint_code:main"
+format = "format_code:main"
 type-check = "type_check:main"
 test = "run_tests:main"
 

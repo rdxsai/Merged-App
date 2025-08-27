@@ -37,26 +37,26 @@ from serve_docs import start_server  # noqa: E402
 def main() -> None:
     """
     Build and serve documentation in one command.
-    
+
     This function orchestrates the complete documentation workflow by first
     building the documentation and then serving it locally. It provides
     a streamlined experience for documentation development and viewing.
-    
+
     Note:
         The function exits with status code 1 if either building or serving fails.
     """
     print("📚 Canvas Quiz Manager - Build and Serve Documentation")
     print("=" * 60)
-    
+
     # Build documentation
     print("🔨 Step 1: Building documentation...")
     if not build_documentation():
         print("❌ Failed to build documentation")
         sys.exit(1)
-    
+
     print("✅ Documentation built successfully!")
     print()
-    
+
     # Serve documentation
     print("🌐 Step 2: Starting documentation server...")
     if not start_server():

@@ -1,12 +1,14 @@
 """
 Integration tests for the question app
 """
-import pytest
-import tempfile
-import os
 import json
-from unittest.mock import patch, MagicMock
+import os
+import tempfile
+from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
+
 from main import app
 
 
@@ -22,34 +24,40 @@ def temp_data_dir():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create test data files
         questions_file = os.path.join(temp_dir, "quiz_questions.json")
-        with open(questions_file, 'w') as f:
-            json.dump([
-                {
-                    "id": 1,
-                    "question_text": "What is the capital of France?",
-                    "question_type": "multiple_choice_question",
-                    "points_possible": 1.0,
-                    "answers": [
-                        {"id": 1, "text": "London", "weight": 0.0},
-                        {"id": 2, "text": "Paris", "weight": 100.0}
-                    ]
-                }
-            ], f)
-        
+        with open(questions_file, "w") as f:
+            json.dump(
+                [
+                    {
+                        "id": 1,
+                        "question_text": "What is the capital of France?",
+                        "question_type": "multiple_choice_question",
+                        "points_possible": 1.0,
+                        "answers": [
+                            {"id": 1, "text": "London", "weight": 0.0},
+                            {"id": 2, "text": "Paris", "weight": 100.0},
+                        ],
+                    }
+                ],
+                f,
+            )
+
         objectives_file = os.path.join(temp_dir, "learning_objectives.json")
-        with open(objectives_file, 'w') as f:
-            json.dump([
-                {
-                    "text": "Understand basic accessibility",
-                    "blooms_level": "understand",
-                    "priority": "high"
-                }
-            ], f)
-        
+        with open(objectives_file, "w") as f:
+            json.dump(
+                [
+                    {
+                        "text": "Understand basic accessibility",
+                        "blooms_level": "understand",
+                        "priority": "high",
+                    }
+                ],
+                f,
+            )
+
         system_prompt_file = os.path.join(temp_dir, "system_prompt.txt")
-        with open(system_prompt_file, 'w') as f:
+        with open(system_prompt_file, "w") as f:
             f.write("You are a helpful assistant for quiz questions.")
-        
+
         yield temp_dir
 
 
@@ -60,12 +68,14 @@ class TestFullWorkflow:
     def test_question_lifecycle(self, client, temp_data_dir):
         """Test complete question lifecycle: create, read, update, delete"""
         # Mock file operations to use temp directory
-        with patch('main.DATA_FILE', os.path.join(temp_data_dir, "quiz_questions.json")):
-            with patch('main.load_questions') as mock_load:
-                with patch('main.save_questions') as mock_save:
+        with patch(
+            "main.DATA_FILE", os.path.join(temp_data_dir, "quiz_questions.json")
+        ):
+            with patch("main.load_questions") as mock_load:
+                with patch("main.save_questions") as mock_save:
                     mock_load.return_value = []
                     mock_save.return_value = True
-                    
+
                     # 1. Create a new question
                     question_data = {
                         "question_text": "What is accessibility?",
@@ -85,7 +95,7 @@ class TestFullWorkflow:
                                 "html": "<p>A design principle</p>",
                                 "comments": "Correct!",
                                 "comments_html": "<p>Correct!</p>",
-                                "weight": 100.0
+                                "weight": 100.0,
                             },
                             {
                                 "id": 2,
@@ -93,24 +103,26 @@ class TestFullWorkflow:
                                 "html": "<p>A programming language</p>",
                                 "comments": "Incorrect.",
                                 "comments_html": "<p>Incorrect.</p>",
-                                "weight": 0.0
-                            }
-                        ]
+                                "weight": 0.0,
+                            },
+                        ],
                     }
-                    
+
                     response = client.post("/questions/new", json=question_data)
                     assert response.status_code == 200
                     data = response.json()
                     assert data["success"] is True
                     question_id = data["question_id"]
-                    
+
                     # 2. Update the question (skip read since it requires template rendering)
                     updated_data = question_data.copy()
                     updated_data["question_text"] = "Updated: What is accessibility?"
-                    
-                    response = client.put(f"/questions/{question_id}", json=updated_data)
+
+                    response = client.put(
+                        f"/questions/{question_id}", json=updated_data
+                    )
                     assert response.status_code == 200
-                    
+
                     # 3. Delete the question
                     response = client.delete(f"/questions/{question_id}")
                     assert response.status_code == 200
@@ -118,20 +130,22 @@ class TestFullWorkflow:
     @pytest.mark.integration
     def test_system_prompt_workflow(self, client, temp_data_dir):
         """Test system prompt management workflow"""
-        with patch('main.SYSTEM_PROMPT_FILE', os.path.join(temp_data_dir, "system_prompt.txt")):
+        with patch(
+            "main.SYSTEM_PROMPT_FILE", os.path.join(temp_data_dir, "system_prompt.txt")
+        ):
             # 1. Get current prompt
             response = client.get("/system-prompt/api")
             assert response.status_code == 200
             data = response.json()
             assert "prompt" in data
-            
+
             # 2. Update prompt
             new_prompt = "Updated system prompt for testing."
             response = client.post("/system-prompt", data={"prompt": new_prompt})
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
-            
+
             # 3. Verify update
             response = client.get("/system-prompt/api")
             assert response.status_code == 200
@@ -142,32 +156,32 @@ class TestFullWorkflow:
     def test_objectives_workflow(self, client, temp_data_dir):
         """Test learning objectives management workflow"""
         objectives_file = os.path.join(temp_data_dir, "learning_objectives.json")
-        
-        with patch('main.load_objectives') as mock_load:
-            with patch('main.save_objectives') as mock_save:
+
+        with patch("main.load_objectives") as mock_load:
+            with patch("main.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
-                
+
                 # 1. Get objectives page
                 response = client.get("/objectives")
                 assert response.status_code == 200
-                
+
                 # 2. Save objectives
                 objectives_data = {
                     "objectives": [
                         {
                             "text": "Understand web accessibility",
                             "blooms_level": "understand",
-                            "priority": "high"
+                            "priority": "high",
                         },
                         {
                             "text": "Apply WCAG guidelines",
                             "blooms_level": "apply",
-                            "priority": "medium"
-                        }
+                            "priority": "medium",
+                        },
                     ]
                 }
-                
+
                 response = client.post("/objectives", json=objectives_data)
                 assert response.status_code == 200
                 data = response.json()
@@ -179,30 +193,30 @@ class TestFullWorkflow:
         # 1. Load chat page
         response = client.get("/chat")
         assert response.status_code == 200
-        
+
         # 2. Send chat message (mocked)
-        with patch('main.search_vector_store') as mock_search:
-            with patch('main.load_chat_system_prompt') as mock_prompt:
-                with patch('httpx.AsyncClient.post') as mock_post:
+        with patch("main.search_vector_store") as mock_search:
+            with patch("main.load_chat_system_prompt") as mock_prompt:
+                with patch("httpx.AsyncClient.post") as mock_post:
                     mock_search.return_value = [
                         {
                             "content": "Sample context",
                             "metadata": {"question_id": 1},
-                            "distance": 0.1
+                            "distance": 0.1,
                         }
                     ]
                     mock_prompt.return_value = "Test system prompt"
-                    
+
                     mock_response = MagicMock()
                     mock_response.status_code = 200
                     mock_response.json.return_value = {
                         "choices": [{"message": {"content": "Test response"}}]
                     }
                     mock_post.return_value = mock_response
-                    
+
                     response = client.post(
                         "/chat/message",
-                        json={"message": "What is accessibility?", "max_chunks": 3}
+                        json={"message": "What is accessibility?", "max_chunks": 3},
                     )
                     assert response.status_code == 200
                     data = response.json()
@@ -211,19 +225,18 @@ class TestFullWorkflow:
     @pytest.mark.integration
     def test_vector_store_workflow(self, client, sample_questions):
         """Test vector store creation workflow"""
-        with patch('main.load_questions', return_value=sample_questions):
-            with patch('main.get_ollama_embeddings') as mock_embeddings:
-                with patch('chromadb.PersistentClient') as mock_client:
+        with patch("main.load_questions", return_value=sample_questions):
+            with patch("main.get_ollama_embeddings") as mock_embeddings:
+                with patch("chromadb.PersistentClient") as mock_client:
                     # Mock embeddings
-                    mock_embeddings.return_value = [
-                        [0.1, 0.2, 0.3],
-                        [0.4, 0.5, 0.6]
-                    ]
-                    
+                    mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+
                     # Mock ChromaDB
                     mock_collection = MagicMock()
-                    mock_client.return_value.create_collection.return_value = mock_collection
-                    
+                    mock_client.return_value.create_collection.return_value = (
+                        mock_collection
+                    )
+
                     # Create vector store
                     response = client.post("/create-vector-store")
                     assert response.status_code == 200
@@ -240,17 +253,17 @@ class TestErrorHandling:
     def test_missing_configuration_handling(self, client):
         """Test handling of missing configuration"""
         # Test with missing Canvas configuration
-        with patch('main.CANVAS_BASE_URL', None):
+        with patch("main.CANVAS_BASE_URL", None):
             response = client.get("/api/courses")
             assert response.status_code == 400
-            
+
             response = client.get("/api/courses/123/quizzes")
             assert response.status_code == 400
 
     @pytest.mark.integration
     def test_file_operation_errors(self, client):
         """Test handling of file operation errors"""
-        with patch('main.load_questions', side_effect=Exception("File read error")):
+        with patch("main.load_questions", side_effect=Exception("File read error")):
             # This should return a 500 error, not raise an exception
             response = client.get("/")
             assert response.status_code == 500
@@ -258,17 +271,20 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_ai_service_errors(self, client, sample_questions):
         """Test handling of AI service errors"""
-        with patch('main.load_system_prompt', return_value="Test prompt"):
-            with patch('main.load_questions', return_value=sample_questions):
-                with patch('main.generate_feedback_with_ai', side_effect=Exception("AI service error")):
+        with patch("main.load_system_prompt", return_value="Test prompt"):
+            with patch("main.load_questions", return_value=sample_questions):
+                with patch(
+                    "main.generate_feedback_with_ai",
+                    side_effect=Exception("AI service error"),
+                ):
                     response = client.post("/questions/1/generate-feedback")
                     assert response.status_code == 500
 
     @pytest.mark.integration
     def test_vector_store_errors(self, client, sample_questions):
         """Test handling of vector store errors"""
-        with patch('main.load_questions', return_value=sample_questions):
-            with patch('chromadb.PersistentClient', side_effect=Exception("DB error")):
+        with patch("main.load_questions", return_value=sample_questions):
+            with patch("chromadb.PersistentClient", side_effect=Exception("DB error")):
                 response = client.post("/create-vector-store")
                 assert response.status_code == 500
 
@@ -279,28 +295,28 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_question_data_consistency(self, client):
         """Test that question data remains consistent through operations"""
-        with patch('main.load_questions') as mock_load:
-            with patch('main.save_questions') as mock_save:
+        with patch("main.load_questions") as mock_load:
+            with patch("main.save_questions") as mock_save:
                 # Initial state
                 initial_questions = [
                     {
                         "id": 1,
                         "question_text": "Original question",
-                        "answers": [{"id": 1, "text": "Answer", "weight": 100.0}]
+                        "answers": [{"id": 1, "text": "Answer", "weight": 100.0}],
                     }
                 ]
                 mock_load.return_value = initial_questions
                 mock_save.return_value = True
-                
+
                 # Update question
                 updated_data = {
                     "question_text": "Updated question",
-                    "answers": [{"id": 1, "text": "Updated answer", "weight": 100.0}]
+                    "answers": [{"id": 1, "text": "Updated answer", "weight": 100.0}],
                 }
-                
+
                 response = client.put("/questions/1", json=updated_data)
                 assert response.status_code == 200
-                
+
                 # Verify save was called with updated data
                 assert mock_save.called
                 saved_questions = mock_save.call_args[0][0]
@@ -310,24 +326,24 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_objectives_data_consistency(self, client):
         """Test that objectives data remains consistent"""
-        with patch('main.load_objectives') as mock_load:
-            with patch('main.save_objectives') as mock_save:
+        with patch("main.load_objectives") as mock_load:
+            with patch("main.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
-                
+
                 objectives_data = {
                     "objectives": [
                         {
                             "text": "Test objective",
                             "blooms_level": "understand",
-                            "priority": "high"
+                            "priority": "high",
                         }
                     ]
                 }
-                
+
                 response = client.post("/objectives", json=objectives_data)
                 assert response.status_code == 200
-                
+
                 # Verify save was called with correct data
                 assert mock_save.called
                 saved_objectives = mock_save.call_args[0][0]
@@ -345,15 +361,17 @@ class TestPerformance:
         # Create large dataset
         large_questions = []
         for i in range(100):
-            large_questions.append({
-                "id": i,
-                "question_text": f"Question {i}",
-                "question_type": "multiple_choice_question",
-                "answers": [{"id": 1, "text": f"Answer {i}", "weight": 100.0}]
-            })
-        
-        with patch('main.load_questions', return_value=large_questions):
-            with patch('main.save_questions', return_value=True):
+            large_questions.append(
+                {
+                    "id": i,
+                    "question_text": f"Question {i}",
+                    "question_type": "multiple_choice_question",
+                    "answers": [{"id": 1, "text": f"Answer {i}", "weight": 100.0}],
+                }
+            )
+
+        with patch("main.load_questions", return_value=large_questions):
+            with patch("main.save_questions", return_value=True):
                 # Test operations on large dataset without template rendering
                 response = client.delete("/questions/50")
                 assert response.status_code == 200
@@ -363,25 +381,25 @@ class TestPerformance:
         """Test concurrent operations handling"""
         import threading
         import time
-        
+
         results = []
-        
+
         def make_request():
-            with patch('main.load_questions', return_value=[]):
+            with patch("main.load_questions", return_value=[]):
                 response = client.get("/")
                 results.append(response.status_code)
-        
+
         # Start multiple threads
         threads = []
         for _ in range(5):
             thread = threading.Thread(target=make_request)
             threads.append(thread)
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # Verify all requests succeeded
         assert all(status == 200 for status in results)
         assert len(results) == 5

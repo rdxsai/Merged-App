@@ -59,6 +59,11 @@ Development Tools
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: format_code
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: build_docs
    :members:
    :undoc-members:
