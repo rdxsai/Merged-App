@@ -51,11 +51,25 @@ Project Structure
 .. code-block:: text
 
    questionapp/
-   ├── main.py                 # Main application file
+   ├── src/
+   │   └── question_app/
+   │       ├── main.py         # Main application file
+   │       ├── models/         # Data models
+   │       │   ├── __init__.py
+   │       │   ├── question.py # Question-related models
+   │       │   └── objective.py # Learning objective models
+   │       ├── utils/          # Utility functions
+   │       │   ├── __init__.py
+   │       │   ├── file_utils.py # File I/O operations
+   │       │   └── text_utils.py # Text processing utilities
+   │       ├── api/            # API endpoints (future)
+   │       ├── core/           # Core configuration (future)
+   │       └── services/       # Business logic (future)
    ├── pyproject.toml          # Poetry configuration
    ├── requirements.txt        # Dependencies
    ├── pytest.ini             # Test configuration
-   ├── run_tests.py           # Test runner
+   ├── scripts/
+   │   ├── run_tests.py       # Test runner
    ├── static/                # Static assets
    │   ├── css/
    │   └── js/
@@ -131,7 +145,7 @@ Running Tests
    poetry run pytest
 
    # Run with coverage
-   poetry run pytest --cov=main
+   poetry run pytest --cov=question_app
 
    # Run specific test file
    poetry run pytest tests/test_api_endpoints.py
@@ -167,7 +181,7 @@ Example test structure:
 .. code-block:: python
 
    import pytest
-   from main import load_questions, save_questions
+   from question_app.main import load_questions, save_questions
 
    def test_load_questions_empty_file(tmp_path):
        """Test loading questions from empty file."""
@@ -420,7 +434,7 @@ Use cProfile for performance analysis:
 
 .. code-block:: bash
 
-   python -m cProfile -o profile.stats main.py
+   python -m cProfile -o profile.stats -m question_app.main
    python -c "import pstats; pstats.Stats('profile.stats').sort_stats('cumulative').print_stats(10)"
 
 Memory Profiling

@@ -8,7 +8,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from main import (
+from question_app.main import (
     clean_answer_feedback,
     clean_html_for_vector_store,
     clean_question_text,
@@ -46,6 +46,7 @@ class TestFileOperations:
         - File encoding and formatting
     """
 
+    @pytest.mark.unit
     def test_load_questions_empty_file(self):
         """Test loading questions from empty file"""
         with patch("builtins.open", mock_open(read_data="[]")):
@@ -139,6 +140,7 @@ class TestFileOperations:
 class TestTextCleaning:
     """Test text cleaning and processing functions"""
 
+    @pytest.mark.unit
     def test_clean_question_text_empty(self):
         """Test cleaning empty question text"""
         result = clean_question_text("")

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation)."
 authors = ["Bryce Kayanuma <BrycePK@vt.edu>"]
 readme = "README.md"
-packages = [{include = "*", from = "."}]  # Include all Python files from root
+packages = [{include = "question_app", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -31,16 +31,16 @@ mypy = "^1.5.1"
 pyright = "^1.1.300"
 
 [tool.poetry.scripts]
-start = "main:start"
-dev = "main:dev"
-docs = "build_docs:main"
-docs-simple = "build_docs_simple:main"
-serve-docs = "serve_docs:main"
-docs-serve = "docs_and_serve:main"
-lint = "lint_code:main"
-format = "format_code:main"
-type-check = "type_check:main"
-test = "run_tests:main"
+start = "question_app.main:start"
+dev = "question_app.main:dev"
+docs = "scripts.build_docs:main"
+docs-simple = "scripts.build_docs_simple:main"
+serve-docs = "scripts.serve_docs:main"
+docs-serve = "scripts.docs_and_serve:main"
+lint = "scripts.lint_code:main"
+format = "scripts.format_code:main"
+type-check = "scripts.type_check:main"
+test = "scripts.run_tests:main"
 
 [build-system]
 requires = ["poetry-core"]

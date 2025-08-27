@@ -54,6 +54,18 @@ The application is built with:
 * **Pydantic**: Data validation and serialization
 * **Jinja2**: Template engine for web interface
 
+Modular Design
+~~~~~~~~~~~~~
+
+The application follows a modular architecture for better maintainability:
+
+* **Models Package**: Pydantic data models for questions and objectives
+* **Utils Package**: Utility functions for file I/O and text processing
+* **Main Application**: FastAPI setup and endpoint orchestration
+* **Future Modules**: Planned API, Core, and Services packages
+
+See :doc:`modules` for detailed module organization.
+
 Installation
 -----------
 

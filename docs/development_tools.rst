@@ -194,7 +194,7 @@ The type checking script provides comprehensive static type analysis.
 - Installation guidance
 - Configurable checking options
 
-run_tests.py
+scripts/run_tests.py
 ~~~~~~~~~~~
 
 The test runner script provides unified testing interface with enhanced features.

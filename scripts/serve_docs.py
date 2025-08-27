@@ -92,7 +92,7 @@ def build_documentation() -> bool:
     """
     print("🔨 Checking if documentation needs to be built...")
 
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent
     docs_dir = project_root / "docs"
     build_dir = docs_dir / "_build" / "html"
 
@@ -156,7 +156,7 @@ def start_server(port: int = 8000, host: str = "localhost") -> bool:
         The server runs in a separate thread and can be stopped with Ctrl+C.
         The function automatically opens the default browser to the documentation.
     """
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent
     docs_dir = project_root / "docs" / "_build" / "html"
 
     if not docs_dir.exists():

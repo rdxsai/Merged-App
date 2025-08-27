@@ -47,7 +47,7 @@ def build_documentation() -> bool:
     print("=" * 50)
 
     # Get the project root directory
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent
     docs_dir = project_root / "docs"
 
     if not docs_dir.exists():

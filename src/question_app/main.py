@@ -84,152 +84,46 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 
 # File paths
-DATA_FILE = "quiz_questions.json"
-SYSTEM_PROMPT_FILE = "system_prompt.txt"
-CHAT_SYSTEM_PROMPT_FILE = "chat_system_prompt.txt"
-WELCOME_MESSAGE_FILE = "chat_welcome_message.txt"
+DATA_FILE = "data/quiz_questions.json"
+SYSTEM_PROMPT_FILE = "config/system_prompt.txt"
+CHAT_SYSTEM_PROMPT_FILE = "config/chat_system_prompt.txt"
+WELCOME_MESSAGE_FILE = "config/chat_welcome_message.txt"
 
 
-# Pydantic models
-class Answer(BaseModel):
-    """
-    Pydantic model representing a quiz answer option.
+# Import models from the models package
+from .models import (
+    Answer,
+    Question,
+    QuestionUpdate,
+    NewQuestion,
+    LearningObjective,
+    ObjectivesUpdate,
+)
 
-    Attributes:
-        id (int): Unique identifier for the answer
-        text (str): The answer text content
-        html (str): HTML formatted version of the answer text
-        comments (str): Feedback comments for this answer
-        comments_html (str): HTML formatted version of the comments
-        weight (float): Weight/score for this answer (0-100)
-    """
-
-    id: int
-    text: str
-    html: str = ""
-    comments: str = ""
-    comments_html: str = ""
-    weight: float = 0.0
-
-
-class Question(BaseModel):
-    """
-    Pydantic model representing a complete quiz question.
-
-    Attributes:
-        id (int): Unique identifier for the question
-        quiz_id (int): ID of the quiz this question belongs to
-        question_name (str): Name/title of the question
-        question_type (str): Type of question (e.g., 'multiple_choice_question')
-        question_text (str): The main question text
-        points_possible (float): Maximum points for this question
-        correct_comments (str): Feedback shown when answer is correct
-        incorrect_comments (str): Feedback shown when answer is incorrect
-        neutral_comments (str): General feedback for the question
-        correct_comments_html (str): HTML formatted correct comments
-        incorrect_comments_html (str): HTML formatted incorrect comments
-        neutral_comments_html (str): HTML formatted neutral comments
-        answers (List[Answer]): List of answer options for this question
-    """
-
-    id: int
-    quiz_id: int
-    question_name: str
-    question_type: str
-    question_text: str
-    points_possible: float
-    correct_comments: str = ""
-    incorrect_comments: str = ""
-    neutral_comments: str = ""
-    correct_comments_html: str = ""
-    incorrect_comments_html: str = ""
-    neutral_comments_html: str = ""
-    answers: List[Answer] = []
+# Import utility functions from organized modules
+from .utils import (
+    load_questions,
+    save_questions,
+    load_objectives,
+    save_objectives,
+    load_system_prompt,
+    save_system_prompt,
+    load_chat_system_prompt,
+    save_chat_system_prompt,
+    load_welcome_message,
+    save_welcome_message,
+    get_default_chat_system_prompt,
+    get_default_welcome_message,
+    clean_question_text,
+    clean_html_for_vector_store,
+    clean_answer_feedback,
+    get_all_existing_tags,
+    extract_topic_from_text,
+)
 
 
-class QuestionUpdate(BaseModel):
-    """
-    Pydantic model for updating existing questions.
-
-    Attributes:
-        question_text (str): Updated question text
-        topic (str): Topic/category for the question
-        tags (str): Comma-separated tags for the question
-        learning_objective (str): Associated learning objective
-        correct_comments (str): Feedback for correct answers
-        incorrect_comments (str): Feedback for incorrect answers
-        neutral_comments (str): General feedback
-        correct_comments_html (str): HTML formatted correct comments
-        incorrect_comments_html (str): HTML formatted incorrect comments
-        neutral_comments_html (str): HTML formatted neutral comments
-        answers (List[Answer]): Updated list of answer options
-    """
-
-    question_text: str
-    topic: str = "general"
-    tags: str = ""
-    learning_objective: str = ""
-    correct_comments: str = ""
-    incorrect_comments: str = ""
-    neutral_comments: str = ""
-    correct_comments_html: str = ""
-    incorrect_comments_html: str = ""
-    neutral_comments_html: str = ""
-    answers: List[Answer] = []
-
-
-class LearningObjective(BaseModel):
-    """
-    Pydantic model representing a learning objective.
-
-    Attributes:
-        text (str): The learning objective text
-        blooms_level (str): Bloom's taxonomy level (e.g., 'understand')
-        priority (str): Priority level ('low', 'medium', 'high')
-    """
-
-    text: str
-    blooms_level: str = "understand"
-    priority: str = "medium"
-
-
-class ObjectivesUpdate(BaseModel):
-    """
-    Pydantic model for updating learning objectives.
-
-    Attributes:
-        objectives (List[LearningObjective]): List of learning objectives
-    """
-
-    objectives: List[LearningObjective] = []
-
-
-class NewQuestion(BaseModel):
-    """
-    Pydantic model for creating new questions.
-
-    Attributes:
-        question_text (str): The question text
-        question_type (str): Type of question
-        topic (str): Topic/category for the question
-        tags (str): Comma-separated tags
-        learning_objective (str): Associated learning objective
-        points_possible (float): Maximum points for the question
-        neutral_comments (str): General feedback
-        answers (List[Answer]): List of answer options
-    """
-
-    question_text: str
-    question_type: str = "multiple_choice_question"
-    topic: str = "general"
-    tags: str = ""
-    learning_objective: str = ""
-    points_possible: float = 1.0
-    neutral_comments: str = ""
-    answers: List[Answer] = []
-
-
-# Utility functions
+# Note: Utility functions are now imported from .utils package
+# The following functions are kept for backward compatibility but are imported from utils
 def load_questions() -> List[Dict[str, Any]]:
     """
     Load questions from the JSON data file.
@@ -253,7 +147,7 @@ def load_questions() -> List[Dict[str, Any]]:
         >>> questions = load_questions()
         >>> print(f"Loaded {len(questions)} questions")
         Loaded 15 questions
-        
+
         >>> # Handle empty file case
         >>> if not questions:
         ...     print("No questions found, starting with empty list")
@@ -326,7 +220,7 @@ def load_objectives() -> List[Dict[str, Any]]:
         The function handles file I/O errors gracefully and logs any issues.
     """
     try:
-        objectives_file = "learning_objectives.json"
+        objectives_file = "data/learning_objectives.json"
         if os.path.exists(objectives_file):
             with open(objectives_file, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -350,7 +244,7 @@ def save_objectives(objectives: List[Dict[str, Any]]) -> bool:
         The function handles file I/O errors gracefully and logs any issues.
     """
     try:
-        objectives_file = "learning_objectives.json"
+        objectives_file = "data/learning_objectives.json"
         with open(objectives_file, "w", encoding="utf-8") as f:
             json.dump(objectives, f, indent=2, ensure_ascii=False)
         return True
@@ -2692,7 +2586,7 @@ def dev():
     """
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("question_app.main:app", host="0.0.0.0", port=8080, reload=True)
 
 
 if __name__ == "__main__":

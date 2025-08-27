@@ -4,7 +4,6 @@ Pytest configuration and fixtures for question app tests
 import asyncio
 import json
 import os
-import sys
 import tempfile
 from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
@@ -13,9 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Import the main app
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from main import app
+from question_app.main import app
 
 
 @pytest.fixture

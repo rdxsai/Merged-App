@@ -26,7 +26,7 @@ Running Tests
    poetry run pytest
 
    # Run with coverage
-   poetry run pytest --cov=main
+   poetry run pytest --cov=question_app
 
    # Run specific test file
    poetry run pytest tests/test_api_endpoints.py
@@ -204,7 +204,7 @@ The test suite includes comprehensive unit tests for all major components:
    poetry run pytest tests/test_utility_functions.py
 
    # Run with coverage report
-   poetry run pytest --cov=main --cov-report=html
+   poetry run pytest --cov=question_app --cov-report=html
 
 Integration Tests
 ~~~~~~~~~~~~~~~~
@@ -256,7 +256,7 @@ The test suite is designed to run in CI/CD environments:
    - name: Run tests
      run: |
        poetry install
-       poetry run pytest --cov=main --cov-report=xml
+       poetry run pytest --cov=question_app --cov-report=xml
 
    - name: Upload coverage
      uses: codecov/codecov-action@v3

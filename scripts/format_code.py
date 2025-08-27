@@ -134,8 +134,8 @@ def main():
     print("=" * 50)
 
     # Check if we're in the right directory
-    project_root = Path(__file__).parent
-    if not (project_root / "main.py").exists():
+    project_root = Path(__file__).parent.parent
+    if not (project_root / "src" / "question_app" / "main.py").exists():
         print("❌ Error: main.py not found. Please run from project root.")
         sys.exit(1)
 

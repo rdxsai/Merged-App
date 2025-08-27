@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
+from question_app.main import app
 
 
 @pytest.fixture
@@ -69,10 +69,11 @@ class TestFullWorkflow:
         """Test complete question lifecycle: create, read, update, delete"""
         # Mock file operations to use temp directory
         with patch(
-            "main.DATA_FILE", os.path.join(temp_data_dir, "quiz_questions.json")
+            "question_app.main.DATA_FILE",
+            os.path.join(temp_data_dir, "quiz_questions.json"),
         ):
-            with patch("main.load_questions") as mock_load:
-                with patch("main.save_questions") as mock_save:
+            with patch("question_app.main.load_questions") as mock_load:
+                with patch("question_app.main.save_questions") as mock_save:
                     mock_load.return_value = []
                     mock_save.return_value = True
 
@@ -131,7 +132,8 @@ class TestFullWorkflow:
     def test_system_prompt_workflow(self, client, temp_data_dir):
         """Test system prompt management workflow"""
         with patch(
-            "main.SYSTEM_PROMPT_FILE", os.path.join(temp_data_dir, "system_prompt.txt")
+            "question_app.main.SYSTEM_PROMPT_FILE",
+            os.path.join(temp_data_dir, "system_prompt.txt"),
         ):
             # 1. Get current prompt
             response = client.get("/system-prompt/api")
@@ -157,8 +159,8 @@ class TestFullWorkflow:
         """Test learning objectives management workflow"""
         objectives_file = os.path.join(temp_data_dir, "learning_objectives.json")
 
-        with patch("main.load_objectives") as mock_load:
-            with patch("main.save_objectives") as mock_save:
+        with patch("question_app.main.load_objectives") as mock_load:
+            with patch("question_app.main.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
 
@@ -195,8 +197,8 @@ class TestFullWorkflow:
         assert response.status_code == 200
 
         # 2. Send chat message (mocked)
-        with patch("main.search_vector_store") as mock_search:
-            with patch("main.load_chat_system_prompt") as mock_prompt:
+        with patch("question_app.main.search_vector_store") as mock_search:
+            with patch("question_app.main.load_chat_system_prompt") as mock_prompt:
                 with patch("httpx.AsyncClient.post") as mock_post:
                     mock_search.return_value = [
                         {
@@ -225,8 +227,8 @@ class TestFullWorkflow:
     @pytest.mark.integration
     def test_vector_store_workflow(self, client, sample_questions):
         """Test vector store creation workflow"""
-        with patch("main.load_questions", return_value=sample_questions):
-            with patch("main.get_ollama_embeddings") as mock_embeddings:
+        with patch("question_app.main.load_questions", return_value=sample_questions):
+            with patch("question_app.main.get_ollama_embeddings") as mock_embeddings:
                 with patch("chromadb.PersistentClient") as mock_client:
                     # Mock embeddings
                     mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
@@ -253,7 +255,7 @@ class TestErrorHandling:
     def test_missing_configuration_handling(self, client):
         """Test handling of missing configuration"""
         # Test with missing Canvas configuration
-        with patch("main.CANVAS_BASE_URL", None):
+        with patch("question_app.main.CANVAS_BASE_URL", None):
             response = client.get("/api/courses")
             assert response.status_code == 400
 
@@ -263,7 +265,9 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_file_operation_errors(self, client):
         """Test handling of file operation errors"""
-        with patch("main.load_questions", side_effect=Exception("File read error")):
+        with patch(
+            "question_app.main.load_questions", side_effect=Exception("File read error")
+        ):
             # This should return a 500 error, not raise an exception
             response = client.get("/")
             assert response.status_code == 500
@@ -271,10 +275,12 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_ai_service_errors(self, client, sample_questions):
         """Test handling of AI service errors"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
-            with patch("main.load_questions", return_value=sample_questions):
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+            with patch(
+                "question_app.main.load_questions", return_value=sample_questions
+            ):
                 with patch(
-                    "main.generate_feedback_with_ai",
+                    "question_app.main.generate_feedback_with_ai",
                     side_effect=Exception("AI service error"),
                 ):
                     response = client.post("/questions/1/generate-feedback")
@@ -283,7 +289,7 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_vector_store_errors(self, client, sample_questions):
         """Test handling of vector store errors"""
-        with patch("main.load_questions", return_value=sample_questions):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
             with patch("chromadb.PersistentClient", side_effect=Exception("DB error")):
                 response = client.post("/create-vector-store")
                 assert response.status_code == 500
@@ -295,8 +301,8 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_question_data_consistency(self, client):
         """Test that question data remains consistent through operations"""
-        with patch("main.load_questions") as mock_load:
-            with patch("main.save_questions") as mock_save:
+        with patch("question_app.main.load_questions") as mock_load:
+            with patch("question_app.main.save_questions") as mock_save:
                 # Initial state
                 initial_questions = [
                     {
@@ -326,8 +332,8 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_objectives_data_consistency(self, client):
         """Test that objectives data remains consistent"""
-        with patch("main.load_objectives") as mock_load:
-            with patch("main.save_objectives") as mock_save:
+        with patch("question_app.main.load_objectives") as mock_load:
+            with patch("question_app.main.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
 
@@ -370,8 +376,8 @@ class TestPerformance:
                 }
             )
 
-        with patch("main.load_questions", return_value=large_questions):
-            with patch("main.save_questions", return_value=True):
+        with patch("question_app.main.load_questions", return_value=large_questions):
+            with patch("question_app.main.save_questions", return_value=True):
                 # Test operations on large dataset without template rendering
                 response = client.delete("/questions/50")
                 assert response.status_code == 200
@@ -385,7 +391,7 @@ class TestPerformance:
         results = []
 
         def make_request():
-            with patch("main.load_questions", return_value=[]):
+            with patch("question_app.main.load_questions", return_value=[]):
                 response = client.get("/")
                 results.append(response.status_code)
 

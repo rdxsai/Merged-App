@@ -3,6 +3,24 @@ API Reference
 
 This document provides detailed information about the Canvas Quiz Manager API endpoints.
 
+Module Organization
+------------------
+
+The application is organized into focused modules for better maintainability:
+
+**Models** (`src/question_app/models/`)
+   - ``question.py``: Question and answer data models
+   - ``objective.py``: Learning objective data models
+
+**Utilities** (`src/question_app/utils/`)
+   - ``file_utils.py``: File I/O operations for data persistence
+   - ``text_utils.py``: Text processing and cleaning functions
+
+**Main Application** (`src/question_app/main.py`)
+   - FastAPI application setup and configuration
+   - API endpoint definitions
+   - Business logic orchestration
+
 Authentication
 --------------
 
@@ -311,6 +329,18 @@ Debug and Testing
 Data Models
 -----------
 
+The data models are organized in the ``src/question_app/models/`` package:
+
+**Question Models** (`models/question.py`)
+   - ``Answer``: Quiz answer option model
+   - ``Question``: Complete quiz question model
+   - ``QuestionUpdate``: Model for updating questions
+   - ``NewQuestion``: Model for creating new questions
+
+**Objective Models** (`models/objective.py`)
+   - ``LearningObjective``: Learning objective model
+   - ``ObjectivesUpdate``: Model for updating objectives
+
 Answer
 ~~~~~~
 
@@ -328,8 +358,14 @@ Answer
        html: str
        """HTML formatted version of the answer text"""
        
-       is_correct: bool
-       """Whether this answer is correct"""
+       comments: str
+       """Feedback comments for this answer"""
+       
+       comments_html: str
+       """HTML formatted version of the comments"""
+       
+       weight: float
+       """Weight/score for this answer (0-100)"""
 
 Question
 ~~~~~~~~
@@ -337,43 +373,46 @@ Question
 .. code-block:: python
 
    class Question(BaseModel):
-       """Pydantic model representing a quiz question."""
+       """Pydantic model representing a complete quiz question."""
        
        id: int
        """Unique identifier for the question"""
        
-       question_text: str
-       """The question text content"""
+       quiz_id: int
+       """ID of the quiz this question belongs to"""
        
-       question_html: str
-       """HTML formatted version of the question text"""
-       
-       answers: List[Answer]
-       """List of answer options for this question"""
-       
-       points_possible: float
-       """Maximum points possible for this question"""
+       question_name: str
+       """Name/title of the question"""
        
        question_type: str
        """Type of question (e.g., 'multiple_choice_question')"""
        
-       position: int
-       """Position of the question in the quiz"""
+       question_text: str
+       """The main question text"""
        
-       quiz_id: int
-       """ID of the quiz this question belongs to"""
+       points_possible: float
+       """Maximum points for this question"""
        
-       course_id: int
-       """ID of the course this question belongs to"""
+       correct_comments: str
+       """Feedback shown when answer is correct"""
        
-       feedback: Optional[str] = None
-       """AI-generated feedback for this question"""
+       incorrect_comments: str
+       """Feedback shown when answer is incorrect"""
        
-       created_at: Optional[str] = None
-       """Timestamp when the question was created"""
+       neutral_comments: str
+       """General feedback for the question"""
        
-       updated_at: Optional[str] = None
-       """Timestamp when the question was last updated"""
+       correct_comments_html: str
+       """HTML formatted correct comments"""
+       
+       incorrect_comments_html: str
+       """HTML formatted incorrect comments"""
+       
+       neutral_comments_html: str
+       """HTML formatted neutral comments"""
+       
+       answers: List[Answer]
+       """List of answer options for this question"""
 
 QuestionUpdate
 ~~~~~~~~~~~~~
@@ -466,6 +505,30 @@ NewQuestion
        
        course_id: int
        """ID of the course this question belongs to"""
+
+Utility Functions
+----------------
+
+The application provides utility functions organized in the ``src/question_app/utils/`` package:
+
+**File Utilities** (`utils/file_utils.py`)
+   - ``load_questions()``: Load questions from JSON file
+   - ``save_questions()``: Save questions to JSON file
+   - ``load_objectives()``: Load learning objectives from JSON file
+   - ``save_objectives()``: Save learning objectives to JSON file
+   - ``load_system_prompt()``: Load AI system prompt from file
+   - ``save_system_prompt()``: Save AI system prompt to file
+   - ``load_chat_system_prompt()``: Load chat system prompt from file
+   - ``save_chat_system_prompt()``: Save chat system prompt to file
+   - ``load_welcome_message()``: Load chat welcome message from file
+   - ``save_welcome_message()``: Save chat welcome message to file
+
+**Text Utilities** (`utils/text_utils.py`)
+   - ``clean_question_text()``: Remove unwanted HTML tags from question text
+   - ``clean_html_for_vector_store()``: Clean HTML for vector store processing
+   - ``clean_answer_feedback()``: Clean and format answer feedback text
+   - ``get_all_existing_tags()``: Extract all unique tags from questions
+   - ``extract_topic_from_text()``: Extract topic from text content
 
 Error Responses
 --------------

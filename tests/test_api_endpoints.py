@@ -8,7 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
+from question_app.main import app
 
 
 @pytest.fixture
@@ -34,14 +34,14 @@ class TestHomeEndpoint:
 
     def test_home_page_loads(self, client):
         """Test that home page loads successfully"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.get("/")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
 
     def test_home_page_with_questions(self, client, sample_questions):
         """Test home page with sample questions"""
-        with patch("main.load_questions", return_value=sample_questions):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
             response = client.get("/")
             assert response.status_code == 200
             # Just check that the page loads successfully, don't check specific content
@@ -60,7 +60,7 @@ class TestCoursesAPI:
             {"id": 2, "name": "Course 2", "course_code": "CS102"},
         ]
 
-        with patch("main.fetch_courses", return_value=mock_courses):
+        with patch("question_app.main.fetch_courses", return_value=mock_courses):
             response = client.get("/api/courses")
             assert response.status_code == 200
             data = response.json()
@@ -70,7 +70,7 @@ class TestCoursesAPI:
     @pytest.mark.asyncio
     async def test_get_courses_missing_config(self, client):
         """Test courses fetch with missing configuration"""
-        with patch("main.CANVAS_BASE_URL", None):
+        with patch("question_app.main.CANVAS_BASE_URL", None):
             response = client.get("/api/courses")
             assert response.status_code == 400
 
@@ -82,7 +82,7 @@ class TestCoursesAPI:
             {"id": 2, "title": "Quiz 2", "question_count": 15},
         ]
 
-        with patch("main.fetch_quizzes", return_value=mock_quizzes):
+        with patch("question_app.main.fetch_quizzes", return_value=mock_quizzes):
             response = client.get("/api/courses/123/quizzes")
             assert response.status_code == 200
             data = response.json()
@@ -117,8 +117,8 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_success(self, client, sample_questions):
         """Test successful questions fetch"""
-        with patch("main.fetch_all_questions", return_value=sample_questions):
-            with patch("main.save_questions", return_value=True):
+        with patch("question_app.main.fetch_all_questions", return_value=sample_questions):
+            with patch("question_app.main.save_questions", return_value=True):
                 response = client.post("/fetch-questions")
                 assert response.status_code == 200
                 data = response.json()
@@ -127,15 +127,15 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_save_failure(self, client, sample_questions):
         """Test questions fetch with save failure"""
-        with patch("main.fetch_all_questions", return_value=sample_questions):
-            with patch("main.save_questions", return_value=False):
+        with patch("question_app.main.fetch_all_questions", return_value=sample_questions):
+            with patch("question_app.main.save_questions", return_value=False):
                 response = client.post("/fetch-questions")
                 assert response.status_code == 500
 
     def test_delete_question_success(self, client, sample_questions):
         """Test successful question deletion"""
-        with patch("main.load_questions", return_value=sample_questions):
-            with patch("main.save_questions", return_value=True):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
+            with patch("question_app.main.save_questions", return_value=True):
                 response = client.delete("/questions/1")
                 assert response.status_code == 200
                 data = response.json()
@@ -143,7 +143,7 @@ class TestQuestionsAPI:
 
     def test_delete_question_not_found(self, client):
         """Test deleting non-existent question"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.delete("/questions/999")
             assert response.status_code == 200
             data = response.json()
@@ -151,8 +151,8 @@ class TestQuestionsAPI:
 
     def test_delete_question_save_failure(self, client, sample_questions):
         """Test question deletion with save failure"""
-        with patch("main.load_questions", return_value=sample_questions):
-            with patch("main.save_questions", return_value=False):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
+            with patch("question_app.main.save_questions", return_value=False):
                 response = client.delete("/questions/1")
                 assert response.status_code == 500
 
@@ -162,20 +162,20 @@ class TestQuestionCRUD:
 
     def test_get_question_edit_page(self, client, sample_questions):
         """Test getting question edit page"""
-        with patch("main.load_questions", return_value=sample_questions):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
             response = client.get("/questions/1")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
 
     def test_get_question_edit_page_not_found(self, client):
         """Test getting non-existent question edit page"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.get("/questions/999")
             assert response.status_code == 404
 
     def test_create_new_question_page(self, client):
         """Test getting new question creation page"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.get("/questions/new")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
@@ -213,8 +213,8 @@ class TestQuestionCRUD:
             ],
         }
 
-        with patch("main.load_questions", return_value=[]):
-            with patch("main.save_questions", return_value=True):
+        with patch("question_app.main.load_questions", return_value=[]):
+            with patch("question_app.main.save_questions", return_value=True):
                 response = client.post("/questions/new", json=question_data)
                 assert response.status_code == 200
                 data = response.json()
@@ -246,8 +246,8 @@ class TestQuestionCRUD:
             ],
         }
 
-        with patch("main.load_questions", return_value=sample_questions):
-            with patch("main.save_questions", return_value=True):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
+            with patch("question_app.main.save_questions", return_value=True):
                 response = client.put("/questions/1", json=question_data)
                 assert response.status_code == 200
                 data = response.json()
@@ -257,7 +257,7 @@ class TestQuestionCRUD:
         """Test updating non-existent question"""
         question_data = {"question_text": "Updated text"}
 
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.put("/questions/999", json=question_data)
             assert response.status_code == 404
 
@@ -267,14 +267,14 @@ class TestSystemPromptAPI:
 
     def test_get_system_prompt_page(self, client):
         """Test getting system prompt edit page"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
             response = client.get("/system-prompt")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
 
     def test_get_system_prompt_api(self, client):
         """Test getting system prompt via API"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
             response = client.get("/system-prompt/api")
             assert response.status_code == 200
             data = response.json()
@@ -282,7 +282,7 @@ class TestSystemPromptAPI:
 
     def test_save_system_prompt_success(self, client):
         """Test successful system prompt save"""
-        with patch("main.save_system_prompt", return_value=True):
+        with patch("question_app.main.save_system_prompt", return_value=True):
             response = client.post(
                 "/system-prompt", data={"prompt": "New system prompt"}
             )
@@ -292,7 +292,7 @@ class TestSystemPromptAPI:
 
     def test_save_system_prompt_failure(self, client):
         """Test system prompt save failure"""
-        with patch("main.save_system_prompt", return_value=False):
+        with patch("question_app.main.save_system_prompt", return_value=False):
             response = client.post(
                 "/system-prompt", data={"prompt": "New system prompt"}
             )
@@ -321,8 +321,8 @@ class TestChatAPI:
 
         mock_ai_response = "This is a helpful response."
 
-        with patch("main.search_vector_store", return_value=mock_chunks):
-            with patch("main.load_chat_system_prompt", return_value="Test prompt"):
+        with patch("question_app.main.search_vector_store", return_value=mock_chunks):
+            with patch("question_app.main.load_chat_system_prompt", return_value="Test prompt"):
                 with patch("httpx.AsyncClient.post") as mock_post:
                     mock_response = MagicMock()
                     mock_response.status_code = 200
@@ -357,7 +357,7 @@ class TestObjectivesAPI:
 
     def test_objectives_page_loads(self, client, sample_objectives):
         """Test that objectives page loads successfully"""
-        with patch("main.load_objectives", return_value=sample_objectives):
+        with patch("question_app.main.load_objectives", return_value=sample_objectives):
             response = client.get("/objectives")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
@@ -379,7 +379,7 @@ class TestObjectivesAPI:
             ]
         }
 
-        with patch("main.save_objectives", return_value=True):
+        with patch("question_app.main.save_objectives", return_value=True):
             response = client.post("/objectives", json=objectives_data)
             assert response.status_code == 200
             data = response.json()
@@ -389,7 +389,7 @@ class TestObjectivesAPI:
         """Test objectives save failure"""
         objectives_data = {"objectives": []}
 
-        with patch("main.save_objectives", return_value=False):
+        with patch("question_app.main.save_objectives", return_value=False):
             response = client.post("/objectives", json=objectives_data)
             assert response.status_code == 500
 
@@ -399,8 +399,8 @@ class TestDebugEndpoints:
 
     def test_debug_config(self, client, mock_env_vars):
         """Test debug configuration endpoint"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
-            with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.main.load_questions", return_value=[]):
                 with patch("os.path.exists", return_value=True):
                     response = client.get("/debug/config")
                     assert response.status_code == 200
@@ -410,7 +410,7 @@ class TestDebugEndpoints:
 
     def test_debug_question(self, client, sample_questions):
         """Test debug question endpoint"""
-        with patch("main.load_questions", return_value=sample_questions):
+        with patch("question_app.main.load_questions", return_value=sample_questions):
             response = client.get("/debug/question/1")
             assert response.status_code == 200
             data = response.json()
@@ -418,7 +418,7 @@ class TestDebugEndpoints:
 
     def test_debug_question_not_found(self, client):
         """Test debug question endpoint with non-existent question"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.get("/debug/question/999")
             assert response.status_code == 200
             data = response.json()
@@ -480,15 +480,15 @@ class TestChatSystemPromptAPI:
 
     def test_get_chat_system_prompt_page(self, client):
         """Test getting chat system prompt edit page"""
-        with patch("main.load_chat_system_prompt", return_value="Test chat prompt"):
-            with patch("main.get_default_chat_system_prompt", return_value="Default chat prompt"):
+        with patch("question_app.main.load_chat_system_prompt", return_value="Test chat prompt"):
+            with patch("question_app.main.get_default_chat_system_prompt", return_value="Default chat prompt"):
                 response = client.get("/chat-system-prompt")
                 assert response.status_code == 200
                 assert "text/html" in response.headers["content-type"]
 
     def test_save_chat_system_prompt_success(self, client):
         """Test successful chat system prompt save"""
-        with patch("main.save_chat_system_prompt", return_value=True):
+        with patch("question_app.main.save_chat_system_prompt", return_value=True):
             response = client.post(
                 "/chat-system-prompt", data={"prompt": "New chat system prompt"}
             )
@@ -503,7 +503,7 @@ class TestChatSystemPromptAPI:
 
     def test_save_chat_system_prompt_failure(self, client):
         """Test chat system prompt save failure"""
-        with patch("main.save_chat_system_prompt", return_value=False):
+        with patch("question_app.main.save_chat_system_prompt", return_value=False):
             response = client.post(
                 "/chat-system-prompt", data={"prompt": "New chat system prompt"}
             )
@@ -511,7 +511,7 @@ class TestChatSystemPromptAPI:
 
     def test_get_default_chat_system_prompt(self, client):
         """Test getting default chat system prompt"""
-        with patch("main.get_default_chat_system_prompt", return_value="Default prompt"):
+        with patch("question_app.main.get_default_chat_system_prompt", return_value="Default prompt"):
             response = client.get("/chat-system-prompt/default")
             assert response.status_code == 200
             data = response.json()
@@ -523,7 +523,7 @@ class TestChatWelcomeMessageAPI:
 
     def test_get_chat_welcome_message(self, client):
         """Test getting current chat welcome message"""
-        with patch("main.load_welcome_message", return_value="Welcome to the chat!"):
+        with patch("question_app.main.load_welcome_message", return_value="Welcome to the chat!"):
             response = client.get("/chat-welcome-message")
             assert response.status_code == 200
             data = response.json()
@@ -531,7 +531,7 @@ class TestChatWelcomeMessageAPI:
 
     def test_save_chat_welcome_message_json_success(self, client):
         """Test successful chat welcome message save with JSON"""
-        with patch("main.save_welcome_message", return_value=True):
+        with patch("question_app.main.save_welcome_message", return_value=True):
             response = client.post(
                 "/chat-welcome-message",
                 json={"welcome_message": "New welcome message"},
@@ -543,7 +543,7 @@ class TestChatWelcomeMessageAPI:
 
     def test_save_chat_welcome_message_form_success(self, client):
         """Test successful chat welcome message save with form data"""
-        with patch("main.save_welcome_message", return_value=True):
+        with patch("question_app.main.save_welcome_message", return_value=True):
             response = client.post(
                 "/chat-welcome-message",
                 data={"welcome_message": "New welcome message"}
@@ -559,7 +559,7 @@ class TestChatWelcomeMessageAPI:
 
     def test_save_chat_welcome_message_failure(self, client):
         """Test chat welcome message save failure"""
-        with patch("main.save_welcome_message", return_value=False):
+        with patch("question_app.main.save_welcome_message", return_value=False):
             response = client.post(
                 "/chat-welcome-message",
                 json={"welcome_message": "New welcome message"}
@@ -568,7 +568,7 @@ class TestChatWelcomeMessageAPI:
 
     def test_get_default_chat_welcome_message(self, client):
         """Test getting default chat welcome message"""
-        with patch("main.get_default_welcome_message", return_value="Default welcome"):
+        with patch("question_app.main.get_default_welcome_message", return_value="Default welcome"):
             response = client.get("/chat-welcome-message/default")
             assert response.status_code == 200
             data = response.json()

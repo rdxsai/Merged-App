@@ -106,7 +106,7 @@ The `serve-docs` command will:
 
 The documentation automatically includes:
 
-- All public functions and classes from `main.py`
+- All public functions and classes from `src/question_app/main.py`
 - API endpoint documentation
 - Pydantic model documentation
 - Test module documentation
@@ -169,7 +169,7 @@ def function_name(param1: str, param2: int = 0) -> bool:
 
 The documentation automatically includes:
 
-- All public functions and classes from `main.py`
+- All public functions and classes from `src/question_app/main.py`
 - API endpoint documentation
 - Pydantic model documentation
 - Test module documentation

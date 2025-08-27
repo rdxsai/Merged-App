@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from main import (
+from question_app.main import (
     create_comprehensive_chunks,
     generate_feedback_with_ai,
     get_ollama_embeddings,
@@ -89,7 +89,7 @@ class TestAIFeedbackGeneration:
         question_data = {"id": 1, "question_text": "Test question"}
         system_prompt = "Test prompt"
 
-        with patch("main.AZURE_OPENAI_ENDPOINT", None):
+        with patch("question_app.main.AZURE_OPENAI_ENDPOINT", None):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)
@@ -274,7 +274,7 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("main.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch("question_app.main.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
                 result = await search_vector_store("test query", n_results=2)
 
                 assert len(result) == 2
@@ -293,7 +293,7 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("main.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch("question_app.main.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
                 result = await search_vector_store("test query")
 
                 assert result == []
@@ -301,7 +301,7 @@ class TestVectorStoreOperations:
     @pytest.mark.asyncio
     async def test_search_vector_store_embedding_failure(self):
         """Test vector store search with embedding failure"""
-        with patch("main.get_ollama_embeddings", return_value=[]):
+        with patch("question_app.main.get_ollama_embeddings", return_value=[]):
             result = await search_vector_store("test query")
 
             assert result == []
@@ -361,16 +361,16 @@ class TestAIIntegrationEndpoints:
         self, client, sample_questions
     ):
         """Test successful feedback generation endpoint"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
-            with patch("main.load_questions", return_value=sample_questions):
-                with patch("main.generate_feedback_with_ai") as mock_generate:
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.main.load_questions", return_value=sample_questions):
+                with patch("question_app.main.generate_feedback_with_ai") as mock_generate:
                     mock_generate.return_value = {
                         "general_feedback": "Test feedback",
                         "answer_feedback": {"answer 1": "Test answer feedback"},
                         "token_usage": {"total_tokens": 100},
                     }
 
-                    with patch("main.save_questions", return_value=True):
+                    with patch("question_app.main.save_questions", return_value=True):
                         response = client.post("/questions/1/generate-feedback")
                         assert response.status_code == 200
                         data = response.json()
@@ -379,23 +379,23 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_generate_question_feedback_no_system_prompt(self, client):
         """Test feedback generation without system prompt"""
-        with patch("main.load_system_prompt", return_value=""):
+        with patch("question_app.main.load_system_prompt", return_value=""):
             response = client.post("/questions/1/generate-feedback")
             assert response.status_code == 400
 
     @pytest.mark.asyncio
     async def test_generate_question_feedback_question_not_found(self, client):
         """Test feedback generation for non-existent question"""
-        with patch("main.load_system_prompt", return_value="Test prompt"):
-            with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.main.load_questions", return_value=[]):
                 response = client.post("/questions/999/generate-feedback")
                 assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_create_vector_store_success(self, client, sample_questions):
         """Test successful vector store creation"""
-        with patch("main.load_questions", return_value=sample_questions):
-            with patch("main.get_ollama_embeddings") as mock_embeddings:
+        with patch("question_app.main.load_questions", return_value=sample_questions):
+            with patch("question_app.main.get_ollama_embeddings") as mock_embeddings:
                 mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
                 with patch("chromadb.PersistentClient") as mock_client:
@@ -412,6 +412,6 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_create_vector_store_no_questions(self, client):
         """Test vector store creation with no questions"""
-        with patch("main.load_questions", return_value=[]):
+        with patch("question_app.main.load_questions", return_value=[]):
             response = client.post("/create-vector-store")
             assert response.status_code == 400

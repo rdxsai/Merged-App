@@ -210,7 +210,7 @@ Vector Store Issues
        rm -rf vector_store/
        
        # Recreate vector store
-       python -c "from main import create_vector_store; import asyncio; asyncio.run(create_vector_store())"
+       python -c "from question_app.main import create_vector_store; import asyncio; asyncio.run(create_vector_store())"
 
 2. **Check ChromaDB Installation**:
    .. code-block:: bash

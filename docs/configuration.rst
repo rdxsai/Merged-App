@@ -119,11 +119,11 @@ The application uses several JSON and text files for data storage:
 
 .. code-block:: text
 
-   quiz_questions.json          # Main questions database
-   learning_objectives.json     # Learning objectives storage
-   system_prompt.txt           # AI system prompt
-   chat_system_prompt.txt      # Chat assistant system prompt
-   chat_welcome_message.txt    # Chat welcome message
+   data/quiz_questions.json          # Main questions database
+   data/learning_objectives.json     # Learning objectives storage
+   config/system_prompt.txt           # AI system prompt
+   config/chat_system_prompt.txt      # Chat assistant system prompt
+   config/chat_welcome_message.txt    # Chat welcome message
 
 Vector Store
 ~~~~~~~~~~~
