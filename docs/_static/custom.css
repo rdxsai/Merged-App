@@ -1,0 +1,106 @@
+/* Custom CSS for Canvas Quiz Manager Documentation */
+
+/* Custom styling for the documentation */
+.wy-nav-content {
+  max-width: 1200px;
+}
+
+/* Improve code block styling */
+.highlight {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Style for API endpoints */
+.http-get,
+.http-post,
+.http-put,
+.http-delete {
+  background-color: #f8f9fa;
+  border-left: 4px solid #007bff;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.http-post {
+  border-left-color: #28a745;
+}
+
+.http-put {
+  border-left-color: #ffc107;
+}
+
+.http-delete {
+  border-left-color: #dc3545;
+}
+
+/* Improve table styling */
+.wy-table-responsive table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.wy-table-responsive th,
+.wy-table-responsive td {
+  border: 1px solid #dee2e6;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.wy-table-responsive th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+/* Custom styling for data models */
+.code-block {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: "Courier New", monospace;
+}
+
+/* Improve readability for long content */
+.wy-nav-content {
+  line-height: 1.6;
+}
+
+.wy-nav-content p {
+  margin-bottom: 1rem;
+}
+
+/* Style for feature lists */
+.feature-list {
+  background-color: #e7f3ff;
+  border-left: 4px solid #007bff;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.feature-list ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.feature-list li {
+  margin: 0.25rem 0;
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+  .wy-nav-content {
+    padding: 1rem;
+  }
+
+  .highlight {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}

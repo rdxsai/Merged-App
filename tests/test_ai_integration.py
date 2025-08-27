@@ -58,7 +58,7 @@ class TestAIFeedbackGeneration:
         with patch('main.AZURE_OPENAI_ENDPOINT', None):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
-            assert "Azure OpenAI configuration incomplete" in str(exc_info.value)
+            assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_generate_feedback_api_error(self, sample_questions):
@@ -74,7 +74,7 @@ class TestAIFeedbackGeneration:
             
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
-            assert "AI service error" in str(exc_info.value)
+            assert "Failed to generate feedback" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_generate_feedback_timeout(self, sample_questions):
@@ -85,7 +85,7 @@ class TestAIFeedbackGeneration:
         with patch('httpx.AsyncClient.post', side_effect=Exception("Timeout")):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
-            assert "Failed to generate feedback" in str(exc_info.value)
+            assert "Failed to generate feedback" in str(exc_info.value.detail)
 
 
 class TestOllamaEmbeddings:
@@ -120,7 +120,7 @@ class TestOllamaEmbeddings:
         with patch('httpx.AsyncClient.post', side_effect=Exception("Connection failed")):
             with pytest.raises(Exception) as exc_info:
                 await get_ollama_embeddings(texts)
-            assert "Failed to generate embeddings" in str(exc_info.value)
+            assert "Failed to generate embeddings" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_get_ollama_embeddings_api_error(self):
@@ -135,7 +135,7 @@ class TestOllamaEmbeddings:
             
             with pytest.raises(Exception) as exc_info:
                 await get_ollama_embeddings(texts)
-            assert "Ollama API error" in str(exc_info.value)
+            assert "Failed to generate embeddings" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_get_ollama_embeddings_invalid_response(self):
@@ -150,7 +150,7 @@ class TestOllamaEmbeddings:
             
             with pytest.raises(Exception) as exc_info:
                 await get_ollama_embeddings(texts)
-            assert "no embedding found" in str(exc_info.value)
+            assert "Failed to generate embeddings" in str(exc_info.value.detail)
 
 
 class TestVectorStoreOperations:

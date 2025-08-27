@@ -1,3 +1,29 @@
+"""
+Canvas Quiz Manager - A Comprehensive Web Application
+
+This module provides a FastAPI-based web application for managing Canvas LMS quiz
+questions with AI-powered feedback generation and an intelligent chat assistant
+using RAG (Retrieval-Augmented Generation).
+
+The application integrates with:
+- Canvas LMS API for fetching quiz questions
+- Azure OpenAI for AI-powered feedback generation
+- Ollama for local embedding generation
+- ChromaDB for vector storage and semantic search
+- FastAPI for web API and frontend
+
+Key Features:
+- Fetch and manage quiz questions from Canvas LMS
+- Generate educational feedback using AI
+- Intelligent chat assistant with RAG capabilities
+- Vector store for semantic search
+- Learning objectives management
+- System prompt customization
+
+Author: Bryce Kayanuma <BrycePK@vt.edu>
+Version: 0.1.0
+"""
+
 from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -65,6 +91,17 @@ WELCOME_MESSAGE_FILE = "chat_welcome_message.txt"
 
 # Pydantic models
 class Answer(BaseModel):
+    """
+    Pydantic model representing a quiz answer option.
+    
+    Attributes:
+        id (int): Unique identifier for the answer
+        text (str): The answer text content
+        html (str): HTML formatted version of the answer text
+        comments (str): Feedback comments for this answer
+        comments_html (str): HTML formatted version of the comments
+        weight (float): Weight/score for this answer (0-100)
+    """
     id: int
     text: str
     html: str = ""
@@ -73,6 +110,24 @@ class Answer(BaseModel):
     weight: float = 0.0
 
 class Question(BaseModel):
+    """
+    Pydantic model representing a complete quiz question.
+    
+    Attributes:
+        id (int): Unique identifier for the question
+        quiz_id (int): ID of the quiz this question belongs to
+        question_name (str): Name/title of the question
+        question_type (str): Type of question (e.g., 'multiple_choice_question')
+        question_text (str): The main question text
+        points_possible (float): Maximum points for this question
+        correct_comments (str): Feedback shown when answer is correct
+        incorrect_comments (str): Feedback shown when answer is incorrect
+        neutral_comments (str): General feedback for the question
+        correct_comments_html (str): HTML formatted correct comments
+        incorrect_comments_html (str): HTML formatted incorrect comments
+        neutral_comments_html (str): HTML formatted neutral comments
+        answers (List[Answer]): List of answer options for this question
+    """
     id: int
     quiz_id: int
     question_name: str
@@ -88,6 +143,22 @@ class Question(BaseModel):
     answers: List[Answer] = []
 
 class QuestionUpdate(BaseModel):
+    """
+    Pydantic model for updating existing questions.
+    
+    Attributes:
+        question_text (str): Updated question text
+        topic (str): Topic/category for the question
+        tags (str): Comma-separated tags for the question
+        learning_objective (str): Associated learning objective
+        correct_comments (str): Feedback for correct answers
+        incorrect_comments (str): Feedback for incorrect answers
+        neutral_comments (str): General feedback
+        correct_comments_html (str): HTML formatted correct comments
+        incorrect_comments_html (str): HTML formatted incorrect comments
+        neutral_comments_html (str): HTML formatted neutral comments
+        answers (List[Answer]): Updated list of answer options
+    """
     question_text: str
     topic: str = "general"
     tags: str = ""
@@ -101,14 +172,41 @@ class QuestionUpdate(BaseModel):
     answers: List[Answer] = []
 
 class LearningObjective(BaseModel):
+    """
+    Pydantic model representing a learning objective.
+    
+    Attributes:
+        text (str): The learning objective text
+        blooms_level (str): Bloom's taxonomy level (e.g., 'understand')
+        priority (str): Priority level ('low', 'medium', 'high')
+    """
     text: str
     blooms_level: str = "understand"
     priority: str = "medium"
 
 class ObjectivesUpdate(BaseModel):
+    """
+    Pydantic model for updating learning objectives.
+    
+    Attributes:
+        objectives (List[LearningObjective]): List of learning objectives
+    """
     objectives: List[LearningObjective] = []
 
 class NewQuestion(BaseModel):
+    """
+    Pydantic model for creating new questions.
+    
+    Attributes:
+        question_text (str): The question text
+        question_type (str): Type of question
+        topic (str): Topic/category for the question
+        tags (str): Comma-separated tags
+        learning_objective (str): Associated learning objective
+        points_possible (float): Maximum points for the question
+        neutral_comments (str): General feedback
+        answers (List[Answer]): List of answer options
+    """
     question_text: str
     question_type: str = "multiple_choice_question"
     topic: str = "general"
@@ -120,7 +218,16 @@ class NewQuestion(BaseModel):
 
 # Utility functions
 def load_questions() -> List[Dict[str, Any]]:
-    """Load questions from JSON file"""
+    """
+    Load questions from the JSON data file.
+    
+    Returns:
+        List[Dict[str, Any]]: List of question dictionaries loaded from the file.
+        Returns an empty list if the file doesn't exist or there's an error.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -131,7 +238,18 @@ def load_questions() -> List[Dict[str, Any]]:
         return []
 
 def save_questions(questions: List[Dict[str, Any]]) -> bool:
-    """Save questions to JSON file"""
+    """
+    Save questions to the JSON data file.
+    
+    Args:
+        questions (List[Dict[str, Any]]): List of question dictionaries to save.
+        
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(questions, f, indent=2, ensure_ascii=False)
@@ -141,7 +259,16 @@ def save_questions(questions: List[Dict[str, Any]]) -> bool:
         return False
 
 def load_objectives() -> List[Dict[str, Any]]:
-    """Load learning objectives from JSON file"""
+    """
+    Load learning objectives from the JSON file.
+    
+    Returns:
+        List[Dict[str, Any]]: List of learning objective dictionaries.
+        Returns an empty list if the file doesn't exist or there's an error.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         objectives_file = 'learning_objectives.json'
         if os.path.exists(objectives_file):
@@ -153,7 +280,18 @@ def load_objectives() -> List[Dict[str, Any]]:
         return []
 
 def save_objectives(objectives: List[Dict[str, Any]]) -> bool:
-    """Save learning objectives to JSON file"""
+    """
+    Save learning objectives to the JSON file.
+    
+    Args:
+        objectives (List[Dict[str, Any]]): List of learning objective dictionaries.
+        
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         objectives_file = 'learning_objectives.json'
         with open(objectives_file, 'w', encoding='utf-8') as f:
@@ -164,7 +302,16 @@ def save_objectives(objectives: List[Dict[str, Any]]) -> bool:
         return False
 
 def load_system_prompt() -> str:
-    """Load system prompt from text file"""
+    """
+    Load the system prompt from the text file.
+    
+    Returns:
+        str: The system prompt content. Returns an empty string if the file
+        doesn't exist or there's an error.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         if os.path.exists(SYSTEM_PROMPT_FILE):
             with open(SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
@@ -175,7 +322,18 @@ def load_system_prompt() -> str:
         return ""
 
 def save_system_prompt(prompt: str) -> bool:
-    """Save system prompt to text file"""
+    """
+    Save the system prompt to the text file.
+    
+    Args:
+        prompt (str): The system prompt content to save.
+        
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         with open(SYSTEM_PROMPT_FILE, 'w', encoding='utf-8') as f:
             f.write(prompt)
@@ -185,7 +343,16 @@ def save_system_prompt(prompt: str) -> bool:
         return False
 
 def load_chat_system_prompt() -> str:
-    """Load chat system prompt from text file"""
+    """
+    Load the chat system prompt from the text file.
+    
+    Returns:
+        str: The chat system prompt content. Returns the default prompt if
+        the file doesn't exist or there's an error.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         if os.path.exists(CHAT_SYSTEM_PROMPT_FILE):
             with open(CHAT_SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
@@ -196,7 +363,18 @@ def load_chat_system_prompt() -> str:
         return get_default_chat_system_prompt()
 
 def save_chat_system_prompt(prompt: str) -> bool:
-    """Save chat system prompt to text file"""
+    """
+    Save the chat system prompt to the text file.
+    
+    Args:
+        prompt (str): The chat system prompt content to save.
+        
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         with open(CHAT_SYSTEM_PROMPT_FILE, 'w', encoding='utf-8') as f:
             f.write(prompt)
@@ -206,7 +384,13 @@ def save_chat_system_prompt(prompt: str) -> bool:
         return False
 
 def get_default_chat_system_prompt() -> str:
-    """Get the default chat system prompt"""
+    """
+    Get the default chat system prompt template.
+    
+    Returns:
+        str: The default system prompt template for the chat assistant.
+        This prompt includes placeholders for context injection.
+    """
     return """You are a helpful assistant specializing in web accessibility and quiz questions. 
 You have access to a knowledge base of quiz questions about accessibility topics.
 
@@ -226,7 +410,16 @@ Instructions:
 - Reference WCAG guidelines when relevant"""
 
 def load_welcome_message() -> str:
-    """Load welcome message from text file"""
+    """
+    Load the welcome message from the text file.
+    
+    Returns:
+        str: The welcome message content. Returns the default message if
+        the file doesn't exist or there's an error.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         if os.path.exists(WELCOME_MESSAGE_FILE):
             with open(WELCOME_MESSAGE_FILE, 'r', encoding='utf-8') as f:
@@ -237,7 +430,18 @@ def load_welcome_message() -> str:
         return get_default_welcome_message()
 
 def save_welcome_message(message: str) -> bool:
-    """Save welcome message to text file"""
+    """
+    Save the welcome message to the text file.
+    
+    Args:
+        message (str): The welcome message content to save.
+        
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+        
+    Note:
+        The function handles file I/O errors gracefully and logs any issues.
+    """
     try:
         with open(WELCOME_MESSAGE_FILE, 'w', encoding='utf-8') as f:
             f.write(message)
@@ -247,11 +451,35 @@ def save_welcome_message(message: str) -> bool:
         return False
 
 def get_default_welcome_message() -> str:
-    """Get the default welcome message"""
+    """
+    Get the default welcome message for the chat assistant.
+    
+    Returns:
+        str: The default welcome message that introduces the chat assistant
+        and explains its capabilities.
+    """
     return "Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. Ask me anything about the quiz questions in your knowledge base!"
 
 async def make_canvas_request(url: str, headers: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
-    """Make Canvas API request with retry logic for rate limiting"""
+    """
+    Make a Canvas API request with retry logic for rate limiting.
+    
+    Args:
+        url (str): The Canvas API endpoint URL to request.
+        headers (Dict[str, str]): HTTP headers to include in the request.
+        max_retries (int, optional): Maximum number of retry attempts. Defaults to 3.
+        
+    Returns:
+        Dict[str, Any]: JSON response from the Canvas API.
+        
+    Raises:
+        HTTPException: If the request fails after all retry attempts or if
+                      the API returns an error status code.
+                      
+    Note:
+        This function implements exponential backoff for rate limiting (429 errors)
+        and includes proper error handling for various HTTP status codes.
+    """
     for attempt in range(max_retries):
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -278,7 +506,23 @@ async def make_canvas_request(url: str, headers: Dict[str, str], max_retries: in
     raise HTTPException(status_code=500, detail="Max retries exceeded")
 
 def clean_question_text(text: str) -> str:
-    """Remove unwanted HTML tags from question text, especially link and script tags"""
+    """
+    Remove unwanted HTML tags from question text.
+    
+    This function specifically targets link, script, style, and meta tags that
+    are commonly included in Canvas question text but are not relevant for
+    display or processing.
+    
+    Args:
+        text (str): The HTML text to clean.
+        
+    Returns:
+        str: The cleaned text with unwanted HTML tags removed and whitespace normalized.
+        
+    Note:
+        The function preserves the content within other HTML tags while removing
+        only the specified unwanted tag types.
+    """
     if not text:
         return text
     
@@ -300,7 +544,22 @@ def clean_question_text(text: str) -> str:
     return text
 
 def clean_html_for_vector_store(html_text: str) -> str:
-    """Clean HTML tags and normalize text for vector store"""
+    """
+    Clean HTML tags and normalize text for vector store processing.
+    
+    This function extracts plain text from HTML content and normalizes whitespace
+    to prepare text for embedding generation and vector storage.
+    
+    Args:
+        html_text (str): The HTML text to clean and convert to plain text.
+        
+    Returns:
+        str: The cleaned plain text with normalized whitespace.
+        
+    Note:
+        This function uses BeautifulSoup to properly parse HTML and extract
+        only the text content, removing all HTML markup.
+    """
     if not html_text:
         return ""
     
@@ -314,7 +573,28 @@ def clean_html_for_vector_store(html_text: str) -> str:
     return text
 
 async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
-    """Get embeddings from Ollama using nomic-embed-text model"""
+    """
+    Get embeddings from Ollama using the nomic-embed-text model.
+    
+    This function generates vector embeddings for a list of text inputs using
+    the local Ollama service with the nomic-embed-text model.
+    
+    Args:
+        texts (List[str]): List of text strings to generate embeddings for.
+        
+    Returns:
+        List[List[float]]: List of embedding vectors, where each vector is a
+        list of floats representing the text in high-dimensional space.
+        
+    Raises:
+        HTTPException: If there are connection issues, timeouts, or API errors
+                      with the Ollama service.
+                      
+    Note:
+        The function includes a small delay between requests to avoid overwhelming
+        the Ollama service. It also handles various error conditions including
+        connection failures, timeouts, and invalid responses.
+    """
     embeddings = []
     
     # Ensure OLLAMA_HOST has proper protocol
@@ -380,7 +660,29 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
         raise HTTPException(status_code=500, detail=f"Failed to generate embeddings: {str(e)}")
 
 def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> tuple[List[str], List[Dict[str, Any]], List[str]]:
-    """Create comprehensive chunks using Option C strategy"""
+    """
+    Create comprehensive chunks from quiz questions for vector store processing.
+    
+    This function transforms quiz questions into comprehensive text chunks that
+    include question text, answer options, feedback, and metadata. The chunks
+    are designed to provide rich context for semantic search and RAG operations.
+    
+    Args:
+        questions (List[Dict[str, Any]]): List of question dictionaries to process.
+        
+    Returns:
+        tuple[List[str], List[Dict[str, Any]], List[str]]: A tuple containing:
+            - List of document texts (the chunks)
+            - List of metadata dictionaries for each chunk
+            - List of unique IDs for each chunk
+            
+    Note:
+        The function creates comprehensive chunks that include:
+        - Question text and type
+        - All answer options with correctness indicators
+        - General feedback and answer-specific feedback
+        - Rich metadata for filtering and analysis
+    """
     documents = []
     metadatas = []
     ids = []
@@ -459,7 +761,26 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> tuple[List[s
     return documents, metadatas, ids
 
 def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
-    """Extract topic/theme from question text and feedback"""
+    """
+    Extract topic/theme from question text and feedback using keyword matching.
+    
+    This function analyzes the question text and feedback to determine the
+    primary topic or theme using a predefined set of keywords for each topic.
+    
+    Args:
+        question_text (str): The main question text to analyze.
+        feedback (str, optional): Additional feedback text to include in analysis.
+                                 Defaults to empty string.
+        
+    Returns:
+        str: The extracted topic. Possible values include: 'accessibility',
+             'navigation', 'forms', 'media', 'color', 'keyboard', 'content',
+             or 'general' if no specific topic is detected.
+             
+    Note:
+        The function uses a simple keyword-based approach to categorize
+        questions into predefined topics related to web accessibility.
+    """
     combined_text = f"{question_text} {feedback}".lower()
     
     # Simple keyword-based topic extraction
@@ -480,7 +801,28 @@ def extract_topic_from_text(question_text: str, feedback: str = "") -> str:
     return "general"
 
 def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
-    """Remove weight/correctness indicators, answer text, and other metadata from AI-generated answer feedback"""
+    """
+    Clean AI-generated answer feedback by removing metadata and formatting artifacts.
+    
+    This function removes weight indicators, correctness markers, answer text
+    references, and other metadata that may be included in AI-generated feedback
+    to produce clean, user-friendly feedback text.
+    
+    Args:
+        feedback (str): The raw AI-generated feedback text to clean.
+        answer_text (str, optional): The answer text to remove if it appears
+                                   at the beginning of the feedback. Defaults to empty string.
+        
+    Returns:
+        str: The cleaned feedback text with metadata and formatting artifacts removed.
+        
+    Note:
+        The function removes various patterns including:
+        - Weight indicators like "(Weight: 100%)"
+        - Correctness markers like "[✓ CORRECT]"
+        - Answer text references at the beginning
+        - Extra whitespace while preserving newlines
+    """
     if not feedback:
         return feedback
     
@@ -515,7 +857,22 @@ def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
     return feedback
 
 def get_all_existing_tags(questions: List[Dict[str, Any]]) -> List[str]:
-    """Extract all unique tags from existing questions"""
+    """
+    Extract all unique tags from existing questions.
+    
+    This function parses the tags field from all questions and returns a
+    sorted list of unique tags that can be used for suggestions or filtering.
+    
+    Args:
+        questions (List[Dict[str, Any]]): List of question dictionaries to analyze.
+        
+    Returns:
+        List[str]: Sorted list of unique tags found across all questions.
+        
+    Note:
+        Tags are expected to be comma-separated strings in the 'tags' field
+        of each question. The function handles whitespace and empty tags.
+    """
     all_tags = set()
     
     for question in questions:
@@ -529,7 +886,28 @@ def get_all_existing_tags(questions: List[Dict[str, Any]]) -> List[str]:
     return sorted(list(all_tags))
 
 async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, Any]]:
-    """Search the ChromaDB vector store for relevant chunks"""
+    """
+    Search the ChromaDB vector store for relevant chunks using semantic similarity.
+    
+    This function generates an embedding for the query text and searches the
+    vector store for the most similar question chunks, returning them with
+    their metadata and similarity scores.
+    
+    Args:
+        query (str): The search query text.
+        n_results (int, optional): Number of results to return. Defaults to 5.
+        
+    Returns:
+        List[Dict[str, Any]]: List of chunk dictionaries, each containing:
+            - 'content': The chunk text content
+            - 'metadata': Associated metadata (question_id, topic, etc.)
+            - 'distance': Similarity distance score (lower is more similar)
+            
+    Note:
+        The function uses Ollama embeddings for the query and searches the
+        ChromaDB collection named "quiz_questions". It handles errors gracefully
+        and returns an empty list if the search fails.
+    """
     try:
         client = chromadb.PersistentClient(path="./vector_store")
         collection = client.get_collection("quiz_questions")
@@ -567,7 +945,33 @@ async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, 
         return []
 
 async def generate_feedback_with_ai(question_data: Dict[str, Any], system_prompt: str) -> Dict[str, Any]:
-    """Generate feedback using Azure OpenAI"""
+    """
+    Generate educational feedback for quiz questions using Azure OpenAI.
+    
+    This function sends a question to Azure OpenAI with a system prompt to
+    generate comprehensive educational feedback including general feedback
+    and answer-specific feedback for each answer option.
+    
+    Args:
+        question_data (Dict[str, Any]): Question data including text, type,
+                                      points, and answer options.
+        system_prompt (str): The system prompt to guide the AI's response.
+        
+    Returns:
+        Dict[str, Any]: Generated feedback containing:
+            - 'general_feedback': Overall feedback for the question
+            - 'answer_feedback': Dictionary mapping answer keys to feedback
+            - 'token_usage': Token usage statistics from the API call
+            
+    Raises:
+        HTTPException: If Azure OpenAI configuration is missing, API calls fail,
+                      or the response is invalid.
+                      
+    Note:
+        The function validates Azure OpenAI configuration, constructs a detailed
+        prompt with question context, and parses the AI response to extract
+        structured feedback. It includes comprehensive error handling and logging.
+    """
     logger.info(f"Starting AI feedback generation for question ID: {question_data.get('id', 'unknown')}")
     
     if not all([AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_ID, AZURE_OPENAI_SUBSCRIPTION_KEY]):
@@ -858,7 +1262,27 @@ Please provide specific educational feedback for each answer choice explaining w
         raise HTTPException(status_code=500, detail=f"Failed to generate feedback: {str(e)}")
 
 async def fetch_courses() -> List[Dict[str, Any]]:
-    """Fetch all available courses for the user"""
+    """
+    Fetch all available courses for the authenticated user from Canvas LMS.
+    
+    This function retrieves a list of courses that the user has access to,
+    including course metadata such as name, code, and term information.
+    
+    Returns:
+        List[Dict[str, Any]]: List of course dictionaries containing:
+            - 'id': Canvas course ID
+            - 'name': Course name
+            - 'course_code': Course code/short name
+            - 'enrollment_term_id': Term ID
+            - 'term': Term name
+            
+    Raises:
+        HTTPException: If Canvas configuration is missing or API calls fail.
+        
+    Note:
+        The function filters for active enrollments and includes term information.
+        It requires valid Canvas API configuration (base URL and token).
+    """
     if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
         logger.error("Missing Canvas configuration")
         raise HTTPException(status_code=400, detail="Canvas API configuration is incomplete")
@@ -901,7 +1325,32 @@ async def fetch_courses() -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Failed to fetch courses: {str(e)}")
 
 async def fetch_quizzes(course_id: str) -> List[Dict[str, Any]]:
-    """Fetch all quizzes for a specific course"""
+    """
+    Fetch all quizzes for a specific course from Canvas LMS.
+    
+    This function retrieves a list of quizzes available in the specified course,
+    including quiz metadata such as title, description, and question count.
+    
+    Args:
+        course_id (str): The Canvas course ID to fetch quizzes for.
+        
+    Returns:
+        List[Dict[str, Any]]: List of quiz dictionaries containing:
+            - 'id': Canvas quiz ID
+            - 'title': Quiz title
+            - 'description': Quiz description
+            - 'question_count': Number of questions in the quiz
+            - 'published': Whether the quiz is published
+            - 'due_at': Quiz due date
+            - 'quiz_type': Type of quiz
+            
+    Raises:
+        HTTPException: If Canvas configuration is missing or API calls fail.
+        
+    Note:
+        The function requires valid Canvas API configuration and the user
+        must have access to the specified course.
+    """
     if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
         logger.error("Missing Canvas configuration")
         raise HTTPException(status_code=400, detail="Canvas API configuration is incomplete")
@@ -942,7 +1391,24 @@ async def fetch_quizzes(course_id: str) -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Failed to fetch quizzes: {str(e)}")
 
 async def fetch_all_questions() -> List[Dict[str, Any]]:
-    """Fetch all questions from Canvas API with pagination"""
+    """
+    Fetch all questions from a Canvas quiz with pagination support.
+    
+    This function retrieves all questions from the configured Canvas quiz,
+    handling pagination automatically and cleaning question text by removing
+    unwanted HTML tags.
+    
+    Returns:
+        List[Dict[str, Any]]: List of question dictionaries from the Canvas quiz.
+        
+    Raises:
+        HTTPException: If Canvas configuration is missing or API calls fail.
+        
+    Note:
+        The function uses the globally configured COURSE_ID and QUIZ_ID.
+        It automatically handles pagination and cleans question text to remove
+        unwanted HTML tags like link, script, and style tags.
+    """
     if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN, COURSE_ID, QUIZ_ID]):
         raise HTTPException(status_code=500, detail="Missing Canvas configuration")
     
@@ -984,7 +1450,25 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
 # Routes
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """Home page showing all questions"""
+    """
+    Home page endpoint displaying all quiz questions.
+    
+    This endpoint serves the main application page that displays all questions
+    in a table format with options to edit, delete, and generate AI feedback.
+    
+    Args:
+        request (Request): FastAPI request object.
+        
+    Returns:
+        HTMLResponse: Rendered index.html template with questions data.
+        
+    Raises:
+        HTTPException: If there's an error loading questions or rendering the template.
+        
+    Note:
+        The response includes cache-busting headers to prevent browser caching issues.
+        The template receives questions data, course ID, and quiz ID for display.
+    """
     try:
         questions = load_questions()
         
@@ -1801,12 +2285,30 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 def start():
-    """Entry point for production server"""
+    """
+    Entry point for production server startup.
+    
+    This function starts the FastAPI application in production mode using uvicorn.
+    The server runs on all interfaces (0.0.0.0) on port 8080.
+    
+    Note:
+        This function is designed to be called from the command line or
+        as a Poetry script entry point for production deployment.
+    """
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
 
 def dev():
-    """Entry point for development server with reload"""
+    """
+    Entry point for development server startup with auto-reload.
+    
+    This function starts the FastAPI application in development mode using uvicorn
+    with auto-reload enabled. The server runs on all interfaces (0.0.0.0) on port 8080.
+    
+    Note:
+        This function is designed to be called from the command line or
+        as a Poetry script entry point for development with hot reloading.
+    """
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
 

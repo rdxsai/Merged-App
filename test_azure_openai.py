@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
 """
 Azure OpenAI Connection Test Script
-This script tests the connection to Azure OpenAI using environment variables.
+
+This script provides comprehensive testing for Azure OpenAI service connectivity
+and functionality. It validates configuration, tests basic connectivity,
+performs API calls, and simulates realistic quiz feedback generation scenarios.
+
+The script is designed to help diagnose and troubleshoot Azure OpenAI integration
+issues in the Canvas Quiz Manager application.
+
+Features:
+- Configuration validation and display
+- Basic HTTP connectivity testing
+- API endpoint testing with simple requests
+- Realistic quiz feedback generation testing
+- Detailed error reporting and debugging information
+
+Author: Bryce Kayanuma <BrycePK@vt.edu>
+Version: 0.1.0
 """
 
 import os
@@ -9,43 +25,101 @@ import json
 import asyncio
 import httpx
 from dotenv import load_dotenv
-from typing import Dict, Any
+from typing import Dict
 
 # Load environment variables
 load_dotenv()
 
 def load_config() -> Dict[str, str]:
-    """Load and validate Azure OpenAI configuration from environment"""
+    """
+    Load and validate Azure OpenAI configuration from environment variables.
+    
+    This function reads the required Azure OpenAI configuration from environment
+    variables and provides default values where appropriate.
+    
+    Returns:
+        Dict[str, str]: Configuration dictionary containing:
+            - 'endpoint': Azure OpenAI endpoint URL
+            - 'deployment_id': Model deployment ID
+            - 'api_version': API version string
+            - 'subscription_key': Azure subscription key
+            
+    Note:
+        The function uses default values for endpoint and API version if not
+        specified in environment variables.
+    """
     config = {
-        'endpoint': os.getenv("AZURE_OPENAI_ENDPOINT", "https://itls-openai-connect.azure-api.net"),
+        'endpoint': os.getenv(
+            "AZURE_OPENAI_ENDPOINT", 
+            "https://itls-openai-connect.azure-api.net"
+        ),
         'deployment_id': os.getenv("AZURE_OPENAI_DEPLOYMENT_ID"),
-        'api_version': os.getenv("AZURE_OPENAI_API_VERSION", "2023-12-01-preview"),
+        'api_version': os.getenv(
+            "AZURE_OPENAI_API_VERSION", 
+            "2023-12-01-preview"
+        ),
         'subscription_key': os.getenv("AZURE_OPENAI_SUBSCRIPTION_KEY")
     }
     return config
 
 def print_config(config: Dict[str, str]) -> None:
-    """Print configuration (masking sensitive data)"""
+    """
+    Print configuration details while masking sensitive data.
+    
+    This function displays the current Azure OpenAI configuration in a
+    user-friendly format, masking the subscription key for security.
+    
+    Args:
+        config (Dict[str, str]): Configuration dictionary from load_config()
+        
+    Note:
+        The subscription key is masked to show only the last 4 characters
+        for security purposes.
+    """
     print("🔧 Configuration:")
     print(f"   Endpoint: {config['endpoint']}")
     print(f"   Deployment ID: {config['deployment_id']}")
     print(f"   API Version: {config['api_version']}")
-    print(f"   Subscription Key: {'*' * (len(config['subscription_key']) - 4) + config['subscription_key'][-4:] if config['subscription_key'] else 'NOT SET'}")
+    
+    # Mask subscription key for security
+    if config['subscription_key']:
+        masked_key = ('*' * (len(config['subscription_key']) - 4) + 
+                     config['subscription_key'][-4:])
+        print(f"   Subscription Key: {masked_key}")
+    else:
+        print("   Subscription Key: NOT SET")
     print()
 
 def validate_config(config: Dict[str, str]) -> bool:
-    """Validate that all required configuration is present"""
+    """
+    Validate that all required Azure OpenAI configuration is present.
+    
+    This function checks that all required environment variables are set
+    and provides helpful error messages for missing configuration.
+    
+    Args:
+        config (Dict[str, str]): Configuration dictionary from load_config()
+        
+    Returns:
+        bool: True if all required configuration is present, False otherwise
+        
+    Note:
+        The function provides detailed error messages listing which
+        environment variables are missing and what they should contain.
+    """
     missing = []
     for key, value in config.items():
         if not value:
             missing.append(key.upper())
     
     if missing:
-        print(f"❌ Missing required environment variables: {', '.join(missing)}")
+        print(f"❌ Missing required environment variables: "
+              f"{', '.join(missing)}")
         print("\n📝 Required environment variables:")
         print("   AZURE_OPENAI_ENDPOINT")
         print("   AZURE_OPENAI_DEPLOYMENT_ID")
-        print("   AZURE_OPENAI_API_VERSION (optional, defaults to 2023-12-01-preview)")
+        print("   AZURE_OPENAI_API_VERSION "
+              "(optional, defaults to 2023-12-01-preview)")
         print("   AZURE_OPENAI_SUBSCRIPTION_KEY")
         return False
     
@@ -53,7 +127,22 @@ def validate_config(config: Dict[str, str]) -> bool:
     return True
 
 async def test_basic_connection(config: Dict[str, str]) -> bool:
-    """Test basic HTTP connection to the endpoint"""
+    """
+    Test basic HTTP connectivity to the Azure OpenAI endpoint.
+    
+    This function performs a simple HTTP GET request to the base endpoint
+    to verify that the service is reachable and responding.
+    
+    Args:
+        config (Dict[str, str]): Configuration dictionary from load_config()
+        
+    Returns:
+        bool: True if the endpoint is reachable, False otherwise
+        
+    Note:
+        A 404 status code is considered successful as it indicates the
+        endpoint is reachable but the base URL doesn't serve content.
+    """
     print("🌐 Testing basic connection...")
     
     # Just test the base endpoint
@@ -66,7 +155,8 @@ async def test_basic_connection(config: Dict[str, str]) -> bool:
             print(f"   Headers: {dict(response.headers)}")
             
             if response.status_code == 404:
-                print("   ✅ Endpoint is reachable (404 is expected for base URL)")
+                print("   ✅ Endpoint is reachable "
+                      "(404 is expected for base URL)")
                 return True
             elif response.status_code < 500:
                 print("   ✅ Endpoint is reachable")
@@ -86,11 +176,28 @@ async def test_basic_connection(config: Dict[str, str]) -> bool:
         return False
 
 async def test_api_endpoint(config: Dict[str, str]) -> bool:
-    """Test the actual API endpoint with a simple request"""
+    """
+    Test the Azure OpenAI API endpoint with a simple chat completion request.
+    
+    This function sends a basic chat completion request to verify that the
+    API is working correctly and can generate responses.
+    
+    Args:
+        config (Dict[str, str]): Configuration dictionary from load_config()
+        
+    Returns:
+        bool: True if the API call is successful, False otherwise
+        
+    Note:
+        The function uses a simple test message to verify API functionality
+        and displays the AI response for verification.
+    """
     print("🤖 Testing Azure OpenAI API endpoint...")
     
     # Construct the full API URL
-    url = f"{config['endpoint']}/us-east/deployments/{config['deployment_id']}/chat/completions?api-version={config['api_version']}"
+    url = (f"{config['endpoint']}/us-east/deployments/"
+           f"{config['deployment_id']}/chat/completions"
+           f"?api-version={config['api_version']}")
     print(f"   API URL: {url}")
     
     headers = {
@@ -102,7 +209,8 @@ async def test_api_endpoint(config: Dict[str, str]) -> bool:
     payload = {
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Say 'Hello, this is a test!' and nothing else."}
+            {"role": "user", 
+             "content": "Say 'Hello, this is a test!' and nothing else."}
         ],
         "max_tokens": 50,
         "temperature": 0.1
@@ -119,7 +227,7 @@ async def test_api_endpoint(config: Dict[str, str]) -> bool:
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"   ✅ API call successful!")
+                print("   ✅ API call successful!")
                 print(f"   Response: {json.dumps(result, indent=2)}")
                 
                 # Extract the actual response content
@@ -129,11 +237,13 @@ async def test_api_endpoint(config: Dict[str, str]) -> bool:
                 
                 return True
             else:
-                print(f"   ❌ API call failed with status {response.status_code}")
+                print(f"   ❌ API call failed with status "
+                      f"{response.status_code}")
                 try:
                     error_content = response.json()
-                    print(f"   Error details: {json.dumps(error_content, indent=2)}")
-                except:
+                    print(f"   Error details: "
+                          f"{json.dumps(error_content, indent=2)}")
+                except Exception:
                     print(f"   Error text: {response.text}")
                 return False
                 

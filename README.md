@@ -1,4 +1,5 @@
 # Canvas Quiz Manager
+
 **Creator: Bryce Kayanuma (BrycePK@vt.edu)**
 
 A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation).
@@ -6,6 +7,7 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
 ## 🌟 Features
 
 ### Core Functionality
+
 - **Canvas Integration**: Fetch quiz questions directly from Canvas LMS API
 - **AI Feedback Generation**: Generate educational feedback using Azure OpenAI
 - **Question Editor**: Edit questions, answers, and feedback with WYSIWYG markdown editors
@@ -13,12 +15,14 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
 - **Real-time Preview**: Live preview updates when answer correctness changes
 
 ### Advanced Features
+
 - **Vector Store**: Create local ChromaDB vector store with Ollama embeddings
 - **RAG Chat Assistant**: Intelligent chat interface with context-aware responses
 - **Comprehensive Search**: Semantic search through quiz content using embeddings
 - **Token Usage Tracking**: Monitor AI API costs with detailed token usage logging
 
 ### User Interface
+
 - **Responsive Design**: Works on desktop and mobile devices
 - **Sticky Headers**: Always accessible navigation and controls
 - **Real-time Updates**: Auto-save functionality and live preview updates
@@ -56,12 +60,14 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
 ## 📋 Prerequisites
 
 ### Required Services
+
 - **Python 3.11+**
 - **Canvas LMS** account with API access
 - **Azure OpenAI** subscription
 - **Ollama** (for local embeddings)
 
 ### API Keys & Configuration
+
 - Canvas API token
 - Azure OpenAI subscription key and endpoint
 - Course ID and Quiz ID from Canvas
@@ -69,6 +75,7 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
 ## 🚀 Installation
 
 ### 1. Clone Repository
+
 ```bash
 git clone <repository-url>
 cd question_app
@@ -79,16 +86,19 @@ cd question_app
 Poetry is the recommended package manager for this project.
 
 #### macOS (using Homebrew):
+
 ```bash
 brew install poetry
 ```
 
 #### Other platforms:
+
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 ### 3. Install Dependencies with Poetry
+
 ```bash
 # Install all dependencies and create virtual environment
 poetry install
@@ -98,6 +108,7 @@ poetry shell
 ```
 
 ### 3a. Alternative: Using pip (Legacy)
+
 ```bash
 # If you prefer pip, first create a virtual environment:
 python -m venv .venv
@@ -110,6 +121,7 @@ pip install -r requirements.txt
 ### 4. Install and Setup Ollama
 
 #### On macOS/Linux:
+
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -119,14 +131,17 @@ ollama serve
 ```
 
 #### On Windows:
+
 1. Download Ollama from [https://ollama.ai/download](https://ollama.ai/download)
 2. Run the installer
 3. Open Command Prompt/PowerShell and start Ollama:
+
 ```cmd
 ollama serve
 ```
 
 #### Pull Required Model:
+
 ```bash
 # Pull the embedding model (required for vector store)
 ollama pull nomic-embed-text
@@ -162,6 +177,7 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ### 6. Start Application
 
 #### Using Poetry (Recommended):
+
 ```bash
 # Development mode with auto-reload
 poetry run dev
@@ -171,6 +187,7 @@ poetry run start
 ```
 
 #### Using uvicorn directly:
+
 ```bash
 # If using Poetry virtual environment
 poetry run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -186,6 +203,7 @@ Access the application at: `http://localhost:8000`
 This project includes convenient Poetry scripts for common tasks:
 
 ### Development
+
 ```bash
 # Start in development mode (auto-reload)
 poetry run dev
@@ -195,7 +213,8 @@ poetry run start
 ```
 
 ### Code Quality
-```bash
+
+````bash
 # Format code with Black
 poetry run format
 
@@ -207,9 +226,46 @@ poetry run type-check
 
 # Run tests
 poetry run test
+
+# Build documentation (requires make)
+poetry run docs
+
+# Build documentation (no make required)
+poetry run docs-simple
+
+# Build and serve documentation in one command
+poetry run docs-serve
+
+# Or serve existing documentation
+poetry run serve-docs
+
+### Code Quality
+
+```bash
+# Run linting and formatting checks
+poetry run lint
+
+# Run type checking
+poetry run type-check
+
+# Check for missing type annotations
+poetry run type-check --check-annotations
+
+# Run tests
+poetry run test
+
+# Run tests with coverage
+poetry run test --coverage
+
+# Run specific test types
+poetry run test --type unit
+poetry run test --type integration
+poetry run test --type ai
+poetry run test --type api
 ```
 
 ### Dependency Management
+
 ```bash
 # Show installed packages
 poetry show
@@ -228,9 +284,10 @@ poetry update
 
 # Remove a package
 poetry remove package-name
-```
+````
 
 ### Virtual Environment
+
 ```bash
 # Show environment info
 poetry env info
@@ -244,13 +301,17 @@ poetry run python script.py
 
 ## 📖 Usage Guide
 
+For detailed usage instructions, see the [Documentation](docs/).
+
 ### Initial Setup
 
 1. **Configure System Prompt**
+
    - Click "Feedback System Prompt" to set up AI feedback generation
    - Customize the prompt for your specific educational context
 
 2. **Fetch Questions from Canvas**
+
    - Click "Fetch Questions" to import quiz questions from Canvas LMS
    - Questions are automatically cleaned of HTML tags and stored locally
 
@@ -261,17 +322,20 @@ poetry run python script.py
 ### Question Management
 
 #### Editing Questions
+
 - Click on any question card to open the editor
 - Edit question text using the WYSIWYG markdown editor
 - Modify answer options and feedback
 
 #### Managing Answer Correctness
+
 - Use True/False buttons to set correct answers
 - **Multiple Choice/True-False**: Only one answer can be correct
 - **Multiple Answer**: Multiple answers can be correct
 - Preview updates automatically
 
 #### AI Feedback Generation
+
 - Click "Generate AI Feedback" to create educational explanations
 - Reviews answer correctness and provides context-aware feedback
 - Token usage is logged to browser console
@@ -279,16 +343,19 @@ poetry run python script.py
 ### Chat Assistant
 
 #### Accessing the Chat
+
 - Click "Chat Assistant" from the main page
 - View the Azure OpenAI model being used in the header
 
 #### Using RAG Features
+
 - Ask questions about quiz content, accessibility, or best practices
 - **Left Panel**: Chat conversation
 - **Right Panel**: Retrieved context chunks used for responses
 - Context is automatically found using semantic search
 
 #### Example Queries
+
 ```
 "What are the best practices for alt text?"
 "How should forms be made accessible?"
@@ -299,32 +366,37 @@ poetry run python script.py
 ## 🛠️ Configuration
 
 ### Canvas Setup
+
 1. Generate API token in Canvas: Account → Settings → Approved Integrations → New Access Token
 2. Find Course ID: URL when viewing course (e.g., `/courses/123456`)
 3. Find Quiz ID: URL when viewing quiz (e.g., `/quizzes/789012`)
 
 ### Azure OpenAI Setup
+
 1. Add endpoint details to .env file
 
 ### Ollama Models
+
 - **nomic-embed-text**: High-quality embedding model for RAG (Suggested model)
 - **Alternative models**: `all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2`
 
 ## 🔧 API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Main question list page |
-| `/chat` | GET | Chat assistant interface |
-| `/questions/{id}` | GET | Question editor page |
-| `/questions/{id}` | PUT | Update question data |
-| `/questions/{id}/generate-feedback` | POST | Generate AI feedback |
-| `/chat/message` | POST | Process chat message with RAG |
-| `/create-vector-store` | POST | Build ChromaDB vector store |
-| `/fetch-questions` | POST | Import questions from Canvas |
-| `/system-prompt` | GET/POST | System prompt management |
-| `/debug/config` | GET | Configuration status |
-| `/debug/ollama-test` | GET | Test Ollama connectivity |
+For complete API documentation, see the [API Reference](docs/api.rst).
+
+| Endpoint                            | Method   | Description                   |
+| ----------------------------------- | -------- | ----------------------------- |
+| `/`                                 | GET      | Main question list page       |
+| `/chat`                             | GET      | Chat assistant interface      |
+| `/questions/{id}`                   | GET      | Question editor page          |
+| `/questions/{id}`                   | PUT      | Update question data          |
+| `/questions/{id}/generate-feedback` | POST     | Generate AI feedback          |
+| `/chat/message`                     | POST     | Process chat message with RAG |
+| `/create-vector-store`              | POST     | Build ChromaDB vector store   |
+| `/fetch-questions`                  | POST     | Import questions from Canvas  |
+| `/system-prompt`                    | GET/POST | System prompt management      |
+| `/debug/config`                     | GET      | Configuration status          |
+| `/debug/ollama-test`                | GET      | Test Ollama connectivity      |
 
 ## 📁 Project Structure
 
@@ -348,6 +420,7 @@ question_app/
 ### Common Issues
 
 #### Ollama Connection Errors
+
 ```bash
 # Check if Ollama is running
 ollama list
@@ -360,23 +433,33 @@ curl http://localhost:11434/api/tags
 ```
 
 #### Vector Store Creation Fails
+
 1. Ensure Ollama is running and nomic-embed-text is installed
 2. Check vector store permissions in project directory
 3. Verify questions are loaded (`quiz_questions.json` exists)
 
 #### Azure OpenAI Errors
+
 1. Verify endpoint URL format: `https://your-resource.openai.azure.com`
 2. Check subscription key and deployment ID
 3. Ensure model is deployed and available
+4. Run `python test_azure_openai.py` for comprehensive testing
 
 #### Canvas API Issues
+
 1. Verify API token has appropriate permissions
 2. Check Course ID and Quiz ID are correct
 3. Ensure Canvas instance URL is correct
 
 ### Debug Endpoints
+
 - `/debug/config` - Check all configuration status
 - `/debug/ollama-test` - Test Ollama connectivity and models
+
+### Testing Tools
+
+- `test_azure_openai.py` - Comprehensive Azure OpenAI connectivity and functionality testing
+- `poetry run pytest` - Run the full test suite
 
 ## 🤝 Contributing
 
@@ -393,6 +476,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 For support or questions:
+
 1. Check the troubleshooting section
 2. Review debug endpoints for configuration issues
 3. Ensure all prerequisites are properly installed
