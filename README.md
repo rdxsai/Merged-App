@@ -214,7 +214,7 @@ poetry run start
 
 ### Code Quality
 
-````bash
+```bash
 # Format code with Black
 poetry run format
 
@@ -222,30 +222,6 @@ poetry run format
 poetry run lint
 
 # Type checking with mypy
-poetry run type-check
-
-# Run tests
-poetry run test
-
-# Build documentation (requires make)
-poetry run docs
-
-# Build documentation (no make required)
-poetry run docs-simple
-
-# Build and serve documentation in one command
-poetry run docs-serve
-
-# Or serve existing documentation
-poetry run serve-docs
-
-### Code Quality
-
-```bash
-# Run linting and formatting checks
-poetry run lint
-
-# Run type checking
 poetry run type-check
 
 # Check for missing type annotations
@@ -262,6 +238,22 @@ poetry run test --type unit
 poetry run test --type integration
 poetry run test --type ai
 poetry run test --type api
+```
+
+### Documentation
+
+```bash
+# Build documentation (requires make)
+poetry run docs
+
+# Build documentation (no make required)
+poetry run docs-simple
+
+# Build and serve documentation in one command
+poetry run docs-serve
+
+# Or serve existing documentation
+poetry run serve-docs
 ```
 
 ### Dependency Management
@@ -302,6 +294,16 @@ poetry run python script.py
 ## 📖 Usage Guide
 
 For detailed usage instructions, see the [Documentation](docs/).
+
+### Documentation Sections
+
+- **[API Reference](docs/api.rst)** - Complete API documentation
+- **[API Examples](docs/api_examples.rst)** - Real-world usage examples and workflows
+- **[Installation Guide](docs/installation.rst)** - Step-by-step setup instructions
+- **[Usage Guide](docs/usage.rst)** - How to use application features
+- **[Configuration Guide](docs/configuration.rst)** - Environment and system setup
+- **[Troubleshooting Guide](docs/troubleshooting.rst)** - Common issues and solutions
+- **[Development Guide](docs/development.rst)** - Contributing and development setup
 
 ### Initial Setup
 
@@ -384,6 +386,8 @@ For detailed usage instructions, see the [Documentation](docs/).
 
 For complete API documentation, see the [API Reference](docs/api.rst).
 
+For practical examples and workflows, see [API Examples](docs/api_examples.rst).
+
 | Endpoint                            | Method   | Description                   |
 | ----------------------------------- | -------- | ----------------------------- |
 | `/`                                 | GET      | Main question list page       |
@@ -408,6 +412,12 @@ question_app/
 │   ├── edit_question.html  # Question editor
 │   ├── chat.html          # Chat assistant
 │   └── system_prompt_edit.html
+├── docs/                   # Documentation
+│   ├── api.rst            # API reference
+│   ├── api_examples.rst   # API usage examples
+│   ├── troubleshooting.rst # Troubleshooting guide
+│   └── ...                # Other documentation files
+├── tests/                  # Test suite
 ├── quiz_questions.json     # Question data storage
 ├── system_prompt.txt      # AI feedback prompt
 ├── vector_store/          # ChromaDB database
@@ -416,6 +426,8 @@ question_app/
 ```
 
 ## 🔍 Troubleshooting
+
+For comprehensive troubleshooting guidance, see the [Troubleshooting Guide](docs/troubleshooting.rst).
 
 ### Common Issues
 
@@ -477,10 +489,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support or questions:
 
-1. Check the troubleshooting section
-2. Review debug endpoints for configuration issues
-3. Ensure all prerequisites are properly installed
-4. Verify environment variables are correctly set
+1. Check the [Troubleshooting Guide](docs/troubleshooting.rst) for common issues
+2. Review the [API Examples](docs/api_examples.rst) for usage patterns
+3. Check debug endpoints for configuration issues
+4. Ensure all prerequisites are properly installed
+5. Verify environment variables are correctly set
 
 ## 🎯 Future Enhancements
 
