@@ -276,7 +276,7 @@ poetry update
 
 # Remove a package
 poetry remove package-name
-````
+```
 
 ### Virtual Environment
 
