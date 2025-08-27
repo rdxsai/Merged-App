@@ -471,8 +471,9 @@
                 .replace(/✓\s*CORRECT\s*[:-]?/gi, '')  // Remove ✓ CORRECT
                 .replace(/✗\s*INCORRECT\s*[:-]?/gi, '')  // Remove ✗ INCORRECT
                 .replace(/^\s*\d+%?\s*[:-]?\s*/gm, '')  // Remove weight percentages at start of lines
-                .replace(/\s+/g, ' ')  // Clean up multiple spaces
-                .trim();
+                .replace(/[ \t]+/g, ' ')  // Clean up multiple spaces/tabs but preserve newlines
+                .split('\n').map(line => line.trim()).join('\n')  // Trim each line
+                .trim();  // Remove empty lines at start and end
         }
         
         // Function to initialize SimpleMDE for answer feedback textareas

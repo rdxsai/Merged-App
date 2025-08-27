@@ -504,8 +504,13 @@ def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
     # Remove weight percentages at the start of lines
     feedback = re.sub(r'^\s*\d+%?\s*[:-]?\s*', '', feedback, flags=re.MULTILINE)
     
-    # Clean up extra whitespace
-    feedback = re.sub(r'\s+', ' ', feedback).strip()
+    # Clean up extra whitespace but preserve newlines
+    # Replace multiple spaces with single space, but keep newlines
+    feedback = re.sub(r'[ \t]+', ' ', feedback)
+    # Remove leading/trailing whitespace from each line
+    feedback = '\n'.join(line.strip() for line in feedback.split('\n'))
+    # Remove empty lines at start and end
+    feedback = feedback.strip()
     
     return feedback
 
@@ -755,7 +760,7 @@ Please provide specific educational feedback for each answer choice explaining w
                             except (ValueError, IndexError):
                                 pass
                             
-                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
+                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback('\n'.join(current_answer_text), answer_text)
                         
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -781,7 +786,7 @@ Please provide specific educational feedback for each answer choice explaining w
                             except (ValueError, IndexError):
                                 pass
                             
-                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
+                            feedback['answer_feedback'][current_answer_key] = clean_answer_feedback('\n'.join(current_answer_text), answer_text)
                         
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -822,10 +827,10 @@ Please provide specific educational feedback for each answer choice explaining w
                 except (ValueError, IndexError):
                     pass
                 
-                feedback['answer_feedback'][current_answer_key] = clean_answer_feedback(' '.join(current_answer_text), answer_text)
+                feedback['answer_feedback'][current_answer_key] = clean_answer_feedback('\n'.join(current_answer_text), answer_text)
             
             # Combine general feedback lines
-            feedback['general_feedback'] = ' '.join(general_feedback_lines)
+            feedback['general_feedback'] = '\n'.join(general_feedback_lines)
             
             # If no structured parsing worked, put everything in general feedback
             if not feedback['general_feedback'] and not feedback['answer_feedback']:
@@ -980,22 +985,26 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page showing all questions"""
-    questions = load_questions()
-    
-    # Create response with cache-busting headers
-    response = templates.TemplateResponse("index.html", {
-        "request": request, 
-        "questions": questions,
-        "course_id": COURSE_ID,
-        "quiz_id": QUIZ_ID
-    })
-    
-    # Add cache-busting headers to prevent browser caching issues
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    
-    return response
+    try:
+        questions = load_questions()
+        
+        # Create response with cache-busting headers
+        response = templates.TemplateResponse("index.html", {
+            "request": request, 
+            "questions": questions,
+            "course_id": COURSE_ID,
+            "quiz_id": QUIZ_ID
+        })
+        
+        # Add cache-busting headers to prevent browser caching issues
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error loading home page: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load questions: {str(e)}")
 
 @app.get("/api/courses")
 async def get_courses():
@@ -1353,7 +1362,10 @@ async def debug_question(question_id: int):
         question = next((q for q in questions if q.get('id') == question_id), None)
         
         if not question:
-            return {"error": "Question not found", "total_questions": len(questions)}
+            return {
+                "question_found": False,
+                "total_questions": len(questions)
+            }
         
         return {
             "question_found": True,
@@ -1368,7 +1380,11 @@ async def debug_question(question_id: int):
             "total_questions": len(questions)
         }
     except Exception as e:
-        return {"error": str(e), "error_type": type(e).__name__}
+        return {
+            "question_found": False,
+            "error": str(e), 
+            "error_type": type(e).__name__
+        }
 
 @app.post("/create-vector-store")
 async def create_vector_store():
@@ -1777,6 +1793,9 @@ async def update_question(question_id: int, question_data: QuestionUpdate):
             return {"success": True, "message": "Question updated successfully"}
         else:
             raise HTTPException(status_code=500, detail="Failed to save changes")
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404) without wrapping them
+        raise
     except Exception as e:
         logger.error(f"Error updating question {question_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
