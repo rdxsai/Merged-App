@@ -196,29 +196,29 @@ class TestVectorStoreOperations:
         """Test creating comprehensive chunks from questions"""
         documents, metadatas, ids = create_comprehensive_chunks(sample_questions)
 
-        # With 2 questions (3 answers + 2 answers), we expect 7 chunks total
-        # 1 main chunk + 3 answer chunks for question 1 = 4 chunks
+        # With 2 questions (2 answers each), we expect 6 chunks total
+        # 1 main chunk + 2 answer chunks for question 1 = 3 chunks
         # 1 main chunk + 2 answer chunks for question 2 = 3 chunks
-        assert len(documents) == 7
-        assert len(metadatas) == 7
-        assert len(ids) == 7
+        assert len(documents) == 6
+        assert len(metadatas) == 6
+        assert len(ids) == 6
 
         # Check that we have chunks for both questions
         question_1_chunks = [doc for doc in documents if "capital of France" in doc]
         question_2_chunks = [doc for doc in documents if "HTML tag" in doc]
-        assert len(question_1_chunks) == 4  # 1 main + 3 answers
+        assert len(question_1_chunks) == 3  # 1 main + 2 answers
         assert len(question_2_chunks) == 3  # 1 main + 2 answers
 
         # Check metadata structure
         question_1_metadata = [meta for meta in metadatas if meta["question_id"] == 1]
         question_2_metadata = [meta for meta in metadatas if meta["question_id"] == 2]
-        assert len(question_1_metadata) == 4
+        assert len(question_1_metadata) == 3
         assert len(question_2_metadata) == 3
 
         # Check IDs structure
         question_1_ids = [id for id in ids if "q_1" in id]
         question_2_ids = [id for id in ids if "q_2" in id]
-        assert len(question_1_ids) == 4
+        assert len(question_1_ids) == 3
         assert len(question_2_ids) == 3
 
     def test_create_comprehensive_chunks_empty_questions(self):

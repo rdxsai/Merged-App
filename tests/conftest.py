@@ -1,7 +1,6 @@
 """
 Pytest configuration and fixtures for question app tests
 """
-import asyncio
 import json
 import os
 import tempfile
@@ -11,31 +10,20 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-# Import the main app
 from question_app.main import app
+
+
+def pytest_configure(config):
+    """Configure pytest with custom markers"""
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "e2e: mark test as an end-to-end test")
+    config.addinivalue_line("markers", "slow: mark test as slow")
 
 
 @pytest.fixture
 def client():
-    """
-    Create a test client for the FastAPI app.
-
-    This fixture provides a TestClient instance configured for testing
-    the Canvas Quiz Manager FastAPI application. It allows for making
-    HTTP requests to the application during testing.
-
-    Returns:
-        TestClient: A configured test client for the FastAPI app
-
-    Example:
-        >>> def test_home_page(client):
-        ...     response = client.get("/")
-        ...     assert response.status_code == 200
-        ...     assert "text/html" in response.headers["content-type"]
-
-    See Also:
-        :func:`sample_questions`: Fixture providing test question data
-    """
+    """Create a test client for the FastAPI app."""
     return TestClient(app)
 
 
@@ -76,14 +64,6 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "comments_html": "<p>Correct! Paris is the capital of France.</p>",
                     "weight": 100.0,
                 },
-                {
-                    "id": 3,
-                    "text": "Berlin",
-                    "html": "<p>Berlin</p>",
-                    "comments": "Berlin is the capital of Germany, not France.",
-                    "comments_html": "<p>Berlin is the capital of Germany, not France.</p>",
-                    "weight": 0.0,
-                },
             ],
         },
         {
@@ -100,27 +80,27 @@ def sample_questions() -> List[Dict[str, Any]]:
             "incorrect_comments_html": "<p>Review HTML accessibility.</p>",
             "neutral_comments_html": "<p>The alt attribute is essential for accessibility.</p>",
             "topic": "accessibility",
-            "tags": "html,accessibility,alt",
+            "tags": "html,accessibility,web",
             "learning_objective": "Understand HTML accessibility features",
             "answers": [
                 {
                     "id": 1,
-                    "text": "alt",
-                    "html": "<p>alt</p>",
-                    "comments": "Correct! The alt attribute provides alternative text for images.",
-                    "comments_html": "<p>Correct! The alt attribute provides alternative text for images.</p>",
-                    "weight": 100.0,
+                    "text": "&lt;img&gt;",
+                    "html": "<p>&lt;img&gt;</p>",
+                    "comments": "The img tag itself is not for accessibility.",
+                    "comments_html": "<p>The img tag itself is not for accessibility.</p>",
+                    "weight": 0.0,
                 },
                 {
                     "id": 2,
-                    "text": "title",
-                    "html": "<p>title</p>",
-                    "comments": "The title attribute provides tooltips, not accessibility for screen readers.",
-                    "comments_html": "<p>The title attribute provides tooltips, not accessibility for screen readers.</p>",
-                    "weight": 0.0,
+                    "text": "&lt;aria-label&gt;",
+                    "html": "<p>&lt;aria-label&gt;</p>",
+                    "comments": "Correct! ARIA labels provide accessibility information.",
+                    "comments_html": "<p>Correct! ARIA labels provide accessibility information.</p>",
+                    "weight": 100.0,
                 },
             ],
-        },
+        }
     ]
 
 
@@ -134,7 +114,7 @@ def sample_objectives() -> List[Dict[str, Any]]:
             "priority": "high",
         },
         {
-            "text": "Apply WCAG guidelines in web development",
+            "text": "Apply accessibility guidelines in web development",
             "blooms_level": "apply",
             "priority": "medium",
         },
@@ -142,85 +122,61 @@ def sample_objectives() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def temp_data_file():
-    """Create a temporary data file for testing"""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump([], f)
-        temp_file = f.name
-
-    yield temp_file
-
-    # Cleanup
-    if os.path.exists(temp_file):
-        os.unlink(temp_file)
-
-
-@pytest.fixture
-def temp_system_prompt_file():
-    """Create a temporary system prompt file for testing"""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-        f.write("You are a helpful assistant for quiz questions.")
-        temp_file = f.name
-
-    yield temp_file
-
-    # Cleanup
-    if os.path.exists(temp_file):
-        os.unlink(temp_file)
-
-
-@pytest.fixture
 def mock_env_vars():
     """Mock environment variables for testing"""
     env_vars = {
-        "CANVAS_BASE_URL": "https://canvas.test.com",
         "CANVAS_API_TOKEN": "test_token",
+        "CANVAS_BASE_URL": "https://test.instructure.com",
+        "AZURE_OPENAI_SUBSCRIPTION_KEY": "test_key",
+        "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
+        "AZURE_OPENAI_DEPLOYMENT_ID": "test_deployment",
         "COURSE_ID": "123",
         "QUIZ_ID": "456",
-        "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-        "AZURE_OPENAI_DEPLOYMENT_ID": "test-deployment",
-        "AZURE_OPENAI_API_VERSION": "2023-12-01-preview",
-        "AZURE_OPENAI_SUBSCRIPTION_KEY": "test_key",
-        "OLLAMA_HOST": "http://localhost:11434",
-        "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
     }
-
     with patch.dict(os.environ, env_vars):
         yield env_vars
 
 
 @pytest.fixture
-def mock_httpx_client():
-    """Mock httpx client for testing HTTP requests"""
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__.return_value = mock_client.return_value
-        mock_client.return_value.__aexit__.return_value = None
-        yield mock_client.return_value
+def temp_data_dir():
+    """Create temporary directory for test data"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        questions_file = os.path.join(temp_dir, "quiz_questions.json")
+        with open(questions_file, "w") as f:
+            json.dump([], f)
+
+        objectives_file = os.path.join(temp_dir, "learning_objectives.json")
+        with open(objectives_file, "w") as f:
+            json.dump([], f)
+
+        system_prompt_file = os.path.join(temp_dir, "system_prompt.txt")
+        with open(system_prompt_file, "w") as f:
+            f.write("You are a helpful assistant for quiz questions.")
+
+        yield temp_dir
 
 
 @pytest.fixture
-def mock_chromadb():
-    """Mock ChromaDB for testing vector store operations"""
-    with patch("chromadb.PersistentClient") as mock_client:
-        mock_collection = MagicMock()
-        mock_client.return_value.get_collection.return_value = mock_collection
-        mock_client.return_value.create_collection.return_value = mock_collection
-        yield mock_client.return_value
+def mock_ai_service():
+    """Mock AI service responses"""
+    mock_response = {
+        "choices": [
+            {
+                "message": {
+                    "content": "Answer 1: London is the capital of England, not France. Answer 2: Correct! Paris is the capital of France."
+                }
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        },
+    }
 
-
-@pytest.fixture
-def event_loop():
-    """Create an instance of the default event loop for the test session"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-# Configure pytest
-def pytest_configure(config):
-    """Configure pytest"""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-    )
-    config.addinivalue_line("markers", "integration: marks tests as integration tests")
-    config.addinivalue_line("markers", "unit: marks tests as unit tests")
+    with patch("httpx.AsyncClient.post") as mock_post:
+        mock_http_response = MagicMock()
+        mock_http_response.status_code = 200
+        mock_http_response.json.return_value = mock_response
+        mock_post.return_value = mock_http_response
+        yield mock_response

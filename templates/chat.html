@@ -1,407 +1,454 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Assistant - Canvas Quiz Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
     <style>
-        .chat-container {
-            height: calc(100vh - 180px);
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
+      .chat-container {
+        height: calc(100vh - 180px);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+      }
+      .chat-messages {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8f9fa;
+      }
+      .chat-input-area {
+        height: 60px;
+        border-top: 1px solid #dee2e6;
+        padding: 0.5rem;
+        background-color: white;
+        border-radius: 0 0 8px 8px;
+      }
+      .message {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        max-width: 85%;
+      }
+      .message.user {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+      }
+      .message.assistant {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        margin-right: auto;
+      }
+      .message.system {
+        background-color: #f1f3f4;
+        color: #5f6368;
+        font-style: italic;
+        text-align: center;
+        margin: 0 auto;
+        max-width: 70%;
+      }
+      .chunks-panel {
+        height: calc(100vh - 180px);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+      }
+      .chunks-header {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        background-color: white;
+        border-radius: 8px 8px 0 0;
+      }
+      .chunks-content {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        padding: 1rem;
+      }
+      .chunk-item {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+      }
+      .chunk-metadata {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+      }
+      .chunk-content {
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .typing-indicator {
+        display: none;
+        padding: 0.75rem;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-right: auto;
+        max-width: 85%;
+      }
+      .typing-dots {
+        display: inline-block;
+      }
+      .typing-dots span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #6c757d;
+        margin: 0 2px;
+        animation: typing 1.4s infinite ease-in-out;
+      }
+      .typing-dots span:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .typing-dots span:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+      @keyframes typing {
+        0%,
+        80%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
         }
-        .chat-messages {
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            padding: 1rem;
-            background-color: #f8f9fa;
+        40% {
+          transform: scale(1);
+          opacity: 1;
         }
-        .chat-input-area {
-            height: 60px;
-            border-top: 1px solid #dee2e6;
-            padding: 0.5rem;
-            background-color: white;
-            border-radius: 0 0 8px 8px;
-        }
-        .message {
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            border-radius: 8px;
-            max-width: 85%;
-        }
-        .message.user {
-            background-color: #007bff;
-            color: white;
-            margin-left: auto;
-            text-align: right;
-        }
-        .message.assistant {
-            background-color: white;
-            border: 1px solid #dee2e6;
-            margin-right: auto;
-        }
-        .message.system {
-            background-color: #f1f3f4;
-            color: #5f6368;
-            font-style: italic;
-            text-align: center;
-            margin: 0 auto;
-            max-width: 70%;
-        }
-        .chunks-panel {
-            height: calc(100vh - 180px);
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-        }
-        .chunks-header {
-            padding: 1rem;
-            border-bottom: 1px solid #dee2e6;
-            background-color: white;
-            border-radius: 8px 8px 0 0;
-        }
-        .chunks-content {
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            padding: 1rem;
-        }
-        .chunk-item {
-            background-color: white;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .chunk-metadata {
-            font-size: 0.85rem;
-            color: #6c757d;
-            margin-bottom: 0.5rem;
-        }
-        .chunk-content {
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-        .typing-indicator {
-            display: none;
-            padding: 0.75rem;
-            background-color: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            margin-right: auto;
-            max-width: 85%;
-        }
-        .typing-dots {
-            display: inline-block;
-        }
-        .typing-dots span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #6c757d;
-            margin: 0 2px;
-            animation: typing 1.4s infinite ease-in-out;
-        }
-        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing {
-            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-        .send-btn:disabled {
-            opacity: 0.6;
-        }
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background-color: white;
-            border-bottom: 1px solid #dee2e6;
-            padding: 1rem 0;
-            margin-bottom: 1rem;
-        }
+      }
+      .send-btn:disabled {
+        opacity: 0.6;
+      }
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: white;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Sticky Header -->
     <div class="sticky-header">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">
-                        <i class="fas fa-comments text-info"></i> Chat Assistant
-                        <small class="text-muted">- Quiz Knowledge Base</small>
-                    </h1>
-                    <div class="mt-1">
-                        <small class="text-muted">
-                            <i class="fas fa-robot"></i> Azure OpenAI: <span id="modelInfo" class="badge bg-light text-dark">Loading...</span>
-                        </small>
-                    </div>
-                </div>
-                <div>
-                    <a href="/chat-system-prompt" class="btn btn-outline-primary me-2">
-                        <i class="fas fa-cog"></i> Edit System Prompt
-                    </a>
-                    <a href="/" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Questions
-                    </a>
-                </div>
+      <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-comments text-info"></i> Chat Assistant
+              <small class="text-muted">- Quiz Knowledge Base</small>
+            </h1>
+            <div class="mt-1">
+              <small class="text-muted">
+                <i class="fas fa-robot"></i> Azure OpenAI:
+                <span id="modelInfo" class="badge bg-light text-dark"
+                  >Loading...</span
+                >
+              </small>
             </div>
+          </div>
+          <div>
+            <a href="/chat/system-prompt" class="btn btn-outline-primary me-2">
+              <i class="fas fa-cog"></i> Edit System Prompt
+            </a>
+            <a href="/" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left"></i> Back to Questions
+            </a>
+          </div>
         </div>
+      </div>
     </div>
 
     <div class="container-fluid">
+      <!-- Alert container -->
+      <div id="alertContainer"></div>
 
-        <!-- Alert container -->
-        <div id="alertContainer"></div>
-
-        <div class="row">
-            <!-- Chat Panel (Left) -->
-            <div class="col-md-8">
-                <div class="chat-container">
-                    <div class="chat-messages" id="chatMessages">
-                        <div id="welcomeMessageContainer"></div>
-                    </div>
-                    <div class="chat-input-area">
-                        <div class="d-flex">
-                            <input type="text" id="messageInput" class="form-control me-2" 
-                                   placeholder="Ask me about quiz questions, accessibility, or best practices..." 
-                                   maxlength="1000">
-                            <button id="sendBtn" class="btn btn-info send-btn">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+      <div class="row">
+        <!-- Chat Panel (Left) -->
+        <div class="col-md-8">
+          <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+              <div id="welcomeMessageContainer"></div>
             </div>
-
-            <!-- Retrieved Chunks Panel (Right) -->
-            <div class="col-md-4">
-                <div class="chunks-panel">
-                    <div class="chunks-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">
-                                <i class="fas fa-search"></i> Retrieved Context
-                                <span id="chunksCount" class="badge bg-secondary ms-2">0</span>
-                            </h6>
-                            <div class="d-flex align-items-center">
-                                <small class="text-muted me-2">Max chunks:</small>
-                                <input type="number" id="maxChunks" class="form-control form-control-sm" 
-                                       value="3" min="1" max="10" style="width: 60px;" 
-                                       title="Number of context chunks to retrieve">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chunks-content" id="chunksContent">
-                        <div class="text-muted text-center" style="margin-top: 2rem;">
-                            <i class="fas fa-info-circle"></i><br>
-                            Retrieved context chunks will appear here when you ask questions.
-                        </div>
-                    </div>
-                </div>
+            <div class="chat-input-area">
+              <div class="d-flex">
+                <input
+                  type="text"
+                  id="messageInput"
+                  class="form-control me-2"
+                  placeholder="Ask me about quiz questions, accessibility, or best practices..."
+                  maxlength="1000"
+                />
+                <button id="sendBtn" class="btn btn-info send-btn">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
             </div>
+          </div>
         </div>
+
+        <!-- Retrieved Chunks Panel (Right) -->
+        <div class="col-md-4">
+          <div class="chunks-panel">
+            <div class="chunks-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                  <i class="fas fa-search"></i> Retrieved Context
+                  <span id="chunksCount" class="badge bg-secondary ms-2"
+                    >0</span
+                  >
+                </h6>
+                <div class="d-flex align-items-center">
+                  <small class="text-muted me-2">Max chunks:</small>
+                  <input
+                    type="number"
+                    id="maxChunks"
+                    class="form-control form-control-sm"
+                    value="3"
+                    min="1"
+                    max="10"
+                    style="width: 60px"
+                    title="Number of context chunks to retrieve"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="chunks-content" id="chunksContent">
+              <div class="text-muted text-center" style="margin-top: 2rem">
+                <i class="fas fa-info-circle"></i><br />
+                Retrieved context chunks will appear here when you ask
+                questions.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
-        let isProcessing = false;
+      // Global variables
+      let isProcessing = false;
 
-        // DOM elements
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        const chunksContent = document.getElementById('chunksContent');
-        const chunksCount = document.getElementById('chunksCount');
-        const maxChunksInput = document.getElementById('maxChunks');
+      // DOM elements
+      const messageInput = document.getElementById("messageInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const chatMessages = document.getElementById("chatMessages");
+      const chunksContent = document.getElementById("chunksContent");
+      const chunksCount = document.getElementById("chunksCount");
+      const maxChunksInput = document.getElementById("maxChunks");
 
-        // Initialize chat functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            // Send message on Enter key
-            messageInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-
-            // Send message on button click
-            sendBtn.addEventListener('click', sendMessage);
-
-            // Focus on input
-            messageInput.focus();
-
-            // Load model information
-            loadModelInfo();
-            
-            // Load welcome message
-            loadWelcomeMessage();
+      // Initialize chat functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        // Send message on Enter key
+        messageInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
         });
 
-        // Load and display welcome message
-        async function loadWelcomeMessage() {
-            const welcomeContainer = document.getElementById('welcomeMessageContainer');
-            
-            try {
-                const response = await fetch('/chat-welcome-message');
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const text = data.message || data.text || data;
-                    
-                    // Create welcome message with identical styling
-                    const welcomeDiv = document.createElement('div');
-                    welcomeDiv.className = 'message system';
-                    welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> ${text['welcome_message']}`;
-                    
-                    welcomeContainer.appendChild(welcomeDiv);
-                    console.log('✅ Welcome message loaded successfully', text);
-                } else {
-                    console.warn('⚠️ Failed to load welcome message, using fallback');
-                    loadFallbackWelcomeMessage();
-                }
-            } catch (error) {
-                console.error('💥 Error loading welcome message:', error);
-                loadFallbackWelcomeMessage();
-            }
-        }
-        
-        // Load fallback welcome message
-        function loadFallbackWelcomeMessage() {
-            const welcomeContainer = document.getElementById('welcomeMessageContainer');
-            
-            // Create fallback welcome message with identical styling
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'message system';
-            welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. Ask me anything about the quiz questions in your knowledge base!`;
-            
+        // Send message on button click
+        sendBtn.addEventListener("click", sendMessage);
+
+        // Focus on input
+        messageInput.focus();
+
+        // Load model information
+        loadModelInfo();
+
+        // Load welcome message
+        loadWelcomeMessage();
+      });
+
+      // Load and display welcome message
+      async function loadWelcomeMessage() {
+        const welcomeContainer = document.getElementById(
+          "welcomeMessageContainer"
+        );
+
+        try {
+          const response = await fetch("/chat/welcome-message");
+
+          if (response.ok) {
+            const data = await response.json();
+            const text = data.message || data.text || data;
+
+            // Create welcome message with identical styling
+            const welcomeDiv = document.createElement("div");
+            welcomeDiv.className = "message system";
+            welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> ${text["welcome_message"]}`;
+
             welcomeContainer.appendChild(welcomeDiv);
-            console.log('ℹ️ Fallback welcome message loaded');
+            console.log("✅ Welcome message loaded successfully", text);
+          } else {
+            console.warn("⚠️ Failed to load welcome message, using fallback");
+            loadFallbackWelcomeMessage();
+          }
+        } catch (error) {
+          console.error("💥 Error loading welcome message:", error);
+          loadFallbackWelcomeMessage();
         }
+      }
 
-        // Load and display model information
-        async function loadModelInfo() {
-            try {
-                const response = await fetch('/debug/config');
-                const config = await response.json();
-                
-                const modelInfo = document.getElementById('modelInfo');
-                
-                if (response.ok && config.azure_configured) {
-                    const deploymentId = config.azure_deployment_id || 'Unknown';
-                    modelInfo.textContent = deploymentId;
-                    modelInfo.className = 'badge bg-success text-white';
-                    modelInfo.title = `Azure OpenAI Deployment: ${deploymentId}`;
-                } else {
-                    modelInfo.textContent = 'Not Configured';
-                    modelInfo.className = 'badge bg-warning text-dark';
-                    modelInfo.title = 'Azure OpenAI is not properly configured';
-                }
-            } catch (error) {
-                console.error('Failed to load model info:', error);
-                const modelInfo = document.getElementById('modelInfo');
-                modelInfo.textContent = 'Error';
-                modelInfo.className = 'badge bg-danger text-white';
-                modelInfo.title = 'Failed to load model information';
-            }
+      // Load fallback welcome message
+      function loadFallbackWelcomeMessage() {
+        const welcomeContainer = document.getElementById(
+          "welcomeMessageContainer"
+        );
+
+        // Create fallback welcome message with identical styling
+        const welcomeDiv = document.createElement("div");
+        welcomeDiv.className = "message system";
+        welcomeDiv.innerHTML = `<i class="fas fa-robot"></i> Hi! I'm your quiz assistant. I can help you with questions about accessibility, quiz content, and best practices. Ask me anything about the quiz questions in your knowledge base!`;
+
+        welcomeContainer.appendChild(welcomeDiv);
+        console.log("ℹ️ Fallback welcome message loaded");
+      }
+
+      // Load and display model information
+      async function loadModelInfo() {
+        try {
+          const response = await fetch("/debug/config");
+          const config = await response.json();
+
+          const modelInfo = document.getElementById("modelInfo");
+
+          if (response.ok && config.azure_configured) {
+            const deploymentId = config.azure_deployment_id || "Unknown";
+            modelInfo.textContent = deploymentId;
+            modelInfo.className = "badge bg-success text-white";
+            modelInfo.title = `Azure OpenAI Deployment: ${deploymentId}`;
+          } else {
+            modelInfo.textContent = "Not Configured";
+            modelInfo.className = "badge bg-warning text-dark";
+            modelInfo.title = "Azure OpenAI is not properly configured";
+          }
+        } catch (error) {
+          console.error("Failed to load model info:", error);
+          const modelInfo = document.getElementById("modelInfo");
+          modelInfo.textContent = "Error";
+          modelInfo.className = "badge bg-danger text-white";
+          modelInfo.title = "Failed to load model information";
         }
+      }
 
-        // Send message function
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message || isProcessing) return;
+      // Send message function
+      async function sendMessage() {
+        const message = messageInput.value.trim();
+        if (!message || isProcessing) return;
 
-            // Clear input and disable button
-            messageInput.value = '';
-            setProcessingState(true);
+        // Clear input and disable button
+        messageInput.value = "";
+        setProcessingState(true);
 
-            // Add user message to chat
-            addMessage('user', message);
-
-            // Show typing indicator
-            showTypingIndicator();
-
-            try {
-                console.log('🚀 Sending chat message:', message);
-
-                // Get the number of chunks to retrieve
-                const maxChunks = parseInt(maxChunksInput.value) || 3;
-                console.log('📊 Max chunks to retrieve:', maxChunks);
-
-                const response = await fetch('/chat/message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        message: message,
-                        max_chunks: maxChunks
-                    })
-                });
-
-                const result = await response.json();
-                console.log('📨 Chat response:', result);
-
-                // Hide typing indicator
-                hideTypingIndicator();
-
-                if (response.ok) {
-                    // Add assistant response
-                    addMessage('assistant', result.response);
-
-                    // Update retrieved chunks
-                    updateChunks(result.retrieved_chunks || []);
-
-                    console.log('✅ Chat message processed successfully');
-                } else {
-                    console.error('❌ Chat request failed:', result.detail);
-                    addMessage('system', `Error: ${result.detail || 'Failed to process message'}`);
-                    clearChunks();
-                }
-            } catch (error) {
-                console.error('💥 Chat request error:', error);
-                hideTypingIndicator();
-                addMessage('system', `Error: ${error.message}`);
-                clearChunks();
-            } finally {
-                setProcessingState(false);
-            }
-        }
-
-        // Add message to chat
-        function addMessage(type, content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            
-            if (type === 'user') {
-                messageDiv.innerHTML = `<i class="fas fa-user me-2"></i>${escapeHtml(content)}`;
-            } else if (type === 'assistant') {
-                messageDiv.innerHTML = `<i class="fas fa-robot me-2"></i>${formatAssistantMessage(content)}`;
-            } else if (type === 'system') {
-                messageDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>${escapeHtml(content)}`;
-            }
-
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Format assistant message (support basic markdown)
-        function formatAssistantMessage(content) {
-            return escapeHtml(content)
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\n/g, '<br>');
-        }
+        // Add user message to chat
+        addMessage("user", message);
 
         // Show typing indicator
-        function showTypingIndicator() {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator';
-            typingDiv.id = 'typingIndicator';
-            typingDiv.innerHTML = `
+        showTypingIndicator();
+
+        try {
+          console.log("🚀 Sending chat message:", message);
+
+          // Get the number of chunks to retrieve
+          const maxChunks = parseInt(maxChunksInput.value) || 3;
+          console.log("📊 Max chunks to retrieve:", maxChunks);
+
+          const response = await fetch("/chat/message", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: message,
+              max_chunks: maxChunks,
+            }),
+          });
+
+          const result = await response.json();
+          console.log("📨 Chat response:", result);
+
+          // Hide typing indicator
+          hideTypingIndicator();
+
+          if (response.ok) {
+            // Add assistant response
+            addMessage("assistant", result.response);
+
+            // Update retrieved chunks
+            updateChunks(result.retrieved_chunks || []);
+
+            console.log("✅ Chat message processed successfully");
+          } else {
+            console.error("❌ Chat request failed:", result.detail);
+            addMessage(
+              "system",
+              `Error: ${result.detail || "Failed to process message"}`
+            );
+            clearChunks();
+          }
+        } catch (error) {
+          console.error("💥 Chat request error:", error);
+          hideTypingIndicator();
+          addMessage("system", `Error: ${error.message}`);
+          clearChunks();
+        } finally {
+          setProcessingState(false);
+        }
+      }
+
+      // Add message to chat
+      function addMessage(type, content) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}`;
+
+        if (type === "user") {
+          messageDiv.innerHTML = `<i class="fas fa-user me-2"></i>${escapeHtml(
+            content
+          )}`;
+        } else if (type === "assistant") {
+          messageDiv.innerHTML = `<i class="fas fa-robot me-2"></i>${formatAssistantMessage(
+            content
+          )}`;
+        } else if (type === "system") {
+          messageDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>${escapeHtml(
+            content
+          )}`;
+        }
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Format assistant message (support basic markdown)
+      function formatAssistantMessage(content) {
+        return escapeHtml(content)
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.*?)\*/g, "<em>$1</em>")
+          .replace(/\n/g, "<br>");
+      }
+
+      // Show typing indicator
+      function showTypingIndicator() {
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "typing-indicator";
+        typingDiv.id = "typingIndicator";
+        typingDiv.innerHTML = `
                 <i class="fas fa-robot me-2"></i>
                 <div class="typing-dots">
                     <span></span>
@@ -409,104 +456,128 @@
                     <span></span>
                 </div>
             `;
-            chatMessages.appendChild(typingDiv);
-            typingDiv.style.display = 'block';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+        chatMessages.appendChild(typingDiv);
+        typingDiv.style.display = "block";
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
 
-        // Hide typing indicator
-        function hideTypingIndicator() {
-            const typingIndicator = document.getElementById('typingIndicator');
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
+      // Hide typing indicator
+      function hideTypingIndicator() {
+        const typingIndicator = document.getElementById("typingIndicator");
+        if (typingIndicator) {
+          typingIndicator.remove();
         }
+      }
 
-        // Update retrieved chunks panel
-        function updateChunks(chunks) {
-            chunksCount.textContent = chunks.length;
-            
-            if (chunks.length === 0) {
-                chunksContent.innerHTML = `
+      // Update retrieved chunks panel
+      function updateChunks(chunks) {
+        chunksCount.textContent = chunks.length;
+
+        if (chunks.length === 0) {
+          chunksContent.innerHTML = `
                     <div class="text-muted text-center" style="margin-top: 2rem;">
                         <i class="fas fa-search"></i><br>
                         No relevant context found for this query.
                     </div>
                 `;
-                return;
-            }
+          return;
+        }
 
-            let chunksHtml = '';
-            chunks.forEach((chunk, index) => {
-                chunksHtml += `
+        let chunksHtml = "";
+        chunks.forEach((chunk, index) => {
+          chunksHtml += `
                     <div class="chunk-item">
                         <div class="chunk-metadata">
-                            <span class="badge bg-light text-dark me-2">#${index + 1}</span>
+                            <span class="badge bg-light text-dark me-2">#${
+                              index + 1
+                            }</span>
                             <strong>Q${chunk.metadata.question_id}</strong> • 
-                            ${chunk.metadata.question_type.replace('_', ' ')} • 
+                            ${chunk.metadata.question_type.replace("_", " ")} • 
                             Topic: ${chunk.metadata.topic}
-                            ${chunk.metadata.learning_objective ? `<br><small><strong>Learning Objective:</strong> Obj ${parseInt(chunk.metadata.learning_objective) + 1}</small>` : ''}
-                            ${chunk.metadata.tags ? `<br><small><strong>Tags:</strong> ${escapeHtml(chunk.metadata.tags)}</small>` : ''}
-                            ${chunk.metadata.correct_answers ? `<br><small><strong>Correct:</strong> ${escapeHtml(chunk.metadata.correct_answers)}</small>` : ''}
+                            ${
+                              chunk.metadata.learning_objective
+                                ? `<br><small><strong>Learning Objective:</strong> Obj ${
+                                    parseInt(
+                                      chunk.metadata.learning_objective
+                                    ) + 1
+                                  }</small>`
+                                : ""
+                            }
+                            ${
+                              chunk.metadata.tags
+                                ? `<br><small><strong>Tags:</strong> ${escapeHtml(
+                                    chunk.metadata.tags
+                                  )}</small>`
+                                : ""
+                            }
+                            ${
+                              chunk.metadata.correct_answers
+                                ? `<br><small><strong>Correct:</strong> ${escapeHtml(
+                                    chunk.metadata.correct_answers
+                                  )}</small>`
+                                : ""
+                            }
                         </div>
                         <div class="chunk-content">
-                            ${escapeHtml(chunk.content.substring(0, 300))}${chunk.content.length > 300 ? '...' : ''}
+                            ${escapeHtml(chunk.content.substring(0, 300))}${
+            chunk.content.length > 300 ? "..." : ""
+          }
                         </div>
                     </div>
                 `;
-            });
-            
-            chunksContent.innerHTML = chunksHtml;
-        }
+        });
 
-        // Clear chunks panel
-        function clearChunks() {
-            chunksCount.textContent = '0';
-            chunksContent.innerHTML = `
+        chunksContent.innerHTML = chunksHtml;
+      }
+
+      // Clear chunks panel
+      function clearChunks() {
+        chunksCount.textContent = "0";
+        chunksContent.innerHTML = `
                 <div class="text-muted text-center" style="margin-top: 2rem;">
                     <i class="fas fa-info-circle"></i><br>
                     Retrieved context chunks will appear here when you ask questions.
                 </div>
             `;
-        }
+      }
 
-        // Set processing state
-        function setProcessingState(processing) {
-            isProcessing = processing;
-            sendBtn.disabled = processing;
-            messageInput.disabled = processing;
-            
-            if (processing) {
-                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            } else {
-                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-            }
-        }
+      // Set processing state
+      function setProcessingState(processing) {
+        isProcessing = processing;
+        sendBtn.disabled = processing;
+        messageInput.disabled = processing;
 
-        // Utility function to escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        if (processing) {
+          sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        } else {
+          sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
         }
+      }
 
-        // Show alert function
-        function showAlert(type, message) {
-            const alertContainer = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type} alert-dismissible fade show`;
-            alert.innerHTML = `
+      // Utility function to escape HTML
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Show alert function
+      function showAlert(type, message) {
+        const alertContainer = document.getElementById("alertContainer");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            alertContainer.appendChild(alert);
-            
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 5000);
-        }
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.remove();
+          }
+        }, 5000);
+      }
     </script>
-</body>
+  </body>
 </html>

@@ -1,260 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat System Prompt - Canvas Quiz Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
     <!-- SimpleMDE CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css"
+    />
     <style>
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background-color: white;
-            border-bottom: 1px solid #dee2e6;
-            padding: 1rem 0;
-            margin-bottom: 1rem;
-        }
-        .header-buttons {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: nowrap;
-        }
-        .header-buttons .btn {
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .editor-container {
-            min-height: calc(100vh - 300px);
-        }
-        .CodeMirror {
-            min-height: 500px;
-            font-size: 14px;
-            line-height: 1.5;
-            border-radius: 0.375rem;
-        }
-        .save-indicator {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1050;
-        }
-        .tips-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            margin-top: 1rem;
-        }
-        .tip-card {
-            background: white;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-left: 4px solid #007bff;
-        }
-        .warning-card {
-            background: white;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-left: 4px solid #ffc107;
-        }
-        .sticky-actions {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            background: white;
-            padding: 1rem 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top: 1px solid #dee2e6;
-        }
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-        body {
-            padding-bottom: 100px;
-        }
-        .prompt-stats {
-            background: #f8f9fa;
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: #6c757d;
-        }
-        .section-divider {
-            height: 2px;
-            background: linear-gradient(to right, #007bff, #6f42c1);
-            border: none;
-            border-radius: 1px;
-            margin: 2rem 0;
-        }
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: white;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+      }
+      .header-buttons {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+      }
+      .header-buttons .btn {
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .editor-container {
+        min-height: calc(100vh - 300px);
+      }
+      .CodeMirror {
+        min-height: 500px;
+        font-size: 14px;
+        line-height: 1.5;
+        border-radius: 0.375rem;
+      }
+      .save-indicator {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .tips-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-top: 1rem;
+      }
+      .tip-card {
+        background: white;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #007bff;
+      }
+      .warning-card {
+        background: white;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #ffc107;
+      }
+      .sticky-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: white;
+        padding: 1rem 0;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        border-top: 1px solid #dee2e6;
+      }
+      .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+      }
+      body {
+        padding-bottom: 100px;
+      }
+      .prompt-stats {
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+      }
+      .section-divider {
+        height: 2px;
+        background: linear-gradient(to right, #007bff, #6f42c1);
+        border: none;
+        border-radius: 1px;
+        margin: 2rem 0;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Sticky Header -->
     <div class="sticky-header">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">
-                        <i class="fas fa-robot text-info"></i> Chat Assistant System Prompt
-                        <small class="text-muted">- Configure AI Behavior</small>
-                    </h1>
-                </div>
-                <div>
-                    <button id="saveBtn" class="btn btn-success me-2">
-                        <i class="fas fa-save"></i> Save Prompt
-                    </button>
-                    <a href="/chat" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Chat
-                    </a>
-                </div>
-            </div>
+      <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-robot text-info"></i> Chat Assistant System
+              Prompt
+              <small class="text-muted">- Configure AI Behavior</small>
+            </h1>
+          </div>
+          <div>
+            <button id="saveBtn" class="btn btn-success me-2">
+              <i class="fas fa-save"></i> Save Prompt
+            </button>
+            <a href="/chat" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left"></i> Back to Chat
+            </a>
+          </div>
         </div>
+      </div>
     </div>
 
     <div class="container-fluid">
-        <!-- Alert container -->
-        <div id="alertContainer"></div>
+      <!-- Alert container -->
+      <div id="alertContainer"></div>
 
-        <!-- Save indicator -->
-        <div id="saveIndicator" class="save-indicator" style="display: none;">
-            <div class="alert alert-success alert-sm mb-0">
-                <i class="fas fa-check"></i> Saved
-            </div>
+      <!-- Save indicator -->
+      <div id="saveIndicator" class="save-indicator" style="display: none">
+        <div class="alert alert-success alert-sm mb-0">
+          <i class="fas fa-check"></i> Saved
         </div>
+      </div>
 
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-0">
-                                    <i class="fas fa-edit"></i> System Prompt Configuration
-                                </h5>
-                                <small class="text-muted">
-                                    This prompt defines how the chat assistant behaves and responds to user queries.
-                                </small>
-                            </div>
-                            <div>
-                                <button id="resetBtn" class="btn btn-outline-warning btn-sm">
-                                    <i class="fas fa-undo"></i> Reset to Default
-                                </button>
-                            </div>
-                        </div>
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h5 class="mb-0">
+                    <i class="fas fa-edit"></i> System Prompt Configuration
+                  </h5>
+                  <small class="text-muted">
+                    This prompt defines how the chat assistant behaves and
+                    responds to user queries.
+                  </small>
+                </div>
+                <div>
+                  <button id="resetBtn" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-undo"></i> Reset to Default
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="editor-container">
+                <textarea id="chatSystemPromptEditor" name="prompt">
+{{ current_prompt if current_prompt else default_prompt }}</textarea
+                >
+              </div>
+
+              <!-- Prompt Statistics -->
+              <div id="promptStats" class="prompt-stats">
+                <div class="row">
+                  <div class="col-md-3">
+                    <strong>Characters:</strong> <span id="charCount">0</span>
+                  </div>
+                  <div class="col-md-3">
+                    <strong>Words:</strong> <span id="wordCount">0</span>
+                  </div>
+                  <div class="col-md-3">
+                    <strong>Lines:</strong> <span id="lineCount">0</span>
+                  </div>
+                  <div class="col-md-3">
+                    <strong>Last Modified:</strong>
+                    <span id="lastModified">Never</span>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="section-divider" />
+
+              <!-- Chat Welcome Message Editor -->
+              <div class="mt-4">
+                <label for="welcomeMessageEditor" class="form-label">
+                  <h6 class="mb-2">
+                    <i class="fas fa-comment-dots text-primary"></i> Chat
+                    Welcome Message
+                  </h6>
+                  <small class="text-muted"
+                    >Configure the initial message shown to users when they
+                    start a new chat session.</small
+                  >
+                </label>
+                <div class="editor-container">
+                  <textarea id="welcomeMessageEditor" name="welcome_message">
+{{ current_welcome_message if current_welcome_message else default_welcome_message }}</textarea
+                  >
+                </div>
+
+                <!-- Welcome Message Statistics -->
+                <div id="welcomeStats" class="prompt-stats">
+                  <div class="row">
+                    <div class="col-md-3">
+                      <strong>Characters:</strong>
+                      <span id="welcomeCharCount">0</span>
                     </div>
-                    <div class="card-body">
-                        <div class="editor-container">
-                            <textarea id="chatSystemPromptEditor" name="prompt">{{ current_prompt if current_prompt else default_prompt }}</textarea>
-                        </div>
-                        
-                        <!-- Prompt Statistics -->
-                        <div id="promptStats" class="prompt-stats">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <strong>Characters:</strong> <span id="charCount">0</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Words:</strong> <span id="wordCount">0</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Lines:</strong> <span id="lineCount">0</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Last Modified:</strong> <span id="lastModified">Never</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr class="section-divider">
-                        
-                        <!-- Chat Welcome Message Editor -->
-                        <div class="mt-4">
-                            <label for="welcomeMessageEditor" class="form-label">
-                                <h6 class="mb-2">
-                                    <i class="fas fa-comment-dots text-primary"></i> Chat Welcome Message
-                                </h6>
-                                <small class="text-muted">Configure the initial message shown to users when they start a new chat session.</small>
-                            </label>
-                            <div class="editor-container">
-                                <textarea id="welcomeMessageEditor" name="welcome_message">{{ current_welcome_message if current_welcome_message else default_welcome_message }}</textarea>
-                            </div>
-                            
-                            <!-- Welcome Message Statistics -->
-                            <div id="welcomeStats" class="prompt-stats">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <strong>Characters:</strong> <span id="welcomeCharCount">0</span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>Words:</strong> <span id="welcomeWordCount">0</span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>Lines:</strong> <span id="welcomeLineCount">0</span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>Last Modified:</strong> <span id="welcomeLastModified">Never</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr class="section-divider">
-                        
-                        <!-- Tips and Guidelines Section -->
-                        <div class="tips-section">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="tip-card">
-                                        <h6 class="fw-bold mb-3">
-                                            <i class="fas fa-lightbulb text-primary"></i> Writing Effective Prompts
-                                        </h6>
-                                        <ul class="list-unstyled mb-0">
-                                            <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Define the assistant's role and expertise clearly</li>
-                                            <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Specify the knowledge domain (accessibility, web development)</li>
-                                            <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Include instructions for using retrieved context</li>
-                                            <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Set expectations for response style and length</li>
-                                            <li class="mb-0"><i class="fas fa-check-circle text-success me-2"></i>Provide guidelines for handling unknown information</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="warning-card">
-                                        <h6 class="fw-bold mb-3">
-                                            <i class="fas fa-exclamation-triangle text-warning"></i> Important Notes
-                                        </h6>
-                                        <ul class="list-unstyled mb-0">
-                                            <li class="mb-2"><i class="fas fa-info-circle text-info me-2"></i>The system automatically includes retrieved context</li>
-                                            <li class="mb-2"><i class="fas fa-info-circle text-info me-2"></i>Reference <code>{context}</code> placeholder in your prompt</li>
-                                            <li class="mb-2"><i class="fas fa-info-circle text-info me-2"></i>Keep instructions clear and concise</li>
-                                            <li class="mb-2"><i class="fas fa-info-circle text-info me-2"></i>Test changes in the chat interface</li>
-                                            <li class="mb-0"><i class="fas fa-info-circle text-info me-2"></i>Changes take effect immediately after saving</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Example Prompt Template -->
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="card border-info">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0">
-                                                <i class="fas fa-code"></i> Example Prompt Template
-                                            </h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <pre class="mb-0" style="font-size: 0.875rem; color: #495057;">You are an expert web accessibility consultant with deep knowledge of WCAG guidelines, ARIA standards, and inclusive design principles.
+                    <div class="col-md-3">
+                      <strong>Words:</strong>
+                      <span id="welcomeWordCount">0</span>
+                    </div>
+                    <div class="col-md-3">
+                      <strong>Lines:</strong>
+                      <span id="welcomeLineCount">0</span>
+                    </div>
+                    <div class="col-md-3">
+                      <strong>Last Modified:</strong>
+                      <span id="welcomeLastModified">Never</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="section-divider" />
+
+              <!-- Tips and Guidelines Section -->
+              <div class="tips-section">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <div class="tip-card">
+                      <h6 class="fw-bold mb-3">
+                        <i class="fas fa-lightbulb text-primary"></i> Writing
+                        Effective Prompts
+                      </h6>
+                      <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                          <i class="fas fa-check-circle text-success me-2"></i
+                          >Define the assistant's role and expertise clearly
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-check-circle text-success me-2"></i
+                          >Specify the knowledge domain (accessibility, web
+                          development)
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-check-circle text-success me-2"></i
+                          >Include instructions for using retrieved context
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-check-circle text-success me-2"></i
+                          >Set expectations for response style and length
+                        </li>
+                        <li class="mb-0">
+                          <i class="fas fa-check-circle text-success me-2"></i
+                          >Provide guidelines for handling unknown information
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <div class="warning-card">
+                      <h6 class="fw-bold mb-3">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        Important Notes
+                      </h6>
+                      <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                          <i class="fas fa-info-circle text-info me-2"></i>The
+                          system automatically includes retrieved context
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-info-circle text-info me-2"></i
+                          >Reference <code>{context}</code> placeholder in your
+                          prompt
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-info-circle text-info me-2"></i>Keep
+                          instructions clear and concise
+                        </li>
+                        <li class="mb-2">
+                          <i class="fas fa-info-circle text-info me-2"></i>Test
+                          changes in the chat interface
+                        </li>
+                        <li class="mb-0">
+                          <i class="fas fa-info-circle text-info me-2"></i
+                          >Changes take effect immediately after saving
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Example Prompt Template -->
+                <div class="row mt-3">
+                  <div class="col-12">
+                    <div class="card border-info">
+                      <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                          <i class="fas fa-code"></i> Example Prompt Template
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <pre
+                          class="mb-0"
+                          style="font-size: 0.875rem; color: #495057"
+                        >
+You are an expert web accessibility consultant with deep knowledge of WCAG guidelines, ARIA standards, and inclusive design principles.
 
 **Your Role:**
 - Answer questions about web accessibility, HTML semantics, and inclusive design
@@ -270,375 +332,420 @@ When provided with context from the knowledge base: {context}
 **Response Style:**
 - Be concise but comprehensive
 - Use examples and code snippets when helpful
-- Prioritize practical implementation advice</pre>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+- Prioritize practical implementation advice</pre
+                        >
+                      </div>
                     </div>
+                  </div>
                 </div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SimpleMDE JS -->
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
-    
+
     <script>
-        // Initialize SimpleMDE markdown editor for system prompt
-        const simplemde = new SimpleMDE({
-            element: document.getElementById("chatSystemPromptEditor"),
-            spellChecker: false,
-            placeholder: "Enter your chat assistant system prompt here...",
-            toolbar: [
-                "bold", "italic", "heading", "|",
-                "quote", "unordered-list", "ordered-list", "|",
-                "link", "code", "|",
-                {
-                    name: "preview",
-                    action: function customPreviewAction(editor) {
-                        SimpleMDE.togglePreview(editor);
-                        updatePreviewButton(editor);
-                    },
-                    className: "fa fa-eye no-disable",
-                    title: "Toggle Preview"
-                }, "guide"
-            ],
-            status: ["lines", "words", "cursor"],
-            insertTexts: {
-                horizontalRule: ["", "\n\n-----\n\n"],
-                image: ["![](http://", ")"],
-                link: ["[", "](http://)"],
-                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
+      // Initialize SimpleMDE markdown editor for system prompt
+      const simplemde = new SimpleMDE({
+        element: document.getElementById("chatSystemPromptEditor"),
+        spellChecker: false,
+        placeholder: "Enter your chat assistant system prompt here...",
+        toolbar: [
+          "bold",
+          "italic",
+          "heading",
+          "|",
+          "quote",
+          "unordered-list",
+          "ordered-list",
+          "|",
+          "link",
+          "code",
+          "|",
+          {
+            name: "preview",
+            action: function customPreviewAction(editor) {
+              SimpleMDE.togglePreview(editor);
+              updatePreviewButton(editor);
             },
-        });
-        
-        // Initialize SimpleMDE markdown editor for welcome message
-        const welcomeMde = new SimpleMDE({
-            element: document.getElementById("welcomeMessageEditor"),
-            spellChecker: false,
-            placeholder: "Enter the welcome message shown to users when they start a new chat...",
-            toolbar: [
-                "bold", "italic", "heading", "|",
-                "quote", "unordered-list", "ordered-list", "|",
-                "link", "code", "|",
-                {
-                    name: "preview",
-                    action: function customPreviewAction(editor) {
-                        SimpleMDE.togglePreview(editor);
-                        updatePreviewButton(editor);
-                    },
-                    className: "fa fa-eye no-disable",
-                    title: "Toggle Preview"
-                }, "guide"
-            ],
-            status: ["lines", "words", "cursor"],
-            insertTexts: {
-                horizontalRule: ["", "\n\n-----\n\n"],
-                image: ["![](http://", ")"],
-                link: ["[", "](http://)"],
-                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
-            },
-        });
+            className: "fa fa-eye no-disable",
+            title: "Toggle Preview",
+          },
+          "guide",
+        ],
+        status: ["lines", "words", "cursor"],
+        insertTexts: {
+          horizontalRule: ["", "\n\n-----\n\n"],
+          image: ["![](http://", ")"],
+          link: ["[", "](http://)"],
+          table: [
+            "",
+            "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n",
+          ],
+        },
+      });
 
-        // Function to update preview button appearance based on current mode
-        function updatePreviewButton(editor) {
-            const toolbar = editor.toolbar;
-            const previewButton = toolbar.find(item => item && item.name === 'preview');
-            
-            if (previewButton) {
-                const isPreviewActive = editor.isPreviewActive();
-                const buttonElement = previewButton;
-                
-                if (isPreviewActive) {
-                    buttonElement.className = "fa fa-pencil no-disable";
-                    buttonElement.title = "Edit (Currently in Preview)";
-                } else {
-                    buttonElement.className = "fa fa-eye no-disable";
-                    buttonElement.title = "Preview (Currently in Edit)";
-                }
-            }
+      // Initialize SimpleMDE markdown editor for welcome message
+      const welcomeMde = new SimpleMDE({
+        element: document.getElementById("welcomeMessageEditor"),
+        spellChecker: false,
+        placeholder:
+          "Enter the welcome message shown to users when they start a new chat...",
+        toolbar: [
+          "bold",
+          "italic",
+          "heading",
+          "|",
+          "quote",
+          "unordered-list",
+          "ordered-list",
+          "|",
+          "link",
+          "code",
+          "|",
+          {
+            name: "preview",
+            action: function customPreviewAction(editor) {
+              SimpleMDE.togglePreview(editor);
+              updatePreviewButton(editor);
+            },
+            className: "fa fa-eye no-disable",
+            title: "Toggle Preview",
+          },
+          "guide",
+        ],
+        status: ["lines", "words", "cursor"],
+        insertTexts: {
+          horizontalRule: ["", "\n\n-----\n\n"],
+          image: ["![](http://", ")"],
+          link: ["[", "](http://)"],
+          table: [
+            "",
+            "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n",
+          ],
+        },
+      });
+
+      // Function to update preview button appearance based on current mode
+      function updatePreviewButton(editor) {
+        const toolbar = editor.toolbar;
+        const previewButton = toolbar.find(
+          (item) => item && item.name === "preview"
+        );
+
+        if (previewButton) {
+          const isPreviewActive = editor.isPreviewActive();
+          const buttonElement = previewButton;
+
+          if (isPreviewActive) {
+            buttonElement.className = "fa fa-pencil no-disable";
+            buttonElement.title = "Edit (Currently in Preview)";
+          } else {
+            buttonElement.className = "fa fa-eye no-disable";
+            buttonElement.title = "Preview (Currently in Edit)";
+          }
         }
+      }
 
-        // Helper function to show alerts
-        function showAlert(type, message) {
-            const alertContainer = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type} alert-dismissible fade show`;
-            alert.innerHTML = `
+      // Helper function to show alerts
+      function showAlert(type, message) {
+        const alertContainer = document.getElementById("alertContainer");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            alertContainer.appendChild(alert);
-            
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 5000);
-        }
+        alertContainer.appendChild(alert);
 
-        // Show save indicator
-        function showSaveIndicator() {
-            const indicator = document.getElementById('saveIndicator');
-            indicator.style.display = 'block';
-            setTimeout(() => {
-                indicator.style.display = 'none';
-            }, 2000);
+        setTimeout(() => {
+          if (alert.parentNode) {
+            alert.remove();
+          }
+        }, 5000);
+      }
+
+      // Show save indicator
+      function showSaveIndicator() {
+        const indicator = document.getElementById("saveIndicator");
+        indicator.style.display = "block";
+        setTimeout(() => {
+          indicator.style.display = "none";
+        }, 2000);
+      }
+
+      // Helper function to update text statistics
+      function updateTextStats(text, charId, wordId, lineId, lastModifiedId) {
+        const chars = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const lines = text.split("\n").length;
+
+        document.getElementById(charId).textContent = chars;
+        document.getElementById(wordId).textContent = words;
+        document.getElementById(lineId).textContent = lines;
+        document.getElementById(lastModifiedId).textContent =
+          new Date().toLocaleString();
+      }
+
+      // Initialize statistics for both editors
+      function initializeStats() {
+        // Update system prompt stats
+        updateTextStats(
+          simplemde.value(),
+          "charCount",
+          "wordCount",
+          "lineCount",
+          "lastModified"
+        );
+
+        // Update welcome message stats
+        updateTextStats(
+          welcomeMde.value(),
+          "welcomeCharCount",
+          "welcomeWordCount",
+          "welcomeLineCount",
+          "welcomeLastModified"
+        );
+      }
+
+      // Save both system prompt and welcome message
+      document.getElementById("saveBtn").addEventListener("click", async () => {
+        const saveBtn = document.getElementById("saveBtn");
+        const originalText = saveBtn.innerHTML;
+
+        try {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+          const prompt = simplemde.value();
+          const welcomeMessage = welcomeMde.value();
+
+          if (!prompt.trim()) {
+            showAlert("warning", "System prompt cannot be empty.");
+            return;
+          }
+
+          // Save system prompt
+          const promptResponse = await fetch("/chat/system-prompt", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `prompt=${encodeURIComponent(prompt)}`,
+          });
+
+          // Save welcome message
+          const welcomeResponse = await fetch("/chat/welcome-message", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `welcome_message=${encodeURIComponent(welcomeMessage)}`,
+          });
+
+          const promptResult = await promptResponse.json();
+          const welcomeResult = await welcomeResponse.json();
+
+          // Show consolidated success/error messages
+          let successMessages = [];
+          let errorMessages = [];
+
+          if (promptResponse.ok) {
+            successMessages.push("System prompt saved successfully!");
+          } else {
+            errorMessages.push(
+              "Failed to save system prompt: " +
+                (promptResult.detail || "Unknown error")
+            );
+          }
+
+          if (welcomeResponse.ok) {
+            successMessages.push("Welcome message saved successfully!");
+          } else {
+            errorMessages.push(
+              "Failed to save welcome message: " +
+                (welcomeResult.detail || "Unknown error")
+            );
+          }
+
+          // Display consolidated alerts
+          if (successMessages.length > 0) {
+            showAlert("success", successMessages.join("<br>"));
+            if (successMessages.length === 2) {
+              showSaveIndicator();
+            }
+          }
+
+          if (errorMessages.length > 0) {
+            showAlert("danger", errorMessages.join("<br>"));
+          }
+        } catch (error) {
+          showAlert("danger", "Error saving: " + error.message);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalText;
         }
-        
-        // Helper function to update text statistics
-        function updateTextStats(text, charId, wordId, lineId, lastModifiedId) {
-            const chars = text.length;
-            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-            const lines = text.split('\n').length;
-            
-            document.getElementById(charId).textContent = chars;
-            document.getElementById(wordId).textContent = words;
-            document.getElementById(lineId).textContent = lines;
-            document.getElementById(lastModifiedId).textContent = new Date().toLocaleString();
-        }
-        
-        // Initialize statistics for both editors
-        function initializeStats() {
-            // Update system prompt stats
-            updateTextStats(
+      });
+
+      // Reset to default for both editors
+      document
+        .getElementById("resetBtn")
+        .addEventListener("click", async () => {
+          if (
+            !confirm(
+              "Are you sure you want to reset both the system prompt and welcome message to defaults? This will overwrite your current content."
+            )
+          ) {
+            return;
+          }
+
+          try {
+            // Fetch default system prompt
+            const promptResponse = await fetch("/chat/system-prompt/default");
+            const promptResult = await promptResponse.json();
+
+            // Fetch default welcome message
+            const welcomeResponse = await fetch(
+              "/chat/welcome-message/default"
+            );
+            const welcomeResult = await welcomeResponse.json();
+
+            let successMessages = [];
+            let errorMessages = [];
+
+            // Handle system prompt reset
+            if (promptResponse.ok) {
+              simplemde.value(promptResult.default_prompt);
+              successMessages.push("System prompt reset to default");
+              // Update system prompt stats
+              updateTextStats(
                 simplemde.value(),
-                'charCount',
-                'wordCount', 
-                'lineCount',
-                'lastModified'
-            );
-            
-            // Update welcome message stats
-            updateTextStats(
+                "charCount",
+                "wordCount",
+                "lineCount",
+                "lastModified"
+              );
+            } else {
+              errorMessages.push("Failed to load default system prompt");
+            }
+
+            // Handle welcome message reset
+            if (welcomeResponse.ok) {
+              welcomeMde.value(welcomeResult.default_welcome_message || "");
+              successMessages.push("Welcome message reset to default");
+              // Update welcome message stats
+              updateTextStats(
                 welcomeMde.value(),
-                'welcomeCharCount',
-                'welcomeWordCount',
-                'welcomeLineCount', 
-                'welcomeLastModified'
-            );
+                "welcomeCharCount",
+                "welcomeWordCount",
+                "welcomeLineCount",
+                "welcomeLastModified"
+              );
+            } else {
+              errorMessages.push("Failed to load default welcome message");
+            }
+
+            // Display consolidated messages
+            if (successMessages.length > 0) {
+              showAlert(
+                "info",
+                successMessages.join("<br>") + ". Don't forget to save!"
+              );
+            }
+
+            if (errorMessages.length > 0) {
+              showAlert("danger", errorMessages.join("<br>"));
+            }
+          } catch (error) {
+            showAlert("danger", "Error loading defaults: " + error.message);
+          }
+        });
+
+      // Auto-save functionality (optional)
+      let saveTimeout;
+      simplemde.codemirror.on("change", function () {
+        // Update system prompt statistics
+        updateTextStats(
+          simplemde.value(),
+          "charCount",
+          "wordCount",
+          "lineCount",
+          "lastModified"
+        );
+
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
         }
-
-        // Save both system prompt and welcome message
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            const saveBtn = document.getElementById('saveBtn');
-            const originalText = saveBtn.innerHTML;
-            
+        // Auto-save after 5 seconds of inactivity
+        saveTimeout = setTimeout(async () => {
+          const prompt = simplemde.value();
+          if (prompt.trim()) {
             try {
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                
-                const prompt = simplemde.value();
-                const welcomeMessage = welcomeMde.value();
-                
-                if (!prompt.trim()) {
-                    showAlert('warning', 'System prompt cannot be empty.');
-                    return;
-                }
-                
-                // Save system prompt
-                const promptResponse = await fetch('/chat-system-prompt', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `prompt=${encodeURIComponent(prompt)}`
-                });
-                
-                // Save welcome message
-                const welcomeResponse = await fetch('/chat-welcome-message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `welcome_message=${encodeURIComponent(welcomeMessage)}`
-                });
-                
-                const promptResult = await promptResponse.json();
-                const welcomeResult = await welcomeResponse.json();
-                
-                // Show consolidated success/error messages
-                let successMessages = [];
-                let errorMessages = [];
-                
-                if (promptResponse.ok) {
-                    successMessages.push('System prompt saved successfully!');
-                } else {
-                    errorMessages.push('Failed to save system prompt: ' + (promptResult.detail || 'Unknown error'));
-                }
-                
-                if (welcomeResponse.ok) {
-                    successMessages.push('Welcome message saved successfully!');
-                } else {
-                    errorMessages.push('Failed to save welcome message: ' + (welcomeResult.detail || 'Unknown error'));
-                }
-                
-                // Display consolidated alerts
-                if (successMessages.length > 0) {
-                    showAlert('success', successMessages.join('<br>'));
-                    if (successMessages.length === 2) {
-                        showSaveIndicator();
-                    }
-                }
-                
-                if (errorMessages.length > 0) {
-                    showAlert('danger', errorMessages.join('<br>'));
-                }
-                
-            } catch (error) {
-                showAlert('danger', 'Error saving: ' + error.message);
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalText;
-            }
-        });
+              const response = await fetch("/chat/system-prompt", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `prompt=${encodeURIComponent(prompt)}`,
+              });
 
-        // Reset to default for both editors
-        document.getElementById('resetBtn').addEventListener('click', async () => {
-            if (!confirm('Are you sure you want to reset both the system prompt and welcome message to defaults? This will overwrite your current content.')) {
-                return;
-            }
-            
-            try {
-                // Fetch default system prompt
-                const promptResponse = await fetch('/chat-system-prompt/default');
-                const promptResult = await promptResponse.json();
-                
-                // Fetch default welcome message
-                const welcomeResponse = await fetch('/chat-welcome-message/default');
-                const welcomeResult = await welcomeResponse.json();
-                
-                let successMessages = [];
-                let errorMessages = [];
-                
-                // Handle system prompt reset
-                if (promptResponse.ok) {
-                    simplemde.value(promptResult.default_prompt);
-                    successMessages.push('System prompt reset to default');
-                    // Update system prompt stats
-                    updateTextStats(
-                        simplemde.value(),
-                        'charCount',
-                        'wordCount',
-                        'lineCount',
-                        'lastModified'
-                    );
-                } else {
-                    errorMessages.push('Failed to load default system prompt');
-                }
-                
-                // Handle welcome message reset
-                if (welcomeResponse.ok) {
-                    welcomeMde.value(welcomeResult.default_welcome_message || '');
-                    successMessages.push('Welcome message reset to default');
-                    // Update welcome message stats
-                    updateTextStats(
-                        welcomeMde.value(),
-                        'welcomeCharCount',
-                        'welcomeWordCount',
-                        'welcomeLineCount',
-                        'welcomeLastModified'
-                    );
-                } else {
-                    errorMessages.push('Failed to load default welcome message');
-                }
-                
-                // Display consolidated messages
-                if (successMessages.length > 0) {
-                    showAlert('info', successMessages.join('<br>') + '. Don\'t forget to save!');
-                }
-                
-                if (errorMessages.length > 0) {
-                    showAlert('danger', errorMessages.join('<br>'));
-                }
-                
+              if (response.ok) {
+                showSaveIndicator();
+              }
             } catch (error) {
-                showAlert('danger', 'Error loading defaults: ' + error.message);
+              console.error("Auto-save failed:", error);
             }
-        });
+          }
+        }, 5000);
+      });
 
-        // Auto-save functionality (optional)
-        let saveTimeout;
-        simplemde.codemirror.on("change", function() {
-            // Update system prompt statistics
+      // Welcome message editor change events
+      welcomeMde.codemirror.on("change", function () {
+        // Update welcome message statistics
+        updateTextStats(
+          welcomeMde.value(),
+          "welcomeCharCount",
+          "welcomeWordCount",
+          "welcomeLineCount",
+          "welcomeLastModified"
+        );
+      });
+
+      // Function to load welcome message from server
+      async function loadWelcomeMessage() {
+        try {
+          const response = await fetch("/chat/welcome-message");
+          const result = await response.json();
+
+          if (response.ok) {
+            welcomeMde.value(result.welcome_message || "");
+            // Update stats after loading
             updateTextStats(
-                simplemde.value(),
-                'charCount',
-                'wordCount',
-                'lineCount',
-                'lastModified'
+              welcomeMde.value(),
+              "welcomeCharCount",
+              "welcomeWordCount",
+              "welcomeLineCount",
+              "welcomeLastModified"
             );
-            
-            if (saveTimeout) {
-                clearTimeout(saveTimeout);
-            }
-            // Auto-save after 5 seconds of inactivity
-            saveTimeout = setTimeout(async () => {
-                const prompt = simplemde.value();
-                if (prompt.trim()) {
-                    try {
-                        const response = await fetch('/chat-system-prompt', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `prompt=${encodeURIComponent(prompt)}`
-                        });
-                        
-                        if (response.ok) {
-                            showSaveIndicator();
-                        }
-                    } catch (error) {
-                        console.error('Auto-save failed:', error);
-                    }
-                }
-            }, 5000);
-        });
-        
-        // Welcome message editor change events
-        welcomeMde.codemirror.on("change", function() {
-            // Update welcome message statistics
-            updateTextStats(
-                welcomeMde.value(),
-                'welcomeCharCount',
-                'welcomeWordCount',
-                'welcomeLineCount',
-                'welcomeLastModified'
-            );
-        });
-        
-        // Function to load welcome message from server
-        async function loadWelcomeMessage() {
-            try {
-                const response = await fetch('/chat-welcome-message');
-                const result = await response.json();
-                
-                if (response.ok) {
-                    welcomeMde.value(result.welcome_message || '');
-                    // Update stats after loading
-                    updateTextStats(
-                        welcomeMde.value(),
-                        'welcomeCharCount',
-                        'welcomeWordCount',
-                        'welcomeLineCount',
-                        'welcomeLastModified'
-                    );
-                } else {
-                    console.error('Failed to load welcome message:', result);
-                }
-            } catch (error) {
-                console.error('Error loading welcome message:', error);
-            }
+          } else {
+            console.error("Failed to load welcome message:", result);
+          }
+        } catch (error) {
+          console.error("Error loading welcome message:", error);
         }
-        
-        // Initialize statistics and load welcome message on page load
-        setTimeout(async () => {
-            initializeStats();
-            await loadWelcomeMessage();
-        }, 100);
+      }
+
+      // Initialize statistics and load welcome message on page load
+      setTimeout(async () => {
+        initializeStats();
+        await loadWelcomeMessage();
+      }, 100);
     </script>
-</body>
+  </body>
 </html>

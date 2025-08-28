@@ -123,8 +123,10 @@ def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
     elif answer_text and feedback.startswith(f"{answer_text} "):
         feedback = feedback[len(f"{answer_text} "):].strip()
 
-    # Clean up whitespace
-    feedback = re.sub(r"\s+", " ", feedback).strip()
+    # Clean up whitespace but preserve newlines
+    feedback = re.sub(r"[ \t]+", " ", feedback)  # Replace multiple spaces/tabs with single space
+    feedback = re.sub(r"\n\s*\n", "\n\n", feedback)  # Normalize multiple newlines to double newlines
+    feedback = feedback.strip()
 
     return feedback
 

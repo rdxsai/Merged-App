@@ -416,19 +416,32 @@ async def get_quizzes(course_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/configuration")
+async def get_configuration():
+    """Get current course and quiz configuration"""
+    try:
+        return {
+            "success": True,
+            "course_id": config.COURSE_ID,
+            "quiz_id": config.QUIZ_ID,
+            "canvas_base_url": config.CANVAS_BASE_URL,
+        }
+    except Exception as e:
+        logger.error(f"Error getting configuration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/configuration")
 async def update_configuration(config_data: ConfigurationUpdate):
     """Update course and quiz configuration"""
     try:
-        global COURSE_ID, QUIZ_ID
-
         if config_data.course_id:
-            COURSE_ID = str(config_data.course_id)
+            config.COURSE_ID = str(config_data.course_id)
         if config_data.quiz_id:
-            QUIZ_ID = str(config_data.quiz_id)
+            config.QUIZ_ID = str(config_data.quiz_id)
 
         logger.info(
-            f"Updated configuration: Course ID = {COURSE_ID}, Quiz ID = {QUIZ_ID}"
+            f"Updated configuration: Course ID = {config.COURSE_ID}, Quiz ID = {config.QUIZ_ID}"
         )
         return {"success": True, "message": "Configuration updated successfully"}
 

@@ -181,7 +181,7 @@ async def edit_question(request: Request, question_id: int):
     # Ensure question has a topic field (backward compatibility)
     if "topic" not in question:
         question["topic"] = extract_topic_from_text(
-            question.get("question_text", ""), question.get("neutral_comments", "")
+            question.get("question_text", "")
         )
 
     # Ensure question has a tags field (backward compatibility)

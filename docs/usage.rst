@@ -175,7 +175,7 @@ Customizing Chat System Prompt
 
 1. **Access Chat Prompt Editor**
 
-   - Navigate to `/chat-system-prompt`
+   - Navigate to `/chat/system-prompt`
    - Edit the prompt that guides the chat assistant
 
 2. **Configure Context Usage**

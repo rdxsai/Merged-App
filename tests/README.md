@@ -1,312 +1,169 @@
-# Question App Test Suite
+# Test Structure Documentation
 
-This directory contains comprehensive tests for the Question App, a FastAPI-based web application for managing Canvas LMS quiz questions with AI-powered feedback generation.
+This document describes the modular test structure for the Canvas Quiz Manager application.
 
-## Test Structure
+## Overview
 
-### Test Files
+The tests have been reorganized from a flat structure to a modular structure that mirrors the application's code organization. This provides better organization, easier navigation, and improved maintainability.
 
-- **`conftest.py`** - Pytest configuration and shared fixtures
-- **`test_utility_functions.py`** - Unit tests for utility functions
-- **`test_api_endpoints.py`** - Tests for API endpoints and HTTP responses
-- **`test_ai_integration.py`** - Tests for AI integration features
-- **`test_integration.py`** - Integration tests for complete workflows
-- **`azure_openai_test_script.py`** - Standalone Azure OpenAI connectivity testing script
+## Directory Structure
 
-### Test Categories
+```
+tests/
+├── __init__.py
+├── conftest.py                    # Shared fixtures and configuration
+├── unit/                          # Unit tests
+│   ├── __init__.py
+│   ├── test_core/                 # Core application tests
+│   │   ├── __init__.py
+│   │   ├── test_app.py           # App creation and configuration
+│   │   └── test_config.py        # Configuration validation
+│   ├── test_utils/               # Utility function tests
+│   │   ├── __init__.py
+│   │   ├── test_file_utils.py    # File I/O operations
+│   │   └── test_text_utils.py    # Text processing functions
+│   ├── test_services/            # Service layer tests
+│   │   ├── __init__.py
+│   │   └── test_ai_service.py    # AI service functionality
+│   └── test_models/              # Data model tests
+│       ├── __init__.py
+│       ├── test_objective.py     # Learning objective model
+│       └── test_question.py      # Question model
+├── integration/                   # Integration tests
+│   ├── __init__.py
+│   ├── test_api/                 # API endpoint tests
+│   │   ├── __init__.py
+│   │   ├── test_canvas.py        # Canvas API integration
+│   │   ├── test_chat.py          # Chat API endpoints
+│   │   ├── test_questions.py     # Questions API endpoints
+│   │   ├── test_objectives.py    # Objectives API endpoints
+│   │   ├── test_system_prompt.py # System prompt API
+│   │   └── test_vector_store.py  # Vector store API
+│   └── test_workflows.py         # End-to-end workflows
+└── e2e/                          # End-to-end tests
+    ├── __init__.py
+    └── test_full_app.py          # Full application workflows
+```
 
-#### Unit Tests (`@pytest.mark.unit`)
+## Test Categories
 
-- Test individual functions and components in isolation
-- Mock external dependencies
-- Fast execution
-- High code coverage
+### Unit Tests (`tests/unit/`)
 
-#### Integration Tests (`@pytest.mark.integration`)
+- **Purpose**: Test individual functions and classes in isolation
+- **Scope**: Single module or function
+- **Dependencies**: Mocked external dependencies
+- **Speed**: Fast execution
+- **Markers**: `@pytest.mark.unit`
 
-- Test complete workflows and system interactions
-- May use real file operations and mocked external services
-- Test data consistency and error handling
+### Integration Tests (`tests/integration/`)
 
-#### AI Integration Tests (`@pytest.mark.ai`)
+- **Purpose**: Test interactions between modules and external services
+- **Scope**: Multiple modules working together
+- **Dependencies**: Mocked external APIs, real internal interactions
+- **Speed**: Medium execution time
+- **Markers**: `@pytest.mark.integration`
 
-- Test AI service integrations (Azure OpenAI, Ollama)
-- Mock AI service responses
-- Test feedback generation and parsing
+### End-to-End Tests (`tests/e2e/`)
 
-#### API Tests (`@pytest.mark.api`)
-
-- Test HTTP endpoints and responses
-- Test request/response formats
-- Test error handling and status codes
-
-#### Slow Tests (`@pytest.mark.slow`)
-
-- Tests that take longer to execute
-- Can be skipped with `--fast` flag
-- Include performance and large dataset tests
+- **Purpose**: Test complete user workflows
+- **Scope**: Full application stack
+- **Dependencies**: Mocked external services, real application flow
+- **Speed**: Slower execution
+- **Markers**: `@pytest.mark.e2e`
 
 ## Running Tests
 
-### Prerequisites
-
-1. Install test dependencies:
+### Run all tests
 
 ```bash
-poetry install --with dev
+poetry run pytest
 ```
 
-2. Ensure you have the required packages:
-
-- pytest
-- pytest-asyncio
-- httpx (for async HTTP testing)
-
-### Basic Test Commands
+### Run specific test categories
 
 ```bash
-# Run all tests
-python -m pytest
+# Unit tests only
+poetry run pytest -m unit
 
-# Run with verbose output
-python -m pytest -v
+# Integration tests only
+poetry run pytest -m integration
 
-# Run specific test file
-python -m pytest tests/test_utility_functions.py
-
-# Run specific test class
-python -m pytest tests/test_api_endpoints.py::TestHomeEndpoint
-
-# Run specific test method
-python -m pytest tests/test_utility_functions.py::TestFileOperations::test_load_questions_empty_file
+# End-to-end tests only
+poetry run pytest -m e2e
 ```
 
-### Using the Test Runner Script
+### Run tests for specific modules
 
 ```bash
-# Run all tests
-python run_tests.py
+# All utility tests
+poetry run pytest tests/unit/test_utils/
 
-# Run only unit tests
-python run_tests.py --type unit
+# All API tests
+poetry run pytest tests/integration/test_api/
 
-# Run only integration tests
-python run_tests.py --type integration
-
-# Run AI integration tests
-python run_tests.py --type ai
-
-# Run with coverage report
-python run_tests.py --coverage
-
-# Skip slow tests
-python run_tests.py --fast
-
-# Verbose output
-python run_tests.py --verbose
+# Specific test file
+poetry run pytest tests/unit/test_utils/test_file_utils.py
 ```
 
-### Test Markers
+### Run specific test functions
 
 ```bash
-# Run only unit tests
-python -m pytest -m unit
-
-# Run only integration tests
-python -m pytest -m integration
-
-# Run only AI tests
-python -m pytest -m ai
-
-# Run only API tests
-python -m pytest -m api
-
-# Skip slow tests
-python -m pytest -m "not slow"
-
-# Run multiple marker combinations
-python -m pytest -m "unit or api"
+poetry run pytest tests/unit/test_utils/test_file_utils.py::TestFileOperations::test_load_questions_empty_file
 ```
 
-## Test Coverage
+## Test Organization Principles
 
-### Current Coverage Areas
+1. **Mirror Source Structure**: Test directories mirror the source code structure
+2. **Single Responsibility**: Each test file focuses on one module or feature
+3. **Clear Naming**: Test files and classes have descriptive names
+4. **Appropriate Scope**: Tests are categorized by their scope and purpose
+5. **Shared Fixtures**: Common test data and mocks are in `conftest.py`
 
-1. **Utility Functions**
+## Benefits of This Structure
 
-   - File operations (load/save questions, objectives, prompts)
-   - Chat utility functions (system prompts, welcome messages)
-   - Text cleaning and processing
-   - Topic extraction
-   - Answer feedback cleaning
-   - Tag extraction
+1. **Easier Navigation**: Find tests for specific functionality quickly
+2. **Better Maintainability**: Changes to a module only affect its test file
+3. **Faster Execution**: Run only the tests you need
+4. **Clear Separation**: Unit, integration, and e2e tests are clearly separated
+5. **Improved Discoverability**: New developers can easily understand the test structure
 
-2. **API Endpoints**
+## Migration from Old Structure
 
-   - Home page and navigation
-   - Question CRUD operations
-   - System prompt management
-   - Chat functionality and endpoints
-   - Chat system prompt management
-   - Chat welcome message management
-   - Learning objectives management
-   - Debug endpoints (config, question, Ollama test)
-   - System prompt testing page
+The original flat test structure has been preserved in the following files:
 
-3. **AI Integration**
+- `tests/test_utility_functions.py` → Split into `tests/unit/test_utils/`
+- `tests/test_api_endpoints.py` → Split into `tests/integration/test_api/`
+- `tests/test_ai_integration.py` → Split into `tests/unit/test_services/` and `tests/integration/test_api/`
+- `tests/test_integration.py` → Moved to `tests/e2e/`
 
-   - Azure OpenAI feedback generation
-   - Ollama embeddings
-   - Vector store operations
-   - Chat message processing
+## Adding New Tests
 
-4. **Integration Workflows**
-   - Complete question lifecycle
-   - System prompt workflow
-   - Objectives management
-   - Chat workflow
-   - Vector store creation
+When adding new tests:
 
-### Coverage Report
+1. **Identify the test type**: Unit, integration, or e2e
+2. **Choose the appropriate directory**: Based on what's being tested
+3. **Follow naming conventions**: `test_<module_name>.py`
+4. **Use appropriate markers**: `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.e2e`
+5. **Add to conftest.py**: If new fixtures are needed across multiple test files
 
-Generate a coverage report:
+## Example Test Structure
 
-```bash
-# Install coverage package
-pip install coverage
+```python
+"""
+Unit tests for file utility functions
+"""
+import pytest
+from question_app.utils import load_questions
 
-# Run tests with coverage
-python -m pytest --cov=main --cov-report=html --cov-report=term
 
-# View HTML report
-open htmlcov/index.html
+class TestFileOperations:
+    """Test file loading and saving operations."""
+
+    @pytest.mark.unit
+    def test_load_questions_empty_file(self):
+        """Test loading questions from empty file"""
+        # Test implementation
+        pass
 ```
 
-## Test Data
-
-### Sample Data
-
-The tests use sample data defined in fixtures:
-
-- **Sample Questions**: Mock quiz questions with various types and content
-- **Sample Objectives**: Learning objectives with different Bloom's levels
-- **Mock Environment Variables**: Test configuration values
-
-### Temporary Files
-
-Tests create temporary files and directories for testing file operations:
-
-- Temporary JSON files for questions and objectives
-- Temporary text files for system prompts
-- Automatic cleanup after tests complete
-
-## Mocking Strategy
-
-### External Services
-
-- **Canvas API**: Mocked HTTP responses for course/quiz data
-- **Azure OpenAI**: Mocked API responses for feedback generation
-- **Ollama**: Mocked embedding generation
-- **ChromaDB**: Mocked vector store operations
-
-### File Operations
-
-- File I/O operations are mocked to avoid side effects
-- Temporary files are used when real file operations are needed
-- Automatic cleanup ensures test isolation
-
-## Best Practices
-
-### Writing Tests
-
-1. **Use descriptive test names** that explain what is being tested
-2. **Follow AAA pattern**: Arrange, Act, Assert
-3. **Test both success and failure cases**
-4. **Mock external dependencies** to ensure test isolation
-5. **Use appropriate markers** to categorize tests
-
-### Test Organization
-
-1. **Group related tests** in test classes
-2. **Use fixtures** for common setup and teardown
-3. **Keep tests independent** - no test should depend on another
-4. **Clean up resources** after each test
-
-### Performance
-
-1. **Mark slow tests** with `@pytest.mark.slow`
-2. **Use async tests** for async functions
-3. **Mock expensive operations** like AI API calls
-4. **Use appropriate timeouts** for external service calls
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Import Errors**: Ensure the main module is in the Python path
-2. **Async Test Issues**: Use `@pytest.mark.asyncio` for async tests
-3. **Mock Issues**: Ensure mocks are applied to the correct module path
-4. **File Permission Errors**: Use temporary files for file operations
-
-### Debug Mode
-
-Run tests in debug mode for more information:
-
-```bash
-python -m pytest -v --tb=long --pdb
-```
-
-### Test Isolation
-
-If tests are interfering with each other:
-
-```bash
-# Run tests in isolation
-python -m pytest --dist=no
-
-# Run specific test in isolation
-python -m pytest tests/test_specific.py -v --tb=long
-```
-
-## Continuous Integration
-
-### GitHub Actions
-
-The test suite is designed to work with CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions workflow
-- name: Run Tests
-  run: |
-    python -m pytest --cov=main --cov-report=xml
-    python -m pytest -m "not slow"  # Skip slow tests in CI
-```
-
-### Pre-commit Hooks
-
-Consider adding pre-commit hooks to run tests before commits:
-
-```bash
-# Install pre-commit
-pip install pre-commit
-
-# Create .pre-commit-config.yaml
-repos:
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: python -m pytest
-        language: system
-        pass_filenames: false
-```
-
-## Contributing
-
-When adding new features:
-
-1. **Write tests first** (TDD approach)
-2. **Add appropriate markers** to new tests
-3. **Update this README** if adding new test categories
-4. **Ensure all tests pass** before submitting PR
-5. **Add integration tests** for new workflows
+This modular structure makes the test suite more organized, maintainable, and easier to work with as the application grows.
