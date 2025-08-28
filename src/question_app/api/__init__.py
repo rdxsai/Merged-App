@@ -1,6 +1,9 @@
 """
-API package for the Question App.
+API module for the Question App.
 
-This package contains API-related modules including endpoints, routers,
-and API-specific utilities.
+This module contains all the API endpoints organized by functionality.
 """
+
+from .canvas import router as canvas_router
+
+__all__ = ["canvas_router"]

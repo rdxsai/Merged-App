@@ -8,6 +8,10 @@ Module Organization
 
 The application is organized into focused modules for better maintainability:
 
+**API Modules** (`src/question_app/api/`)
+   - ``canvas.py``: Canvas LMS integration endpoints and utilities
+   - Additional API modules can be added for other functionality
+
 **Models** (`src/question_app/models/`)
    - ``question.py``: Question and answer data models
    - ``objective.py``: Learning objective data models
@@ -18,8 +22,8 @@ The application is organized into focused modules for better maintainability:
 
 **Main Application** (`src/question_app/main.py`)
    - FastAPI application setup and configuration
-   - API endpoint definitions
-   - Business logic orchestration
+   - Router integration and orchestration
+   - Web interface endpoints
 
 Authentication
 --------------
@@ -111,7 +115,9 @@ including editing, creating, updating, and deleting questions.
 Canvas Integration
 ~~~~~~~~~~~~~~~~~
 
-.. http:post:: /fetch-questions
+The Canvas integration endpoints are organized in the Canvas API module for better maintainability.
+
+.. http:post:: /api/fetch-questions
 
    Fetch all questions from Canvas API.
 

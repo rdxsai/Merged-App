@@ -255,7 +255,7 @@ class TestErrorHandling:
     def test_missing_configuration_handling(self, client):
         """Test handling of missing configuration"""
         # Test with missing Canvas configuration
-        with patch("question_app.main.CANVAS_BASE_URL", None):
+        with patch("question_app.api.canvas.CANVAS_BASE_URL", None):
             response = client.get("/api/courses")
             assert response.status_code == 400
 

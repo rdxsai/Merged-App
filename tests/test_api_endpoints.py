@@ -60,7 +60,7 @@ class TestCoursesAPI:
             {"id": 2, "name": "Course 2", "course_code": "CS102"},
         ]
 
-        with patch("question_app.main.fetch_courses", return_value=mock_courses):
+        with patch("question_app.api.canvas.fetch_courses", return_value=mock_courses):
             response = client.get("/api/courses")
             assert response.status_code == 200
             data = response.json()
@@ -70,7 +70,7 @@ class TestCoursesAPI:
     @pytest.mark.asyncio
     async def test_get_courses_missing_config(self, client):
         """Test courses fetch with missing configuration"""
-        with patch("question_app.main.CANVAS_BASE_URL", None):
+        with patch("question_app.api.canvas.CANVAS_BASE_URL", None):
             response = client.get("/api/courses")
             assert response.status_code == 400
 
@@ -82,7 +82,7 @@ class TestCoursesAPI:
             {"id": 2, "title": "Quiz 2", "question_count": 15},
         ]
 
-        with patch("question_app.main.fetch_quizzes", return_value=mock_quizzes):
+        with patch("question_app.api.canvas.fetch_quizzes", return_value=mock_quizzes):
             response = client.get("/api/courses/123/quizzes")
             assert response.status_code == 200
             data = response.json()
@@ -117,9 +117,9 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_success(self, client, sample_questions):
         """Test successful questions fetch"""
-        with patch("question_app.main.fetch_all_questions", return_value=sample_questions):
-            with patch("question_app.main.save_questions", return_value=True):
-                response = client.post("/fetch-questions")
+        with patch("question_app.api.canvas.fetch_all_questions", return_value=sample_questions):
+            with patch("question_app.api.canvas.save_questions", return_value=True):
+                response = client.post("/api/fetch-questions")
                 assert response.status_code == 200
                 data = response.json()
                 assert data["success"] is True
@@ -127,9 +127,9 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_save_failure(self, client, sample_questions):
         """Test questions fetch with save failure"""
-        with patch("question_app.main.fetch_all_questions", return_value=sample_questions):
-            with patch("question_app.main.save_questions", return_value=False):
-                response = client.post("/fetch-questions")
+        with patch("question_app.api.canvas.fetch_all_questions", return_value=sample_questions):
+            with patch("question_app.api.canvas.save_questions", return_value=False):
+                response = client.post("/api/fetch-questions")
                 assert response.status_code == 500
 
     def test_delete_question_success(self, client, sample_questions):

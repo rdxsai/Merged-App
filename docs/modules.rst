@@ -15,7 +15,10 @@ Package Structure
 
    src/question_app/
    ├── __init__.py              # Package initialization
-   ├── main.py                  # FastAPI application and endpoints
+   ├── main.py                  # FastAPI application and router integration
+   ├── api/                     # API endpoints and routers
+   │   ├── __init__.py          # API module exports
+   │   └── canvas.py            # Canvas LMS integration endpoints
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
    │   ├── question.py          # Question-related models
@@ -24,7 +27,6 @@ Package Structure
    │   ├── __init__.py
    │   ├── file_utils.py        # File I/O operations
    │   └── text_utils.py        # Text processing utilities
-   ├── api/                     # API endpoints (planned)
    ├── core/                    # Core configuration (planned)
    └── services/                # Business logic (planned)
 
@@ -145,6 +147,40 @@ Handles text processing and cleaning operations:
    # Extract topic
    topic = extract_topic_from_text("Solve the quadratic equation x² + 5x + 6 = 0")
 
+API Package
+-----------
+
+**File**: ``api/canvas.py``
+
+The Canvas API module contains all Canvas LMS integration endpoints and utilities:
+
+- Canvas course and quiz management
+- Question fetching from Canvas API
+- Configuration management
+- Canvas API request utilities
+
+**Key Functions**:
+- ``fetch_courses()``: Fetch courses from Canvas LMS
+- ``fetch_quizzes(course_id)``: Fetch quizzes for a specific course
+- ``fetch_all_questions()``: Fetch all questions from a Canvas quiz
+- ``make_canvas_request()``: Make Canvas API requests with retry logic
+- ``clean_question_text()``: Clean HTML tags from question text
+
+**Endpoints**:
+- `GET /api/courses` - Get all available courses
+- `GET /api/courses/{course_id}/quizzes` - Get all quizzes for a specific course
+- `POST /api/configuration` - Update course and quiz configuration
+- `POST /api/fetch-questions` - Fetch questions from Canvas API
+
+**Usage**:
+
+.. code-block:: python
+
+   from question_app.api.canvas import router as canvas_router
+   
+   # Include in FastAPI app
+   app.include_router(canvas_router)
+
 Main Application
 ---------------
 
@@ -153,8 +189,8 @@ Main Application
 The main application file contains:
 
 - FastAPI application setup and configuration
-- API endpoint definitions
-- Business logic orchestration
+- Router integration and orchestration
+- Web interface endpoints
 - Imports and re-exports from organized modules
 
 **Key Responsibilities**:
@@ -188,13 +224,15 @@ Future Modules
 
 The following modules are planned for future development:
 
-API Package
-~~~~~~~~~~
+Additional API Modules
+~~~~~~~~~~~~~~~~~~~~~
 
-**Purpose**: Organize API endpoints by functionality
+**Purpose**: Further organize API endpoints by functionality
 **Planned Structure**:
-- ``api/questions.py``: Question-related endpoints
-- ``api/chat.py``: Chat-related endpoints
+- ``api/questions.py``: Question management endpoints
+- ``api/chat.py``: Chat assistant endpoints
+- ``api/ai.py``: AI feedback generation endpoints
+- ``api/objectives.py``: Learning objectives endpoints
 - ``api/canvas.py``: Canvas integration endpoints
 - ``api/system.py``: System configuration endpoints
 

@@ -13,6 +13,8 @@ questionapp/
 │       ├── __init__.py
 │       ├── main.py           # FastAPI application entry point
 │       ├── api/              # API endpoints and routers
+│       │   ├── __init__.py   # API module exports
+│       │   └── canvas.py     # Canvas LMS integration endpoints
 │       ├── core/             # Core application logic
 │       ├── models/           # Pydantic models and data structures
 │       ├── services/         # Business logic and external integrations
@@ -203,10 +205,33 @@ Data files are stored in the `data/` directory:
 The application follows a modular architecture:
 
 - **API Layer** (`src/question_app/api/`): FastAPI endpoints and routers
+  - **Canvas API** (`canvas.py`): Canvas LMS integration endpoints
+  - Additional API modules can be added for other functionality
 - **Core Layer** (`src/question_app/core/`): Core application logic
 - **Models Layer** (`src/question_app/models/`): Data models and schemas
 - **Services Layer** (`src/question_app/services/`): Business logic and external integrations
 - **Utils Layer** (`src/question_app/utils/`): Utility functions and helpers
+
+## 🔌 API Structure
+
+The API is organized into focused modules for better maintainability:
+
+### Canvas Integration (`/api/*`)
+
+- `GET /api/courses` - Get all available courses
+- `GET /api/courses/{course_id}/quizzes` - Get all quizzes for a specific course
+- `POST /api/configuration` - Update course and quiz configuration
+- `POST /api/fetch-questions` - Fetch questions from Canvas API
+
+### Web Interface (`/*`)
+
+- `GET /` - Main application page
+- `GET /questions/{id}` - Question edit page
+- `GET /questions/new` - New question creation page
+- `POST /questions/{id}/generate-feedback` - Generate AI feedback
+- And more...
+
+See `docs/api_structure.md` for detailed API documentation.
 
 ## 🤝 Contributing
 
