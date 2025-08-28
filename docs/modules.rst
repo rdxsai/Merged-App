@@ -21,8 +21,9 @@ Package Structure
    │   ├── canvas.py            # Canvas LMS integration endpoints
    │   ├── questions.py         # Question CRUD operations and endpoints
    │   ├── chat.py              # RAG-based chat functionality
-│   ├── vector_store.py      # Vector store operations and semantic search
-   │   └── system_prompt.py     # System prompt management endpoints
+   │   ├── vector_store.py      # Vector store operations and semantic search
+   │   ├── system_prompt.py     # System prompt management endpoints
+   │   └── debug.py             # Debugging and testing endpoints
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
    │   ├── question.py          # Question-related models

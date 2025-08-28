@@ -152,6 +152,24 @@ Contains all vector store operations and semantic search functionality:
 - Document chunking and processing
 - Vector store status monitoring
 
+### Debug API (`src/question_app/api/debug.py`)
+
+Contains all debugging and testing functionality:
+
+#### Endpoints:
+
+- `GET /debug/question/{question_id}` - Inspect specific question details
+- `GET /debug/config` - Check application configuration status
+- `GET /debug/ollama-test` - Test Ollama connection and model availability
+
+#### Features:
+
+- Question inspection and debugging
+- Configuration validation and status reporting
+- Ollama service connectivity testing
+- Comprehensive error reporting and troubleshooting
+- Development and testing support
+
 ## Services
 
 ### AI Service (`src/question_app/services/ai_service.py`)
@@ -174,13 +192,14 @@ Contains AI-related business logic:
 The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router, questions_router, chat_router, vector_store_router, system_prompt_router, objectives_router
+from .api import canvas_router, questions_router, chat_router, vector_store_router, system_prompt_router, objectives_router, debug_router
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
 app.include_router(vector_store_router)
 app.include_router(system_prompt_router)
 app.include_router(objectives_router)
+app.include_router(debug_router)
 ```
 
 ## Benefits

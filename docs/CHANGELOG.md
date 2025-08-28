@@ -4,6 +4,15 @@
 
 ### Added
 
+- **Debug API Module** (`src/question_app/api/debug.py`)
+
+  - Extracted debugging and testing endpoints from main.py into dedicated module
+  - Organized debugging functionality into focused module
+  - Added question inspection, configuration validation, and Ollama testing endpoints
+  - Moved debugging utilities and testing functions
+  - Added comprehensive error handling and logging
+  - Maintained backward compatibility with existing debugging functionality
+
 - **Vector Store API Module** (`src/question_app/api/vector_store.py`)
 
   - Extracted vector store operations from chat.py into dedicated module
@@ -73,6 +82,18 @@
   - Vector store endpoints now use `/vector-store/*` prefix for consistency
   - System prompt endpoints now use `/system-prompt/*` prefix for consistency
   - Objectives endpoints now use `/objectives/*` prefix for consistency
+  - Debug endpoints now use `/debug/*` prefix for consistency
+
+### Changed
+
+- **API Endpoint Paths**:
+  - `/fetch-questions` → `/api/fetch-questions`
+  - Canvas endpoints now use `/api/*` prefix for consistency
+  - Question endpoints maintain original paths for backward compatibility
+  - Chat endpoints now use `/chat/*` prefix for consistency
+  - Vector store endpoints now use `/vector-store/*` prefix for consistency
+  - System prompt endpoints now use `/system-prompt/*` prefix for consistency
+  - Objectives endpoints now use `/objectives/*` prefix for consistency
 - **Frontend Updates**:
   - Updated `templates/index.html` to use new `/api/fetch-questions` endpoint
 - **Test Updates**:
@@ -82,7 +103,8 @@
   - Updated test files to patch functions in `question_app.api.vector_store` instead of `question_app.api.chat`
   - Updated test files to patch functions in `question_app.api.system_prompt` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.objectives` instead of `question_app.main`
-  - Fixed import paths for Canvas-related, question-related, vector store, system prompt, and objectives functions
+  - Updated test files to patch functions in `question_app.api.debug` instead of `question_app.main`
+  - Fixed import paths for Canvas-related, question-related, vector store, system prompt, objectives, and debug functions
   - Fixed AI service mocking to target correct import paths
   - Updated test expectations for vector store error handling behavior
 
@@ -91,8 +113,8 @@
 - **README.md**: Added API structure section and updated project structure
 - **docs/api.rst**: Updated module organization and endpoint documentation
 - **docs/modules.rst**: Added API package and Services package documentation
-- **docs/api_structure.md**: Updated with Vector Store API, Questions API, System Prompt API, and AI Service information
-- **docs/CHANGELOG.md**: Added vector store refactoring documentation
+- **docs/api_structure.md**: Updated with Vector Store API, Questions API, System Prompt API, Debug API, and AI Service information
+- **docs/CHANGELOG.md**: Added debug API refactoring documentation
 
 ### Architecture Improvements
 

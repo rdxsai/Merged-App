@@ -399,8 +399,8 @@ class TestDebugEndpoints:
 
     def test_debug_config(self, client, mock_env_vars):
         """Test debug configuration endpoint"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
-            with patch("question_app.main.load_questions", return_value=[]):
+        with patch("question_app.api.debug.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.api.debug.load_questions", return_value=[]):
                 with patch("os.path.exists", return_value=True):
                     response = client.get("/debug/config")
                     assert response.status_code == 200
@@ -410,7 +410,7 @@ class TestDebugEndpoints:
 
     def test_debug_question(self, client, sample_questions):
         """Test debug question endpoint"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
+        with patch("question_app.api.debug.load_questions", return_value=sample_questions):
             response = client.get("/debug/question/1")
             assert response.status_code == 200
             data = response.json()
@@ -418,7 +418,7 @@ class TestDebugEndpoints:
 
     def test_debug_question_not_found(self, client):
         """Test debug question endpoint with non-existent question"""
-        with patch("question_app.main.load_questions", return_value=[]):
+        with patch("question_app.api.debug.load_questions", return_value=[]):
             response = client.get("/debug/question/999")
             assert response.status_code == 200
             data = response.json()

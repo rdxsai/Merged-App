@@ -19,7 +19,8 @@ questionapp/
 │       │   ├── chat.py       # RAG-based chat endpoints
 │       │   ├── vector_store.py # Vector store operations endpoints
 │       │   ├── objectives.py # Learning objectives management endpoints
-│       │   └── system_prompt.py  # System prompt management endpoints
+│       │   ├── system_prompt.py  # System prompt management endpoints
+│       │   └── debug.py      # Debugging and testing endpoints
 │       ├── core/             # Core application logic
 │       ├── models/           # Pydantic models and data structures
 │       ├── services/         # Business logic and external integrations
@@ -215,6 +216,7 @@ The application follows a modular architecture:
   - **Chat API** (`chat.py`): RAG-based chat functionality
   - **Vector Store API** (`vector_store.py`): Vector store operations and semantic search
   - **Objectives API** (`objectives.py`): Learning objectives management
+  - **Debug API** (`debug.py`): Debugging and testing endpoints
   - Additional API modules can be added for other functionality
 - **Core Layer** (`src/question_app/core/`): Core application logic
 - **Models Layer** (`src/question_app/models/`): Data models and schemas
@@ -258,6 +260,12 @@ The API is organized into focused modules for better maintainability:
 
 - `GET /objectives/` - Learning objectives management page
 - `POST /objectives/` - Save learning objectives
+
+### Debug and Testing (`/debug/*`)
+
+- `GET /debug/question/{question_id}` - Inspect specific question details
+- `GET /debug/config` - Check application configuration status
+- `GET /debug/ollama-test` - Test Ollama connection and model availability
 
 See `docs/api_structure.md` for detailed API documentation.
 

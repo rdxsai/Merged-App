@@ -69,7 +69,7 @@ class TestFullWorkflow:
         """Test complete question lifecycle: create, read, update, delete"""
         # Mock file operations to use temp directory
         with patch(
-            "question_app.main.DATA_FILE",
+            "question_app.utils.file_utils.DATA_FILE",
             os.path.join(temp_data_dir, "quiz_questions.json"),
         ):
             with patch("question_app.api.questions.load_questions") as mock_load:
@@ -132,7 +132,7 @@ class TestFullWorkflow:
     def test_system_prompt_workflow(self, client, temp_data_dir):
         """Test system prompt management workflow"""
         with patch(
-            "question_app.main.SYSTEM_PROMPT_FILE",
+            "question_app.utils.file_utils.SYSTEM_PROMPT_FILE",
             os.path.join(temp_data_dir, "system_prompt.txt"),
         ):
             # 1. Get current prompt
