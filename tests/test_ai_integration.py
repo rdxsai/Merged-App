@@ -89,7 +89,7 @@ class TestAIFeedbackGeneration:
         question_data = {"id": 1, "question_text": "Test question"}
         system_prompt = "Test prompt"
 
-        with patch("question_app.services.ai_service.AZURE_OPENAI_ENDPOINT", None):
+        with patch("question_app.core.config.Config.validate_azure_openai_config", return_value=False):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)

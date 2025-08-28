@@ -1,6 +1,73 @@
 # Changelog
 
-## [Unreleased] - API Restructuring and Modularization
+## [Unreleased] - Core Configuration and App Setup Refactoring
+
+### Added
+
+- **Core Configuration Module** (`src/question_app/core/config.py`)
+
+  - Centralized all environment variable loading and configuration management
+  - Created Config class with validation methods for Canvas and Azure OpenAI
+  - Added helper methods for checking missing configuration variables
+  - Consolidated all configuration variables in one place
+  - Improved configuration validation and error reporting
+
+- **Core Logging Module** (`src/question_app/core/logging.py`)
+
+  - Centralized logging configuration and setup
+  - Provided setup functions for consistent logging across the application
+  - Added helper functions for getting logger instances
+  - Standardized logging format and handlers
+
+- **Core App Setup Module** (`src/question_app/core/app.py`)
+
+  - Centralized FastAPI application creation and configuration
+  - Handled router registration and template setup
+  - Managed static file mounting and middleware setup
+  - Provided clean separation of concerns for app initialization
+
+- **Core Module Exports** (`src/question_app/core/__init__.py`)
+  - Exported all core modules for easy importing
+  - Provided clean API for accessing core functionality
+
+### Changed
+
+- **Main Application** (`src/question_app/main.py`)
+
+  - Simplified main module significantly by removing duplicate functions
+  - Updated to use new core modules for configuration and app setup
+  - Cleaned up imports and reduced code complexity
+  - Removed large AI feedback generation function (moved to services)
+
+- **All API Modules Updated**
+
+  - Updated all API modules to use new configuration system
+  - Replaced direct environment variable access with config module
+  - Updated logging to use centralized logging system
+  - Improved error handling with new validation methods
+
+- **AI Service Module** (`src/question_app/services/ai_service.py`)
+
+  - Updated to use new configuration system
+  - Removed duplicate environment variable loading
+  - Improved error handling with new validation methods
+
+- **Test Updates**
+  - Updated all tests to work with new configuration structure
+  - Fixed test patches to target new core configuration module
+  - Updated integration tests and AI integration tests
+  - All 135 tests now pass with new architecture
+
+### Benefits
+
+- **Centralized Configuration**: All environment variables managed in one place
+- **Better Validation**: Configuration validation is centralized and consistent
+- **Improved Maintainability**: Changes to configuration only need to be made in one place
+- **Cleaner Code**: Removed duplicate code and simplified modules
+- **Better Testing**: Configuration can be easily mocked and tested
+- **Modular Design**: Clear separation between configuration, logging, and app setup
+
+## [Previous] - API Restructuring and Modularization
 
 ### Added
 

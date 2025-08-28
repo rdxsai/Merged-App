@@ -8,6 +8,7 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
    :caption: Contents:
 
    modules
+   core_modules
    api
    api_examples
    installation
@@ -59,10 +60,14 @@ Modular Design
 
 The application follows a modular architecture for better maintainability:
 
+* **Core Package**: Centralized configuration, logging, and app setup
+* **API Package**: Modular API endpoints for different functionalities
 * **Models Package**: Pydantic data models for questions and objectives
+* **Services Package**: Business logic and external integrations
 * **Utils Package**: Utility functions for file I/O and text processing
 * **Main Application**: FastAPI setup and endpoint orchestration
-* **Future Modules**: Planned API, Core, and Services packages
+
+See :doc:`core_modules` for detailed core module documentation.
 
 See :doc:`modules` for detailed module organization.
 

@@ -67,8 +67,15 @@ Project Structure
    │       │   ├── canvas.py
    │       │   ├── questions.py
    │       │   ├── chat.py
-   │       │   └── system_prompt.py
-   │       ├── core/           # Core configuration (future)
+   │       │   ├── vector_store.py
+   │       │   ├── objectives.py
+   │       │   ├── system_prompt.py
+   │       │   └── debug.py
+   │       ├── core/           # Core configuration and app setup
+   │       │   ├── __init__.py
+   │       │   ├── config.py
+   │       │   ├── logging.py
+   │       │   └── app.py
    │       └── services/       # Business logic
    │           ├── __init__.py
    │           └── ai_service.py

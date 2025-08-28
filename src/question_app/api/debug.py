@@ -7,25 +7,19 @@ This module contains all debugging and testing functionality including:
 - Ollama connection testing endpoints
 """
 
-import logging
 import os
 from typing import Dict, Any  # noqa: F401
 
 import httpx
 from fastapi import APIRouter
 
+from ..core import config, get_logger
 from ..utils import load_questions, load_system_prompt
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for debug endpoints
 router = APIRouter(prefix="/debug", tags=["debug"])
-
-# Configuration from environment
-CANVAS_BASE_URL = os.getenv("CANVAS_BASE_URL")
-CANVAS_API_TOKEN = os.getenv("CANVAS_API_TOKEN")
-COURSE_ID = os.getenv("COURSE_ID")
-QUIZ_ID = os.getenv("QUIZ_ID")
 
 # File paths
 DATA_FILE = "data/quiz_questions.json"
@@ -113,38 +107,22 @@ async def debug_config():
             - ollama_embedding_model: Ollama embedding model
             - ollama_host_with_protocol: Full Ollama URL with protocol
     """
-    # Import environment variables from chat and vector_store modules
-    from .chat import (
-        AZURE_OPENAI_ENDPOINT,
-        AZURE_OPENAI_DEPLOYMENT_ID,
-        AZURE_OPENAI_SUBSCRIPTION_KEY,
-        AZURE_OPENAI_API_VERSION,
-    )
-    from .vector_store import (
-        OLLAMA_HOST,
-        OLLAMA_EMBEDDING_MODEL,
-    )
+    # Configuration is now handled by the core config module
     
     return {
-        "canvas_configured": bool(
-            CANVAS_BASE_URL and CANVAS_API_TOKEN and COURSE_ID and QUIZ_ID
-        ),
-        "azure_configured": bool(
-            AZURE_OPENAI_ENDPOINT
-            and AZURE_OPENAI_DEPLOYMENT_ID
-            and AZURE_OPENAI_SUBSCRIPTION_KEY
-        ),
+        "canvas_configured": config.validate_canvas_config(),
+        "azure_configured": config.validate_azure_openai_config(),
         "has_system_prompt": bool(load_system_prompt()),
         "data_file_exists": os.path.exists(DATA_FILE),
         "questions_count": len(load_questions()) if os.path.exists(DATA_FILE) else 0,
-        "azure_endpoint": AZURE_OPENAI_ENDPOINT,
-        "azure_deployment_id": AZURE_OPENAI_DEPLOYMENT_ID,
-        "azure_api_version": AZURE_OPENAI_API_VERSION,
-        "ollama_host": OLLAMA_HOST,
-        "ollama_embedding_model": OLLAMA_EMBEDDING_MODEL,
-        "ollama_host_with_protocol": OLLAMA_HOST
-        if OLLAMA_HOST.startswith(("http://", "https://"))
-        else f"http://{OLLAMA_HOST}",
+        "azure_endpoint": config.AZURE_OPENAI_ENDPOINT,
+        "azure_deployment_id": config.AZURE_OPENAI_DEPLOYMENT_ID,
+        "azure_api_version": config.AZURE_OPENAI_API_VERSION,
+        "ollama_host": config.OLLAMA_HOST,
+        "ollama_embedding_model": config.OLLAMA_EMBEDDING_MODEL,
+        "ollama_host_with_protocol": config.OLLAMA_HOST
+        if config.OLLAMA_HOST.startswith(("http://", "https://"))
+        else f"http://{config.OLLAMA_HOST}",
     }
 
 
@@ -166,9 +144,7 @@ async def test_ollama_connection():
             - error: Error details if connection fails
     """
     # Import environment variables from vector_store module
-    from .vector_store import OLLAMA_HOST, OLLAMA_EMBEDDING_MODEL
-    
-    ollama_host = OLLAMA_HOST
+    ollama_host = config.OLLAMA_HOST
     if not ollama_host.startswith(("http://", "https://")):
         ollama_host = f"http://{ollama_host}"
 
@@ -185,8 +161,8 @@ async def test_ollama_connection():
                     "ollama_connected": True,
                     "ollama_host": ollama_host,
                     "available_models": model_names,
-                    "embedding_model_available": OLLAMA_EMBEDDING_MODEL in model_names,
-                    "configured_model": OLLAMA_EMBEDDING_MODEL,
+                            "embedding_model_available": config.OLLAMA_EMBEDDING_MODEL in model_names,
+        "configured_model": config.OLLAMA_EMBEDDING_MODEL,
                 }
             else:
                 return {

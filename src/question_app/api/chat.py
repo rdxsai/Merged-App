@@ -10,14 +10,12 @@ This module contains all RAG-based chat functionality including:
 - Welcome message management
 """
 
-import logging
-import os
-
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..core import config, get_logger
 from ..utils import (
     load_chat_system_prompt,
     save_chat_system_prompt,
@@ -26,25 +24,15 @@ from ..utils import (
     get_default_chat_system_prompt,
     get_default_welcome_message,
 )
+from .vector_store import search_vector_store
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for chat endpoints
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Templates setup
 templates = Jinja2Templates(directory="templates")
-
-# Configuration from environment
-AZURE_OPENAI_ENDPOINT = os.getenv(
-    "AZURE_OPENAI_ENDPOINT", "https://itls-openai-connect.azure-api.net"
-)
-AZURE_OPENAI_DEPLOYMENT_ID = os.getenv("AZURE_OPENAI_DEPLOYMENT_ID")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2023-12-01-preview")
-AZURE_OPENAI_SUBSCRIPTION_KEY = os.getenv("AZURE_OPENAI_SUBSCRIPTION_KEY")
-
-# Import vector store functions
-from .vector_store import search_vector_store
 
 
 # Chat endpoints
@@ -103,10 +91,14 @@ async def chat_message(request: Request):
         # Call Azure OpenAI for chat completion
         logger.info("Calling Azure OpenAI for chat completion...")
 
-        url = f"{AZURE_OPENAI_ENDPOINT}/us-east/deployments/{AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
+        url = (
+            f"{config.AZURE_OPENAI_ENDPOINT}/us-east/deployments/"
+            f"{config.AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions"
+            f"?api-version={config.AZURE_OPENAI_API_VERSION}"
+        )
 
         headers = {
-            "Ocp-Apim-Subscription-Key": AZURE_OPENAI_SUBSCRIPTION_KEY,
+            "Ocp-Apim-Subscription-Key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
             "Content-Type": "application/json",
         }
 

@@ -9,8 +9,6 @@ This module contains all Canvas LMS integration endpoints including:
 """
 
 import asyncio
-import logging
-import os
 import random
 import re
 from typing import Any, Dict, List
@@ -19,17 +17,13 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..core import config, get_logger
+
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router
 router = APIRouter(prefix="/api", tags=["canvas"])
-
-# Configuration from environment
-CANVAS_BASE_URL = os.getenv("CANVAS_BASE_URL")
-CANVAS_API_TOKEN = os.getenv("CANVAS_API_TOKEN")
-COURSE_ID = os.getenv("COURSE_ID")
-QUIZ_ID = os.getenv("QUIZ_ID")
 
 
 class ConfigurationUpdate(BaseModel):
@@ -169,17 +163,19 @@ async def fetch_courses() -> List[Dict[str, Any]]:
         The function filters for active enrollments and includes term information.
         It requires valid Canvas API configuration (base URL and token).
     """
-    if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
-        logger.error("Missing Canvas configuration")
+    if not config.validate_canvas_config():
+        missing_configs = config.get_missing_canvas_configs()
+        logger.error(f"Missing Canvas configuration: {', '.join(missing_configs)}")
         raise HTTPException(
-            status_code=400, detail="Canvas API configuration is incomplete"
+            status_code=400, 
+            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}"
         )
 
-    headers = {"Authorization": f"Bearer {CANVAS_API_TOKEN}"}
+    headers = {"Authorization": f"Bearer {config.CANVAS_API_TOKEN}"}
     courses = []
 
     try:
-        url = f"{CANVAS_BASE_URL}/api/v1/courses"
+        url = f"{config.CANVAS_BASE_URL}/api/v1/courses"
         params = {"enrollment_state": "active", "per_page": 100, "include": ["term"]}
 
         async with httpx.AsyncClient() as client:
@@ -244,17 +240,19 @@ async def fetch_quizzes(course_id: str) -> List[Dict[str, Any]]:
         The function requires valid Canvas API configuration and the user
         must have access to the specified course.
     """
-    if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN]):
-        logger.error("Missing Canvas configuration")
+    if not config.validate_canvas_config():
+        missing_configs = config.get_missing_canvas_configs()
+        logger.error(f"Missing Canvas configuration: {', '.join(missing_configs)}")
         raise HTTPException(
-            status_code=400, detail="Canvas API configuration is incomplete"
+            status_code=400, 
+            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}"
         )
 
-    headers = {"Authorization": f"Bearer {CANVAS_API_TOKEN}"}
+    headers = {"Authorization": f"Bearer {config.CANVAS_API_TOKEN}"}
     quizzes = []
 
     try:
-        url = f"{CANVAS_BASE_URL}/api/v1/courses/{course_id}/quizzes"
+        url = f"{config.CANVAS_BASE_URL}/api/v1/courses/{course_id}/quizzes"
         params = {"per_page": 100}
 
         async with httpx.AsyncClient() as client:
@@ -311,11 +309,15 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
         It automatically handles pagination and cleans question text to remove
         unwanted HTML tags like link, script, and style tags.
     """
-    if not all([CANVAS_BASE_URL, CANVAS_API_TOKEN, COURSE_ID, QUIZ_ID]):
-        raise HTTPException(status_code=500, detail="Missing Canvas configuration")
+    if not config.validate_canvas_config():
+        missing_configs = config.get_missing_canvas_configs()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Missing Canvas configuration: {', '.join(missing_configs)}"
+        )
 
     headers = {
-        "Authorization": f"Bearer {CANVAS_API_TOKEN}",
+        "Authorization": f"Bearer {config.CANVAS_API_TOKEN}",
         "Content-Type": "application/json",
     }
 
@@ -325,7 +327,7 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
 
     while True:
         url = (
-            f"{CANVAS_BASE_URL}/api/v1/courses/{COURSE_ID}/quizzes/{QUIZ_ID}/questions"
+            f"{config.CANVAS_BASE_URL}/api/v1/courses/{config.COURSE_ID}/quizzes/{config.QUIZ_ID}/questions"
         )
         params = f"?page={page}&per_page={per_page}"
 

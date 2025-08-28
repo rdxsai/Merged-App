@@ -70,7 +70,7 @@ class TestCoursesAPI:
     @pytest.mark.asyncio
     async def test_get_courses_missing_config(self, client):
         """Test courses fetch with missing configuration"""
-        with patch("question_app.api.canvas.CANVAS_BASE_URL", None):
+        with patch("question_app.core.config.Config.validate_canvas_config", return_value=False):
             response = client.get("/api/courses")
             assert response.status_code == 400
 

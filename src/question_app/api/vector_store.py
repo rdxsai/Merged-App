@@ -9,28 +9,23 @@ This module contains all vector store operations including:
 """
 
 import asyncio
-import logging
-import os
 from typing import Any, Dict, List, Tuple
 
 import chromadb
 import httpx
 from fastapi import APIRouter, HTTPException
 
+from ..core import config, get_logger
 from ..utils import (
     clean_html_for_vector_store,
     load_questions,
     extract_topic_from_text,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for vector store endpoints
 router = APIRouter(prefix="/vector-store", tags=["vector-store"])
-
-# Configuration from environment
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 
 
 async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
@@ -88,13 +83,13 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
 
                 # Prepare request payload
                 payload = {
-                    "model": OLLAMA_EMBEDDING_MODEL,
+                    "model": config.OLLAMA_EMBEDDING_MODEL,
                     "prompt": text.strip()
                 }
 
                 # Make request to Ollama
                 response = await client.post(
-                    f"{OLLAMA_HOST}/api/embeddings",
+                    f"{config.OLLAMA_HOST}/api/embeddings",
                     json=payload,
                     headers={"Content-Type": "application/json"}
                 )

@@ -7,18 +7,17 @@ This module contains all system prompt management functionality including:
 - Test system prompt functionality
 """
 
-import logging
-
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..core import get_logger
 from ..utils import (
     load_system_prompt,
     save_system_prompt,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for system prompt endpoints
 router = APIRouter(prefix="/system-prompt", tags=["system-prompt"])

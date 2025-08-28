@@ -35,7 +35,11 @@ Package Structure
    ├── services/                # Business logic services
    │   ├── __init__.py          # Services package initialization
    │   └── ai_service.py        # AI feedback generation and Azure OpenAI integration
-   └── core/                    # Core configuration (planned)
+   └── core/                    # Core configuration and app setup
+       ├── __init__.py          # Core module exports
+       ├── config.py            # Centralized configuration management
+       ├── logging.py           # Centralized logging setup
+       └── app.py               # FastAPI application setup
 
 Models Package
 -------------
@@ -387,11 +391,19 @@ Core Package
 ~~~~~~~~~~~
 
 **Purpose**: Application core configuration and setup
-**Planned Structure**:
-- ``core/config.py``: Configuration management
-- ``core/database.py``: Database connections
-- ``core/logging.py``: Logging configuration
-- ``core/app.py``: Application initialization
+**Implemented Structure**:
+- ``core/config.py``: Centralized configuration management ✅
+- ``core/logging.py``: Centralized logging configuration ✅
+- ``core/app.py``: FastAPI application setup ✅
+- ``core/__init__.py``: Core module exports ✅
+
+**Key Features**:
+- Centralized environment variable management
+- Configuration validation and error reporting
+- Consistent logging across the application
+- Clean application initialization and setup
+
+See :doc:`core_modules` for detailed documentation.
 
 Services Package
 ~~~~~~~~~~~~~~~

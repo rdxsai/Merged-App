@@ -5,16 +5,16 @@ This module contains FastAPI endpoints for managing learning objectives,
 including viewing and saving objectives.
 """
 
-import logging
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..core import get_logger
 from ..models.objective import ObjectivesUpdate
 from ..utils.file_utils import load_objectives, save_objectives
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router
 router = APIRouter(prefix="/objectives", tags=["objectives"])

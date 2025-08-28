@@ -3,6 +3,10 @@ Configuration
 
 This document describes all configuration options for the Canvas Quiz Manager application.
 
+The application uses a centralized configuration system located in ``src/question_app/core/config.py``.
+All environment variables are loaded and validated through this system, providing consistent
+configuration management across the entire application.
+
 Environment Variables
 --------------------
 

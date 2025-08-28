@@ -6,25 +6,16 @@ using Azure OpenAI and other AI integrations.
 """
 
 import json
-import logging
-import os
 import re
 from typing import Dict, Any
 
 import httpx
 from fastapi import HTTPException
 
+from ..core import config, get_logger
 from ..utils import clean_answer_feedback
 
-logger = logging.getLogger(__name__)
-
-# Azure OpenAI Configuration
-AZURE_OPENAI_ENDPOINT = os.getenv(
-    "AZURE_OPENAI_ENDPOINT", "https://itls-openai-connect.azure-api.net"
-)
-AZURE_OPENAI_DEPLOYMENT_ID = os.getenv("AZURE_OPENAI_DEPLOYMENT_ID")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2023-12-01-preview")
-AZURE_OPENAI_SUBSCRIPTION_KEY = os.getenv("AZURE_OPENAI_SUBSCRIPTION_KEY")
+logger = get_logger(__name__)
 
 
 async def generate_feedback_with_ai(
@@ -82,20 +73,8 @@ async def generate_feedback_with_ai(
         f"Starting AI feedback generation for question ID: {question_data.get('id', 'unknown')}"
     )
 
-    if not all(
-        [
-            AZURE_OPENAI_ENDPOINT,
-            AZURE_OPENAI_DEPLOYMENT_ID,
-            AZURE_OPENAI_SUBSCRIPTION_KEY,
-        ]
-    ):
-        missing_configs = []
-        if not AZURE_OPENAI_ENDPOINT:
-            missing_configs.append("AZURE_OPENAI_ENDPOINT")
-        if not AZURE_OPENAI_DEPLOYMENT_ID:
-            missing_configs.append("AZURE_OPENAI_DEPLOYMENT_ID")
-        if not AZURE_OPENAI_SUBSCRIPTION_KEY:
-            missing_configs.append("AZURE_OPENAI_SUBSCRIPTION_KEY")
+    if not config.validate_azure_openai_config():
+        missing_configs = config.get_missing_azure_openai_configs()
         logger.error(
             f"Missing Azure OpenAI configuration: {', '.join(missing_configs)}"
         )
@@ -105,11 +84,15 @@ async def generate_feedback_with_ai(
         )
 
     # Construct the Azure OpenAI URL
-    url = f"{AZURE_OPENAI_ENDPOINT}/us-east/deployments/{AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions?api-version={AZURE_OPENAI_API_VERSION}"
+    url = (
+        f"{config.AZURE_OPENAI_ENDPOINT}/us-east/deployments/"
+        f"{config.AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions"
+        f"?api-version={config.AZURE_OPENAI_API_VERSION}"
+    )
     logger.info(f"Azure OpenAI URL: {url}")
 
     headers = {
-        "Ocp-Apim-Subscription-Key": AZURE_OPENAI_SUBSCRIPTION_KEY,
+        "Ocp-Apim-Subscription-Key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
         "Content-Type": "application/json",
     }
 

@@ -4,13 +4,11 @@ Question API module for the Question App.
 This module contains all question-related CRUD operations and endpoints.
 """
 
-import logging
-import os
-
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..core import config, get_logger
 from ..models import QuestionUpdate
 from ..utils import (
     load_questions,
@@ -22,16 +20,13 @@ from ..utils import (
 )
 from ..services.ai_service import generate_feedback_with_ai
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for question endpoints
 router = APIRouter(prefix="/questions", tags=["questions"])
 
 # Templates setup
 templates = Jinja2Templates(directory="templates")
-
-# Configuration from environment
-QUIZ_ID = os.getenv("QUIZ_ID")
 
 
 @router.delete("/{question_id}")
@@ -67,7 +62,7 @@ async def new_question_page(request: Request):
         "question_text": "Enter your question text here...",
         "question_type": "multiple_choice_question",
         "points_possible": 1.0,
-        "quiz_id": QUIZ_ID,
+        "quiz_id": config.QUIZ_ID,
         "topic": "general",
         "tags": "",
         "learning_objective": "",
@@ -131,7 +126,7 @@ async def create_new_question(question_data: QuestionUpdate):
             "question_text": question_data.question_text,
             "question_type": "multiple_choice_question",  # Default type
             "points_possible": 1.0,  # Default points
-            "quiz_id": QUIZ_ID,
+            "quiz_id": config.QUIZ_ID,
             "topic": question_data.topic,
             "tags": question_data.tags,
             "learning_objective": question_data.learning_objective,

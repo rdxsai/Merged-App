@@ -21,7 +21,11 @@ questionapp/
 │       │   ├── objectives.py # Learning objectives management endpoints
 │       │   ├── system_prompt.py  # System prompt management endpoints
 │       │   └── debug.py      # Debugging and testing endpoints
-│       ├── core/             # Core application logic
+│       ├── core/             # Core configuration and app setup
+│       │   ├── __init__.py   # Core module exports
+│       │   ├── config.py     # Centralized configuration management
+│       │   ├── logging.py    # Centralized logging setup
+│       │   └── app.py        # FastAPI application setup
 │       ├── models/           # Pydantic models and data structures
 │       ├── services/         # Business logic and external integrations
 │       └── utils/            # Utility functions and helpers
