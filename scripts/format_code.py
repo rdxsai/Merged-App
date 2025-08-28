@@ -11,7 +11,7 @@ Key Features:
 - Automatic fixing capabilities
 - Comprehensive error reporting
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Author: Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 

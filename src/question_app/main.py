@@ -26,7 +26,9 @@ Architecture:
 - Business logic in services/ module
 - Utility functions in utils/ module
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Authors:
+  - Bryce Kayanuma <BrycePK@vt.edu>
+  - Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 
@@ -42,7 +44,6 @@ from .utils import load_questions
 
 # TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
 # TODO: Offload vector store to S3 Vector Bucket
-
 
 
 # Set up logging

@@ -18,7 +18,7 @@ Key Features:
 - Comprehensive error reporting
 - Helpful fixing guidance
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Author: Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 

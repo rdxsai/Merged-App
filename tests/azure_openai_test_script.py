@@ -16,7 +16,9 @@ Features:
 - Realistic quiz feedback generation testing
 - Detailed error reporting and debugging information
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Authors:
+  - Bryce Kayanuma <BrycePK@vt.edu>
+  - Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 

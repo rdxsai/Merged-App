@@ -16,7 +16,7 @@ Key Features:
 - Configurable port and host settings
 - Graceful error handling and shutdown
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Author: Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 

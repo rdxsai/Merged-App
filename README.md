@@ -288,6 +288,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 👥 Authors
 
 - **Bryce Kayanuma** - _Initial work_ - [BrycePK@vt.edu](mailto:BrycePK@vt.edu)
+- **Robert Fentress** - [learn@vt.edu](mailto:learn@vt.edu)
 
 ## 🙏 Acknowledgments
 

@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "Canvas Quiz Manager"
-copyright = "2024, Bryce Kayanuma"
-author = "Bryce Kayanuma <BrycePK@vt.edu>"
+copyright = "2025, Robert Fentress"
+author = "Robert Fentress <learn@vt.edu>, Bryce Kayanuma <BrycePK@vt.edu>"
 
 # The full version, including alpha/beta/rc tags
 release = "0.1.0"

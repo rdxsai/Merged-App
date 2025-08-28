@@ -16,7 +16,7 @@ Key Features:
 - Helpful fixing suggestions
 - Configurable checking options
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Author: Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 

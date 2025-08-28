@@ -18,7 +18,7 @@ Key Features:
 - Graceful error handling
 - Poetry script integration
 
-Author: Bryce Kayanuma <BrycePK@vt.edu>
+Author: Robert Fentress <learn@vt.edu>
 Version: 0.1.0
 """
 
