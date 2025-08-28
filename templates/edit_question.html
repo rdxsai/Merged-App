@@ -883,6 +883,8 @@
             
             console.log('=== AI Feedback Generation Started ===');
             console.log('Question ID:', questionId);
+            console.log('Current Question ID:', currentQuestionId);
+            console.log('Is New Question:', isNewQuestion);
             console.log('Button clicked, starting feedback generation...');
             
             isGeneratingFeedback = true;
@@ -890,8 +892,51 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             
             try {
-                const requestUrl = `/questions/${questionId}/generate-feedback`;
-                console.log('Making request to:', requestUrl);
+                // Check if the question has content before proceeding
+                const questionText = questionTextEditor.value().trim();
+                if (!questionText) {
+                    showErrorMessage('Please enter question text before generating feedback.');
+                    return;
+                }
+                
+                let targetQuestionId = currentQuestionId;
+                
+                // If this is a new question, we need to save it first to get a real ID
+                if (isNewQuestion && currentQuestionId === 'new') {
+                    console.log('New question detected, saving first to get ID...');
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving question...';
+                    
+                    // Collect form data and save the question
+                    const formData = collectFormData();
+                    console.log('Form data collected for saving:', formData);
+                    
+                    const saveResponse = await fetch('/questions/new', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    if (!saveResponse.ok) {
+                        const error = await saveResponse.json();
+                        throw new Error(`Failed to save question: ${error.detail || 'Unknown error'}`);
+                    }
+                    
+                    const saveResult = await saveResponse.json();
+                    console.log('Question saved successfully:', saveResult);
+                    
+                    // Update the current question ID
+                    targetQuestionId = saveResult.question_id;
+                    currentQuestionId = targetQuestionId;
+                    isNewQuestion = false;
+                    
+                    console.log('Updated current question ID to:', targetQuestionId);
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating feedback...';
+                }
+                
+                const requestUrl = `/questions/${targetQuestionId}/generate-feedback`;
+                console.log('Making feedback request to:', requestUrl);
                 
                 const response = await fetch(requestUrl, {
                     method: 'POST',
@@ -1029,7 +1074,12 @@
                     scheduleAutoSave();
                     console.log('Auto-save scheduled');
                     
-                    showSuccessMessage('AI feedback generated successfully!');
+                    // Show appropriate success message
+                    if (isNewQuestion && currentQuestionId !== 'new') {
+                        showSuccessMessage(`Question saved and AI feedback generated successfully! Question ID: ${currentQuestionId}`);
+                    } else {
+                        showSuccessMessage('AI feedback generated successfully!');
+                    }
                 } else {
                     console.error('❌ Failed to generate feedback');
                     console.error('Error details:', result.detail || result.message || 'Unknown error');
