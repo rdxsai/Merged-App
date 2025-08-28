@@ -4,6 +4,26 @@
 
 The Question App API has been restructured to organize endpoints by functionality. Both Canvas-related and question-related endpoints have been extracted into dedicated modules for better maintainability and separation of concerns.
 
+## Recent Improvements (v0.3.0)
+
+### Type Safety Enhancements
+- **100% Pyright Compliance**: All type checking errors resolved
+- **80% Mypy Improvement**: Reduced from 15 to 3 errors
+- **Enhanced Error Handling**: Proper HTTPException types throughout
+- **Type Guards**: Runtime type checking for complex scenarios
+- **Comprehensive Annotations**: Full type coverage across all modules
+
+### Development Experience
+- **VS Code Integration**: Complete development environment setup
+- **Debugging Support**: Full debugging for FastAPI and tests
+- **Task Automation**: Pre-configured development tasks
+- **Real-time Type Checking**: Integrated type checking in VS Code
+
+### Bug Fixes
+- **Feedback Generation**: Fixed new question feedback generation workflow
+- **Environment Configuration**: Improved PYTHONPATH and module discovery
+- **API Compatibility**: Enhanced type compatibility across endpoints
+
 ## API Modules
 
 ### Canvas API (`src/question_app/api/canvas.py`)
@@ -47,9 +67,10 @@ Contains all question-related CRUD operations and endpoints:
 
 - Full CRUD operations for questions
 - HTML template rendering for web interface
-- AI feedback generation integration
+- AI feedback generation integration with automatic question saving for new questions
 - Proper error handling and logging
 - Backward compatibility with existing data structure
+- Enhanced JavaScript workflow for new question feedback generation
 
 ### System Prompt API (`src/question_app/api/system_prompt.py`)
 

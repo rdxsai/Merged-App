@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "question_app"
-version = "0.2.0"
-description = "A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation)."
+version = "0.3.0"
+description = "A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation, intelligent chat assistant using RAG, comprehensive type safety, and VS Code integration."
 authors = ["Bryce Kayanuma <BrycePK@vt.edu>", "Robert Fentress <learn@vt.edu>"]
 readme = "README.md"
 packages = [{include = "question_app", from = "src"}]

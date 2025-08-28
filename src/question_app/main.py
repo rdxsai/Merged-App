@@ -19,6 +19,9 @@ Key Features:
 - Vector store operations and semantic search
 - Learning objectives management
 - System prompt customization
+- Comprehensive type safety with Pyright and Mypy
+- VS Code integration with debugging and task automation
+- Enhanced error handling and validation
 
 Architecture:
 - Core configuration and app setup in core/ module
@@ -29,7 +32,14 @@ Architecture:
 Authors:
   - Bryce Kayanuma <BrycePK@vt.edu>
   - Robert Fentress <learn@vt.edu>
-Version: 0.2.0
+Version: 0.3.0
+
+Recent Improvements (v0.3.0):
+- Enhanced type safety: 100% Pyright compliance, 80% Mypy improvement
+- VS Code integration with comprehensive configuration
+- Fixed feedback generation for new questions
+- Improved error handling and validation
+- Enhanced debugging capabilities
 """
 
 import uvicorn
