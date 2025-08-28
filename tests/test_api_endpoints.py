@@ -321,7 +321,7 @@ class TestChatAPI:
 
         mock_ai_response = "This is a helpful response."
 
-        with patch("question_app.api.chat.search_vector_store", return_value=mock_chunks):
+        with patch("question_app.api.vector_store.search_vector_store", return_value=mock_chunks):
             with patch("question_app.api.chat.load_chat_system_prompt", return_value="Test prompt"):
                 with patch("httpx.AsyncClient.post") as mock_post:
                     mock_response = MagicMock()

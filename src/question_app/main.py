@@ -16,7 +16,7 @@ Key Features:
 - Fetch and manage quiz questions from Canvas LMS
 - Generate educational feedback using AI
 - Intelligent chat assistant with RAG capabilities
-- Vector store for semantic search
+- Vector store operations and semantic search
 - Learning objectives management
 - System prompt customization
 
@@ -58,6 +58,7 @@ from .api import (
     canvas_router, 
     questions_router, 
     chat_router, 
+    vector_store_router,
     system_prompt_router,
     objectives_router
 )
@@ -79,6 +80,7 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
+app.include_router(vector_store_router)
 app.include_router(system_prompt_router)
 app.include_router(objectives_router)
 
@@ -691,12 +693,14 @@ async def debug_question(question_id: int):
 @app.get("/debug/config")
 async def debug_config():
     """Debug endpoint to check configuration"""
-    # Import environment variables from chat module
+    # Import environment variables from chat and vector_store modules
     from .api.chat import (
         AZURE_OPENAI_ENDPOINT,
         AZURE_OPENAI_DEPLOYMENT_ID,
         AZURE_OPENAI_SUBSCRIPTION_KEY,
         AZURE_OPENAI_API_VERSION,
+    )
+    from .api.vector_store import (
         OLLAMA_HOST,
         OLLAMA_EMBEDDING_MODEL,
     )
@@ -727,8 +731,8 @@ async def debug_config():
 @app.get("/debug/ollama-test")
 async def test_ollama_connection():
     """Test Ollama connection and model availability"""
-    # Import environment variables from chat module
-    from .api.chat import OLLAMA_HOST, OLLAMA_EMBEDDING_MODEL
+    # Import environment variables from vector_store module
+    from .api.vector_store import OLLAMA_HOST, OLLAMA_EMBEDDING_MODEL
     
     ollama_host = OLLAMA_HOST
     if not ollama_host.startswith(("http://", "https://")):

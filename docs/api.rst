@@ -200,7 +200,13 @@ The vector store management system uses ChromaDB to create and maintain semantic
 search capabilities for the question database, enabling intelligent retrieval
 and RAG functionality.
 
-.. http:post:: /chat/create-vector-store
+Vector Store Operations
+~~~~~~~~~~~~~~~~~~~~~~
+
+The vector store operations provide semantic search capabilities for the question database,
+enabling intelligent retrieval and RAG functionality through ChromaDB integration.
+
+.. http:post:: /vector-store/create
 
    Create ChromaDB vector store from questions.
 
@@ -212,6 +218,28 @@ and RAG functionality.
    - Automatic vector store creation from questions
    - Search statistics and performance metrics
    - Vector store maintenance and updates
+
+.. http:get:: /vector-store/search
+
+   Search vector store for relevant content.
+
+   **Query Parameters:**
+   - ``query``: Search query text
+   - ``n_results``: Number of results to return (default: 5, max: 20)
+
+   **Response:** JSON with search results and metadata
+
+.. http:get:: /vector-store/status
+
+   Get vector store status.
+
+   **Response:** JSON with vector store status and document count
+
+.. http:delete:: /vector-store/
+
+   Delete vector store.
+
+   **Response:** JSON with deletion status
 
 Chat Assistant
 ~~~~~~~~~~~~~~

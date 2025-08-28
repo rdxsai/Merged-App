@@ -17,6 +17,7 @@ questionapp/
 │       │   ├── canvas.py     # Canvas LMS integration endpoints
 │       │   ├── questions.py  # Question CRUD endpoints
 │       │   ├── chat.py       # RAG-based chat endpoints
+│       │   ├── vector_store.py # Vector store operations endpoints
 │       │   ├── objectives.py # Learning objectives management endpoints
 │       │   └── system_prompt.py  # System prompt management endpoints
 │       ├── core/             # Core application logic
@@ -212,6 +213,7 @@ The application follows a modular architecture:
   - **Canvas API** (`canvas.py`): Canvas LMS integration endpoints
   - **Questions API** (`questions.py`): Question CRUD operations
   - **Chat API** (`chat.py`): RAG-based chat functionality
+  - **Vector Store API** (`vector_store.py`): Vector store operations and semantic search
   - **Objectives API** (`objectives.py`): Learning objectives management
   - Additional API modules can be added for other functionality
 - **Core Layer** (`src/question_app/core/`): Core application logic
@@ -242,9 +244,15 @@ The API is organized into focused modules for better maintainability:
 
 - `GET /chat/` - Chat interface page
 - `POST /chat/message` - Process chat messages with RAG
-- `POST /chat/create-vector-store` - Create vector store from questions
 - `GET /chat/system-prompt` - Chat system prompt management
 - `GET /chat/welcome-message` - Welcome message management
+
+### Vector Store Operations (`/vector-store/*`)
+
+- `POST /vector-store/create` - Create vector store from questions
+- `GET /vector-store/search` - Search vector store for relevant content
+- `GET /vector-store/status` - Get vector store status
+- `DELETE /vector-store/` - Delete vector store
 
 ### Learning Objectives Management (`/objectives/*`)
 

@@ -20,7 +20,8 @@ Package Structure
    │   ├── __init__.py          # API module exports
    │   ├── canvas.py            # Canvas LMS integration endpoints
    │   ├── questions.py         # Question CRUD operations and endpoints
-   │   ├── chat.py              # RAG-based chat functionality and vector store operations
+   │   ├── chat.py              # RAG-based chat functionality
+│   ├── vector_store.py      # Vector store operations and semantic search
    │   └── system_prompt.py     # System prompt management endpoints
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
@@ -225,18 +226,14 @@ Chat API
 
 **File**: ``api/chat.py``
 
-The Chat API module contains all RAG-based chat functionality and vector store operations:
+The Chat API module contains all RAG-based chat functionality:
 
 - RAG-based chat interface with semantic search
-- Vector store creation and management using ChromaDB
-- Ollama embedding integration for local AI processing
 - Chat system prompt and welcome message management
+- Integration with vector store for semantic search
 - Comprehensive error handling and logging
 
 **Key Functions**:
-- ``get_ollama_embeddings()``: Generate embeddings using Ollama
-- ``create_comprehensive_chunks()``: Create text chunks for vector store
-- ``search_vector_store()``: Search vector store for similar content
 - ``load_chat_system_prompt()``: Load chat system prompt
 - ``save_chat_system_prompt()``: Save chat system prompt
 - ``load_welcome_message()``: Load welcome message
@@ -245,7 +242,7 @@ The Chat API module contains all RAG-based chat functionality and vector store o
 **Endpoints**:
 - `GET /chat/` - Chat interface page
 - `POST /chat/message` - Process chat messages with RAG
-- `POST /chat/create-vector-store` - Create ChromaDB vector store from questions
+
 - `GET /chat/system-prompt` - Chat system prompt edit page
 - `POST /chat/system-prompt` - Save chat system prompt
 - `GET /chat/system-prompt/default` - Get default chat system prompt
@@ -261,6 +258,39 @@ The Chat API module contains all RAG-based chat functionality and vector store o
    
    # Include in FastAPI app
    app.include_router(chat_router)
+
+Vector Store API
+~~~~~~~~~~~~~~~
+
+**File**: ``api/vector_store.py``
+
+The Vector Store API module contains all vector store operations and semantic search functionality:
+
+- Vector store creation and management using ChromaDB
+- Ollama embedding integration for local AI processing
+- Semantic search capabilities
+- Document chunking and processing
+- Vector store status monitoring
+
+**Key Functions**:
+- ``get_ollama_embeddings()``: Generate embeddings using Ollama
+- ``create_comprehensive_chunks()``: Create text chunks for vector store
+- ``search_vector_store()``: Search vector store for similar content
+
+**Endpoints**:
+- `POST /vector-store/create` - Create ChromaDB vector store from questions
+- `GET /vector-store/search` - Search vector store for relevant content
+- `GET /vector-store/status` - Get vector store status
+- `DELETE /vector-store/` - Delete vector store
+
+**Usage**:
+
+.. code-block:: python
+
+   from question_app.api.vector_store import router as vector_store_router
+   
+   # Include in FastAPI app
+   app.include_router(vector_store_router)
 
 Services Package
 ---------------

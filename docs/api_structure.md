@@ -98,13 +98,12 @@ Contains all learning objectives management functionality:
 
 ### Chat API (`src/question_app/api/chat.py`)
 
-Contains all RAG-based chat functionality and vector store operations:
+Contains all RAG-based chat functionality:
 
 #### Endpoints:
 
 - `GET /chat/` - Chat interface page
 - `POST /chat/message` - Process chat messages with RAG
-- `POST /chat/create-vector-store` - Create ChromaDB vector store from questions
 - `GET /chat/system-prompt` - Chat system prompt edit page
 - `POST /chat/system-prompt` - Save chat system prompt
 - `GET /chat/system-prompt/default` - Get default chat system prompt
@@ -114,9 +113,6 @@ Contains all RAG-based chat functionality and vector store operations:
 
 #### Functions:
 
-- `get_ollama_embeddings()` - Generate embeddings using Ollama
-- `create_comprehensive_chunks()` - Create text chunks for vector store
-- `search_vector_store()` - Search vector store for similar content
 - `load_chat_system_prompt()` - Load chat system prompt
 - `save_chat_system_prompt()` - Save chat system prompt
 - `load_welcome_message()` - Load welcome message
@@ -125,11 +121,36 @@ Contains all RAG-based chat functionality and vector store operations:
 #### Features:
 
 - RAG-based chat interface with semantic search
-- Vector store creation and management using ChromaDB
-- Ollama embedding integration for local AI processing
 - Chat system prompt and welcome message management
 - Comprehensive error handling and logging
 - HTML template rendering for web interface
+- Integration with vector store for semantic search
+
+### Vector Store API (`src/question_app/api/vector_store.py`)
+
+Contains all vector store operations and semantic search functionality:
+
+#### Endpoints:
+
+- `POST /vector-store/create` - Create ChromaDB vector store from questions
+- `GET /vector-store/search` - Search vector store for relevant content
+- `GET /vector-store/status` - Get vector store status
+- `DELETE /vector-store/` - Delete vector store
+
+#### Functions:
+
+- `get_ollama_embeddings()` - Generate embeddings using Ollama
+- `create_comprehensive_chunks()` - Create text chunks for vector store
+- `search_vector_store()` - Search vector store for similar content
+
+#### Features:
+
+- Vector store creation and management using ChromaDB
+- Ollama embedding integration for local AI processing
+- Semantic search capabilities
+- Comprehensive error handling and logging
+- Document chunking and processing
+- Vector store status monitoring
 
 ## Services
 
@@ -153,10 +174,11 @@ Contains AI-related business logic:
 The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router, questions_router, chat_router, system_prompt_router, objectives_router
+from .api import canvas_router, questions_router, chat_router, vector_store_router, system_prompt_router, objectives_router
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
+app.include_router(vector_store_router)
 app.include_router(system_prompt_router)
 app.include_router(objectives_router)
 ```

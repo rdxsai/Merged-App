@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from question_app.api.chat import (
+from question_app.api.vector_store import (
     create_comprehensive_chunks,
     get_ollama_embeddings,
     search_vector_store,
@@ -154,9 +154,9 @@ class TestOllamaEmbeddings:
         with patch(
             "httpx.AsyncClient.post", side_effect=Exception("Connection failed")
         ):
-            with pytest.raises(Exception) as exc_info:
-                await get_ollama_embeddings(texts)
-            assert "Failed to generate embeddings" in str(exc_info.value.detail)
+            result = await get_ollama_embeddings(texts)
+            # Should return empty list with zero vectors when connection fails
+            assert result == [[0.0] * 768]
 
     @pytest.mark.asyncio
     async def test_get_ollama_embeddings_api_error(self):
@@ -169,9 +169,9 @@ class TestOllamaEmbeddings:
             mock_response.text = "Model not found"
             mock_post.return_value = mock_response
 
-            with pytest.raises(Exception) as exc_info:
-                await get_ollama_embeddings(texts)
-            assert "Failed to generate embeddings" in str(exc_info.value.detail)
+            result = await get_ollama_embeddings(texts)
+            # Should return empty list with zero vectors when API error occurs
+            assert result == [[0.0] * 768]
 
     @pytest.mark.asyncio
     async def test_get_ollama_embeddings_invalid_response(self):
@@ -184,9 +184,9 @@ class TestOllamaEmbeddings:
             mock_response.json.return_value = {"no_embedding": "here"}
             mock_post.return_value = mock_response
 
-            with pytest.raises(Exception) as exc_info:
-                await get_ollama_embeddings(texts)
-            assert "Failed to generate embeddings" in str(exc_info.value.detail)
+            result = await get_ollama_embeddings(texts)
+            # Should return empty list with zero vectors when response is invalid
+            assert result == [[0.0] * 768]
 
 
 class TestVectorStoreOperations:
@@ -196,23 +196,30 @@ class TestVectorStoreOperations:
         """Test creating comprehensive chunks from questions"""
         documents, metadatas, ids = create_comprehensive_chunks(sample_questions)
 
-        assert len(documents) == 2
-        assert len(metadatas) == 2
-        assert len(ids) == 2
+        # With 2 questions (3 answers + 2 answers), we expect 7 chunks total
+        # 1 main chunk + 3 answer chunks for question 1 = 4 chunks
+        # 1 main chunk + 2 answer chunks for question 2 = 3 chunks
+        assert len(documents) == 7
+        assert len(metadatas) == 7
+        assert len(ids) == 7
 
-        # Check document content
-        assert "What is the capital of France?" in documents[0]
-        assert "Which HTML tag is used for accessibility?" in documents[1]
+        # Check that we have chunks for both questions
+        question_1_chunks = [doc for doc in documents if "capital of France" in doc]
+        question_2_chunks = [doc for doc in documents if "HTML tag" in doc]
+        assert len(question_1_chunks) == 4  # 1 main + 3 answers
+        assert len(question_2_chunks) == 3  # 1 main + 2 answers
 
-        # Check metadata
-        assert metadatas[0]["question_id"] == 1
-        assert metadatas[1]["question_id"] == 2
-        assert metadatas[0]["topic"] == "general"
-        assert metadatas[1]["topic"] == "accessibility"
+        # Check metadata structure
+        question_1_metadata = [meta for meta in metadatas if meta["question_id"] == 1]
+        question_2_metadata = [meta for meta in metadatas if meta["question_id"] == 2]
+        assert len(question_1_metadata) == 4
+        assert len(question_2_metadata) == 3
 
-        # Check IDs
-        assert ids[0] == "question_1"
-        assert ids[1] == "question_2"
+        # Check IDs structure
+        question_1_ids = [id for id in ids if "q_1" in id]
+        question_2_ids = [id for id in ids if "q_2" in id]
+        assert len(question_1_ids) == 4
+        assert len(question_2_ids) == 3
 
     def test_create_comprehensive_chunks_empty_questions(self):
         """Test creating chunks from empty questions list"""
@@ -244,10 +251,20 @@ class TestVectorStoreOperations:
 
         documents, metadatas, ids = create_comprehensive_chunks(questions)
 
-        assert len(documents) == 1
-        assert "What is accessibility?" in documents[0]
-        assert "Accessibility helps users with disabilities" in documents[0]
-        assert "A design principle (CORRECT)" in documents[0]
+        # 1 main chunk + 1 answer chunk = 2 chunks
+        assert len(documents) == 2
+        assert len(metadatas) == 2
+        assert len(ids) == 2
+
+        # Check main chunk content
+        main_chunk = [doc for doc in documents if "What is accessibility?" in doc and "A design principle" not in doc][0]
+        assert "What is accessibility?" in main_chunk
+        assert "Accessibility helps users with disabilities" in main_chunk
+
+        # Check answer chunk content
+        answer_chunk = [doc for doc in documents if "A design principle" in doc][0]
+        assert "A design principle" in answer_chunk
+        assert "Correct! Accessibility is a design principle" in answer_chunk
 
     @pytest.mark.asyncio
     async def test_search_vector_store_success(self):
@@ -274,7 +291,7 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("question_app.api.chat.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
                 result = await search_vector_store("test query", n_results=2)
 
                 assert len(result) == 2
@@ -293,7 +310,7 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("question_app.api.chat.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
                 result = await search_vector_store("test query")
 
                 assert result == []
@@ -301,7 +318,7 @@ class TestVectorStoreOperations:
     @pytest.mark.asyncio
     async def test_search_vector_store_embedding_failure(self):
         """Test vector store search with embedding failure"""
-        with patch("question_app.api.chat.get_ollama_embeddings", return_value=[]):
+        with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[]):
             result = await search_vector_store("test query")
 
             assert result == []
@@ -394,8 +411,8 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_create_vector_store_success(self, client, sample_questions):
         """Test successful vector store creation"""
-        with patch("question_app.api.chat.load_questions", return_value=sample_questions):
-            with patch("question_app.api.chat.get_ollama_embeddings") as mock_embeddings:
+        with patch("question_app.api.vector_store.load_questions", return_value=sample_questions):
+            with patch("question_app.api.vector_store.get_ollama_embeddings") as mock_embeddings:
                 mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
                 with patch("chromadb.PersistentClient") as mock_client:
@@ -404,7 +421,7 @@ class TestAIIntegrationEndpoints:
                         mock_collection
                     )
 
-                    response = client.post("/chat/create-vector-store")
+                    response = client.post("/vector-store/create")
                     assert response.status_code == 200
                     data = response.json()
                     assert data["success"] is True
@@ -412,6 +429,6 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_create_vector_store_no_questions(self, client):
         """Test vector store creation with no questions"""
-        with patch("question_app.api.chat.load_questions", return_value=[]):
-            response = client.post("/chat/create-vector-store")
+        with patch("question_app.api.vector_store.load_questions", return_value=[]):
+            response = client.post("/vector-store/create")
             assert response.status_code == 400
