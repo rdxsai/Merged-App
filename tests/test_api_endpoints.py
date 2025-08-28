@@ -151,8 +151,8 @@ class TestQuestionsAPI:
 
     def test_delete_question_save_failure(self, client, sample_questions):
         """Test question deletion with save failure"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
-            with patch("question_app.main.save_questions", return_value=False):
+        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+            with patch("question_app.api.questions.save_questions", return_value=False):
                 response = client.delete("/questions/1")
                 assert response.status_code == 500
 
@@ -162,7 +162,7 @@ class TestQuestionCRUD:
 
     def test_get_question_edit_page(self, client, sample_questions):
         """Test getting question edit page"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
+        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
             response = client.get("/questions/1")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
@@ -246,8 +246,8 @@ class TestQuestionCRUD:
             ],
         }
 
-        with patch("question_app.main.load_questions", return_value=sample_questions):
-            with patch("question_app.main.save_questions", return_value=True):
+        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+            with patch("question_app.api.questions.save_questions", return_value=True):
                 response = client.put("/questions/1", json=question_data)
                 assert response.status_code == 200
                 data = response.json()

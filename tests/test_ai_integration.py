@@ -361,16 +361,16 @@ class TestAIIntegrationEndpoints:
         self, client, sample_questions
     ):
         """Test successful feedback generation endpoint"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
-            with patch("question_app.main.load_questions", return_value=sample_questions):
-                with patch("question_app.main.generate_feedback_with_ai") as mock_generate:
+        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+                with patch("question_app.services.ai_service.generate_feedback_with_ai") as mock_generate:
                     mock_generate.return_value = {
                         "general_feedback": "Test feedback",
                         "answer_feedback": {"answer 1": "Test answer feedback"},
                         "token_usage": {"total_tokens": 100},
                     }
 
-                    with patch("question_app.main.save_questions", return_value=True):
+                    with patch("question_app.api.questions.save_questions", return_value=True):
                         response = client.post("/questions/1/generate-feedback")
                         assert response.status_code == 200
                         data = response.json()
@@ -379,15 +379,15 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_generate_question_feedback_no_system_prompt(self, client):
         """Test feedback generation without system prompt"""
-        with patch("question_app.main.load_system_prompt", return_value=""):
+        with patch("question_app.api.questions.load_system_prompt", return_value=""):
             response = client.post("/questions/1/generate-feedback")
             assert response.status_code == 400
 
     @pytest.mark.asyncio
     async def test_generate_question_feedback_question_not_found(self, client):
         """Test feedback generation for non-existent question"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
-            with patch("question_app.main.load_questions", return_value=[]):
+        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
+            with patch("question_app.api.questions.load_questions", return_value=[]):
                 response = client.post("/questions/999/generate-feedback")
                 assert response.status_code == 404
 

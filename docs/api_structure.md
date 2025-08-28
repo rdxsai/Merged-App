@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Question App API has been restructured to organize endpoints by functionality. Canvas-related endpoints have been extracted into a dedicated module for better maintainability and separation of concerns.
+The Question App API has been restructured to organize endpoints by functionality. Both Canvas-related and question-related endpoints have been extracted into dedicated modules for better maintainability and separation of concerns.
 
 ## API Modules
 
@@ -30,32 +30,72 @@ Contains all Canvas LMS integration endpoints and utilities:
 - `ConfigurationUpdate` - Model for configuration update requests
 - `FetchQuestionsResponse` - Model for fetch questions response
 
+### Questions API (`src/question_app/api/questions.py`)
+
+Contains all question-related CRUD operations and endpoints:
+
+#### Endpoints:
+
+- `DELETE /questions/{question_id}` - Delete a question
+- `GET /questions/new` - Show new question creation page
+- `POST /questions/new` - Create a new question
+- `GET /questions/{question_id}` - Show question edit page
+- `PUT /questions/{question_id}` - Update a question
+- `POST /questions/{question_id}/generate-feedback` - Generate AI feedback for a question
+
+#### Features:
+
+- Full CRUD operations for questions
+- HTML template rendering for web interface
+- AI feedback generation integration
+- Proper error handling and logging
+- Backward compatibility with existing data structure
+
+## Services
+
+### AI Service (`src/question_app/services/ai_service.py`)
+
+Contains AI-related business logic:
+
+#### Functions:
+
+- `generate_feedback_with_ai()` - AI feedback generation using Azure OpenAI
+
+#### Features:
+
+- Azure OpenAI integration
+- Feedback generation logic
+- Response parsing and formatting
+- Comprehensive error handling
+
 ## Integration
 
-The Canvas API router is automatically included in the main FastAPI application:
+The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router
+from .api import canvas_router, questions_router
 app.include_router(canvas_router)
+app.include_router(questions_router)
 ```
 
 ## Benefits
 
-1. **Modularity**: Canvas functionality is isolated in its own module
-2. **Maintainability**: Easier to maintain and update Canvas-specific code
-3. **Testability**: Canvas endpoints can be tested independently
+1. **Modularity**: Functionality is isolated in focused modules
+2. **Maintainability**: Easier to maintain and update specific functionality
+3. **Testability**: API modules can be tested independently
 4. **Scalability**: Easy to add more API modules for other functionality
 5. **Documentation**: Better organization makes the API easier to understand
+6. **Separation of Concerns**: Clear boundaries between different types of functionality
 
 ## Future Extensions
 
 Additional API modules can be created for:
 
-- Question management endpoints
-- AI/feedback generation endpoints
-- Chat assistant endpoints
-- Learning objectives endpoints
-- System configuration endpoints
+- Learning objectives management
+- System configuration
+- Chat assistant functionality
+- Vector store management
+- User authentication and authorization
 
 ## Usage
 

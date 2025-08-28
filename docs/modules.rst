@@ -18,7 +18,8 @@ Package Structure
    ├── main.py                  # FastAPI application and router integration
    ├── api/                     # API endpoints and routers
    │   ├── __init__.py          # API module exports
-   │   └── canvas.py            # Canvas LMS integration endpoints
+   │   ├── canvas.py            # Canvas LMS integration endpoints
+   │   └── questions.py         # Question CRUD operations and endpoints
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
    │   ├── question.py          # Question-related models
@@ -27,8 +28,10 @@ Package Structure
    │   ├── __init__.py
    │   ├── file_utils.py        # File I/O operations
    │   └── text_utils.py        # Text processing utilities
-   ├── core/                    # Core configuration (planned)
-   └── services/                # Business logic (planned)
+   ├── services/                # Business logic services
+   │   ├── __init__.py          # Services package initialization
+   │   └── ai_service.py        # AI feedback generation and Azure OpenAI integration
+   └── core/                    # Core configuration (planned)
 
 Models Package
 -------------
@@ -150,6 +153,11 @@ Handles text processing and cleaning operations:
 API Package
 -----------
 
+The API package contains organized endpoint modules for different functionality.
+
+Canvas API
+~~~~~~~~~~
+
 **File**: ``api/canvas.py``
 
 The Canvas API module contains all Canvas LMS integration endpoints and utilities:
@@ -180,6 +188,70 @@ The Canvas API module contains all Canvas LMS integration endpoints and utilitie
    
    # Include in FastAPI app
    app.include_router(canvas_router)
+
+Questions API
+~~~~~~~~~~~~
+
+**File**: ``api/questions.py``
+
+The Questions API module contains all question-related CRUD operations and endpoints:
+
+- Question creation, reading, updating, and deletion
+- HTML template rendering for web interface
+- AI feedback generation integration
+- Proper error handling and logging
+
+**Endpoints**:
+- `DELETE /questions/{question_id}` - Delete a question
+- `GET /questions/new` - Show new question creation page
+- `POST /questions/new` - Create a new question
+- `GET /questions/{question_id}` - Show question edit page
+- `PUT /questions/{question_id}` - Update a question
+- `POST /questions/{question_id}/generate-feedback` - Generate AI feedback for a question
+
+**Usage**:
+
+.. code-block:: python
+
+   from question_app.api.questions import router as questions_router
+   
+   # Include in FastAPI app
+   app.include_router(questions_router)
+
+Services Package
+---------------
+
+The Services package contains business logic services separated from API endpoints.
+
+AI Service
+~~~~~~~~~~
+
+**File**: ``services/ai_service.py``
+
+The AI Service module contains AI-related business logic:
+
+- Azure OpenAI integration for feedback generation
+- AI response parsing and formatting
+- Comprehensive error handling
+- Token usage tracking
+
+**Key Functions**:
+- ``generate_feedback_with_ai()``: Generate educational feedback using Azure OpenAI
+
+**Features**:
+- Azure OpenAI API integration
+- Structured feedback parsing
+- Error handling and retry logic
+- Token usage statistics
+
+**Usage**:
+
+.. code-block:: python
+
+   from question_app.services.ai_service import generate_feedback_with_ai
+   
+   # Generate feedback for a question
+   feedback = await generate_feedback_with_ai(question_data, system_prompt)
 
 Main Application
 ---------------

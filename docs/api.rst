@@ -10,6 +10,7 @@ The application is organized into focused modules for better maintainability:
 
 **API Modules** (`src/question_app/api/`)
    - ``canvas.py``: Canvas LMS integration endpoints and utilities
+   - ``questions.py``: Question CRUD operations and endpoints
    - Additional API modules can be added for other functionality
 
 **Models** (`src/question_app/models/`)
@@ -24,6 +25,9 @@ The application is organized into focused modules for better maintainability:
    - FastAPI application setup and configuration
    - Router integration and orchestration
    - Web interface endpoints
+
+**Services** (`src/question_app/services/`)
+   - ``ai_service.py``: AI feedback generation and Azure OpenAI integration
 
 Authentication
 --------------

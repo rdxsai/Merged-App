@@ -275,12 +275,12 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_ai_service_errors(self, client, sample_questions):
         """Test handling of AI service errors"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
             with patch(
-                "question_app.main.load_questions", return_value=sample_questions
+                "question_app.api.questions.load_questions", return_value=sample_questions
             ):
                 with patch(
-                    "question_app.main.generate_feedback_with_ai",
+                    "question_app.api.questions.generate_feedback_with_ai",
                     side_effect=Exception("AI service error"),
                 ):
                     response = client.post("/questions/1/generate-feedback")
@@ -301,8 +301,8 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_question_data_consistency(self, client):
         """Test that question data remains consistent through operations"""
-        with patch("question_app.main.load_questions") as mock_load:
-            with patch("question_app.main.save_questions") as mock_save:
+        with patch("question_app.api.questions.load_questions") as mock_load:
+            with patch("question_app.api.questions.save_questions") as mock_save:
                 # Initial state
                 initial_questions = [
                     {
