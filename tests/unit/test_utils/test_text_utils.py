@@ -23,7 +23,7 @@ class TestTextCleaning:
 
     def test_clean_question_text_none(self):
         """Test cleaning None question text"""
-        result = clean_question_text(None)
+        result = clean_question_text(None)  # type: ignore[arg-type]
         assert result is None
 
     def test_clean_question_text_remove_links(self):
@@ -130,7 +130,7 @@ class TestAnswerFeedbackCleaning:
 
     def test_clean_answer_feedback_none(self):
         """Test cleaning None answer feedback"""
-        result = clean_answer_feedback(None)
+        result = clean_answer_feedback(None)  # type: ignore[arg-type]
         assert result == ""
 
     def test_clean_answer_feedback_remove_html(self):

@@ -4,6 +4,7 @@ Unit tests for AI service functions
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from question_app.services.ai_service import generate_feedback_with_ai
 
@@ -87,7 +88,7 @@ class TestAIFeedbackGeneration:
             "question_app.core.config.Config.validate_azure_openai_config",
             return_value=False,
         ):
-            with pytest.raises(Exception) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)
 
@@ -103,7 +104,7 @@ class TestAIFeedbackGeneration:
             mock_response.text = "Internal server error"
             mock_post.return_value = mock_response
 
-            with pytest.raises(Exception) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Failed to generate feedback" in str(exc_info.value.detail)
 
@@ -114,7 +115,7 @@ class TestAIFeedbackGeneration:
         system_prompt = "Test prompt"
 
         with patch("httpx.AsyncClient.post", side_effect=Exception("Timeout")):
-            with pytest.raises(Exception) as exc_info:
+            with pytest.raises(HTTPException) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Failed to generate feedback" in str(exc_info.value.detail)
 

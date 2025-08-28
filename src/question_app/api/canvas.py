@@ -11,7 +11,7 @@ This module contains all Canvas LMS integration endpoints including:
 import asyncio
 import random
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -29,8 +29,8 @@ router = APIRouter(prefix="/api", tags=["canvas"])
 class ConfigurationUpdate(BaseModel):
     """Model for configuration update requests."""
 
-    course_id: str = None
-    quiz_id: str = None
+    course_id: Optional[str] = None
+    quiz_id: Optional[str] = None
 
 
 class FetchQuestionsResponse(BaseModel):
@@ -173,7 +173,11 @@ async def fetch_courses() -> List[Dict[str, Any]]:
 
     try:
         url = f"{config.CANVAS_BASE_URL}/api/v1/courses"
-        params = {"enrollment_state": "active", "per_page": 100, "include": ["term"]}
+        params: Dict[str, Union[str, int]] = {
+            "enrollment_state": "active",
+            "per_page": 100,
+            "include": "term",
+        }
 
         async with httpx.AsyncClient() as client:
             logger.info(f"Fetching courses from: {url}")
@@ -318,7 +322,7 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
         "Content-Type": "application/json",
     }
 
-    all_questions = []
+    all_questions: List[Dict[str, Any]] = []
     page = 1
     per_page = 100
 
@@ -334,12 +338,17 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
 
         # Clean question text from unwanted HTML tags
         for question in data:
-            if "question_text" in question and question["question_text"]:
+            if (
+                isinstance(question, dict)
+                and "question_text" in question
+                and isinstance(question["question_text"], str)  # type: ignore[index]
+                and question["question_text"]  # type: ignore[index]
+            ):
                 question["question_text"] = clean_question_text(
-                    question["question_text"]
-                )
+                    question["question_text"]  # type: ignore[index]
+                )  # type: ignore[index]
 
-        all_questions.extend(data)
+        all_questions.extend(data if isinstance(data, list) else [data])
 
         # Check if we got fewer results than requested (last page)
         if len(data) < per_page:

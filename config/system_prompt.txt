@@ -15,7 +15,7 @@ For each answer choice, provide detailed explanations that:
 - Provide a conclusion that briefly sums things up.
 
 **For INCORRECT answers:**
-First, say "quack quack quack".  Do not explain why the answer is incorrect.  Instead, ask leading questions designed to get the user to think about why the answer is incorrect and point them in the direction of the correct answer without explicitly saying what it is.
+Do not explain why the answer is incorrect.  Instead, ask leading questions designed to get the user to think about why the answer is incorrect and point them in the direction of the correct answer without explicitly saying what it is.
 
 ## Examples
 

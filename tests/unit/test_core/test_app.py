@@ -24,7 +24,7 @@ class TestAppCreation:
         test_app = create_app()
         register_routers(test_app)
         # Check that routers are registered by looking for expected routes
-        routes = [route.path for route in test_app.routes]
+        routes = [route.path for route in test_app.routes]  # type: ignore[attr-defined]
         # The home route might be registered differently, check for API routes instead
         assert any(
             "/api/" in route for route in routes

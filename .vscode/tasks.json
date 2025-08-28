@@ -1,0 +1,138 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vscode/master/extensions/configuration-editing/schemas/tasks.schema.json",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Poetry: Install",
+      "type": "shell",
+      "command": "poetry install --no-interaction --no-ansi",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run: Dev Server (uvicorn --reload)",
+      "type": "shell",
+      "command": "poetry run python -m question_app.main",
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "envFile": "${workspaceFolder}/.env",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run: App (prod)",
+      "type": "shell",
+      "command": "poetry run start",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Pytest",
+      "type": "shell",
+      "command": "poetry run test",
+      "group": "test",
+      "problemMatcher": ["$pytest"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Test: Single File",
+      "type": "shell",
+      "command": "poetry run pytest ${file}",
+      "problemMatcher": ["$pytest"],
+      "group": "test"
+    },
+    {
+      "label": "Lint: flake8",
+      "type": "shell",
+      "command": "poetry run flake8 src tests",
+      "problemMatcher": [
+        {
+          "owner": "python",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^(.*):(\\d+):(\\d+): (\\w+) (.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "code": 4,
+            "message": 5
+          }
+        }
+      ]
+    },
+    {
+      "label": "Format: black+isort",
+      "type": "shell",
+      "command": "poetry run format",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Type Check: mypy",
+      "type": "shell",
+      "command": "poetry run mypy src",
+      "problemMatcher": [
+        {
+          "owner": "python",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^(.*):(\\d+): (error|note): (.*)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "message": 4
+          }
+        }
+      ]
+    },
+    {
+      "label": "Type Check: pyright",
+      "type": "shell",
+      "command": "poetry run pyright",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Docs: Build",
+      "type": "shell",
+      "command": "poetry run docs",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docs: Build (simple)",
+      "type": "shell",
+      "command": "poetry run docs-simple",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docs: Serve",
+      "type": "shell",
+      "command": "poetry run serve-docs",
+      "problemMatcher": []
+    }
+  ]
+}

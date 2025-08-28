@@ -275,11 +275,14 @@ async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, 
         collection = client.get_collection("quiz_questions")
 
         # Generate embedding for the query using Ollama
-        query_embeddings = await get_ollama_embeddings([query])
+        query_embeddings_list = await get_ollama_embeddings([query])
 
-        if not query_embeddings:
+        if not query_embeddings_list or not query_embeddings_list[0]:
             logger.error("Failed to generate query embedding")
             return []
+
+        # Extract the single embedding for the query
+        query_embeddings = query_embeddings_list[0]
 
         # Search the vector store
         results = collection.query(
@@ -356,8 +359,11 @@ async def create_vector_store():
 
         # Add documents to collection
         logger.info("Adding documents to ChromaDB collection...")
+        # Convert embeddings to the format expected by ChromaDB
+        embeddings_for_chroma = embeddings if embeddings else []
+        metadatas_for_chroma = metadatas if metadatas else []
         collection.add(
-            documents=documents, embeddings=embeddings, metadatas=metadatas, ids=ids
+            documents=documents, embeddings=embeddings_for_chroma, metadatas=metadatas_for_chroma, ids=ids  # type: ignore[arg-type]
         )
 
         # Create summary statistics

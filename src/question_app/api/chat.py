@@ -10,6 +10,8 @@ This module contains all RAG-based chat functionality including:
 - Welcome message management
 """
 
+from typing import Dict
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -97,8 +99,10 @@ async def chat_message(request: Request):
             f"?api-version={config.AZURE_OPENAI_API_VERSION}"
         )
 
-        headers = {
-            "Ocp-Apim-Subscription-Key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
+        headers: Dict[str, str] = {
+            "Ocp-Apim-Subscription-Key": str(
+                config.AZURE_OPENAI_SUBSCRIPTION_KEY or ""
+            ),
             "Content-Type": "application/json",
         }
 
@@ -179,7 +183,8 @@ async def save_chat_system_prompt_endpoint(request: Request):
     """Save chat system prompt"""
     try:
         form = await request.form()
-        prompt = form.get("prompt", "").strip()
+        prompt_value = form.get("prompt", "")
+        prompt = prompt_value.strip() if isinstance(prompt_value, str) else ""
 
         if not prompt:
             raise HTTPException(status_code=400, detail="System prompt cannot be empty")
@@ -229,7 +234,8 @@ async def save_chat_welcome_message(request: Request):
             message = body.get("welcome_message", "").strip()
         else:
             form = await request.form()
-            message = form.get("welcome_message", "").strip()
+            message_value = form.get("welcome_message", "")
+            message = message_value.strip() if isinstance(message_value, str) else ""
 
         if not message:
             raise HTTPException(

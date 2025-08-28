@@ -7,7 +7,7 @@ using Azure OpenAI and other AI integrations.
 
 import json
 import re
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, cast
 
 import httpx
 from fastapi import HTTPException
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 async def generate_feedback_with_ai(
     question_data: Dict[str, Any], system_prompt: str
-) -> Dict[str, Any]:
+) -> Dict[str, Any]:  # type: ignore
     """
     Generate educational feedback for quiz questions using Azure OpenAI.
 
@@ -91,8 +91,8 @@ async def generate_feedback_with_ai(
     )
     logger.info(f"Azure OpenAI URL: {url}")
 
-    headers = {
-        "Ocp-Apim-Subscription-Key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
+    headers: Dict[str, str] = {
+        "Ocp-Apim-Subscription-Key": str(config.AZURE_OPENAI_SUBSCRIPTION_KEY or ""),
         "Content-Type": "application/json",
     }
 
@@ -204,10 +204,10 @@ Please provide specific educational feedback for each answer choice explaining w
             }
 
             lines = ai_response.split("\n")
-            current_section = None
-            general_feedback_lines = []
-            current_answer_key = None
-            current_answer_text = []
+            current_section: Optional[str] = None
+            general_feedback_lines: List[str] = []
+            current_answer_key: Optional[str] = None
+            current_answer_text: List[str] = []
 
             logger.info(f"Parsing AI response with {len(lines)} lines")
 
@@ -269,14 +269,15 @@ Please provide specific educational feedback for each answer choice explaining w
                             feedback["answer_feedback"][
                                 current_answer_key
                             ] = clean_answer_feedback(
-                                "\n".join(current_answer_text), answer_text
+                                "\n".join(current_answer_text), answer_text  # type: ignore[index]
                             )
 
                         parts = line.split(":", 1)
                         if len(parts) == 2:
                             current_answer_key = parts[0].strip().lower()
-                            current_answer_text = (
-                                [parts[1].strip()] if parts[1].strip() else []
+                            current_answer_text = cast(
+                                List[str],
+                                [parts[1].strip()] if parts[1].strip() else [],
                             )
                             logger.debug(f"Found answer key: {current_answer_key}")
                 elif current_section == "general":
@@ -321,7 +322,8 @@ Please provide specific educational feedback for each answer choice explaining w
                             logger.debug(f"Found answer key: {current_answer_key}")
                     elif current_answer_key:
                         # Continue adding to current answer feedback
-                        current_answer_text.append(line)
+                        current_answer_text = cast(List[str], current_answer_text)
+                        current_answer_text.append(line)  # type: ignore[index]
                 elif not current_section:
                     # Check if this line looks like an answer before defaulting to general feedback
                     if (
