@@ -357,7 +357,7 @@ class TestObjectivesAPI:
 
     def test_objectives_page_loads(self, client, sample_objectives):
         """Test that objectives page loads successfully"""
-        with patch("question_app.main.load_objectives", return_value=sample_objectives):
+        with patch("question_app.api.objectives.load_objectives", return_value=sample_objectives):
             response = client.get("/objectives")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
@@ -379,7 +379,7 @@ class TestObjectivesAPI:
             ]
         }
 
-        with patch("question_app.main.save_objectives", return_value=True):
+        with patch("question_app.api.objectives.save_objectives", return_value=True):
             response = client.post("/objectives", json=objectives_data)
             assert response.status_code == 200
             data = response.json()
@@ -389,7 +389,7 @@ class TestObjectivesAPI:
         """Test objectives save failure"""
         objectives_data = {"objectives": []}
 
-        with patch("question_app.main.save_objectives", return_value=False):
+        with patch("question_app.api.objectives.save_objectives", return_value=False):
             response = client.post("/objectives", json=objectives_data)
             assert response.status_code == 500
 

@@ -54,13 +54,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import API routers
-from .api import canvas_router, questions_router, chat_router, system_prompt_router
+from .api import (
+    canvas_router, 
+    questions_router, 
+    chat_router, 
+    system_prompt_router,
+    objectives_router
+)
 
 # Import utility functions from organized modules
 from .utils import (
     load_questions,
-    load_objectives,
-    save_objectives,
     load_system_prompt,
     clean_answer_feedback,
 )
@@ -76,6 +80,7 @@ app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
 app.include_router(system_prompt_router)
+app.include_router(objectives_router)
 
 # Configuration from environment
 CANVAS_BASE_URL = os.getenv("CANVAS_BASE_URL")
@@ -88,8 +93,7 @@ DATA_FILE = "data/quiz_questions.json"
 SYSTEM_PROMPT_FILE = "config/system_prompt.txt"
 
 
-# Import models from the models package
-from .models import ObjectivesUpdate
+
 
 
 
@@ -681,35 +685,7 @@ async def debug_question(question_id: int):
 
 
 
-@app.get("/objectives", response_class=HTMLResponse)
-async def objectives_page(request: Request):
-    """Learning objectives management page"""
-    objectives = load_objectives()
-    return templates.TemplateResponse(
-        "objectives.html", {"request": request, "objectives": objectives}
-    )
 
-
-@app.post("/objectives")
-async def save_objectives_endpoint(objectives_data: ObjectivesUpdate):
-    """Save learning objectives"""
-    try:
-        # Convert Pydantic models to dictionaries
-        objectives_list = [obj.model_dump() for obj in objectives_data.objectives]
-
-        if save_objectives(objectives_list):
-            logger.info(f"Saved {len(objectives_list)} learning objectives")
-            return {
-                "success": True,
-                "message": f"Successfully saved {len(objectives_list)} learning objectives",
-            }
-        else:
-            raise HTTPException(
-                status_code=500, detail="Failed to save learning objectives"
-            )
-    except Exception as e:
-        logger.error(f"Error saving objectives: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/debug/config")

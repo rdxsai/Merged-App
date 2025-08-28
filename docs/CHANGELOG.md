@@ -41,10 +41,18 @@
   - Added Ollama embedding integration for local AI processing
 
 - **AI Service Module** (`src/question_app/services/ai_service.py`)
+
   - Extracted AI feedback generation logic from main.py
   - Separated AI business logic from API endpoints
   - Eliminated circular import issues
   - Added comprehensive error handling and logging
+
+- **Objectives API Module** (`src/question_app/api/objectives.py`)
+  - Extracted learning objectives management endpoints from main.py
+  - Organized objectives functionality into dedicated module
+  - Added objectives viewing and saving endpoints
+  - Maintained HTML template rendering for web interface
+  - Added proper error handling and logging
 
 ### Changed
 
@@ -54,6 +62,7 @@
   - Question endpoints maintain original paths for backward compatibility
   - Chat endpoints now use `/chat/*` prefix for consistency
   - System prompt endpoints now use `/system-prompt/*` prefix for consistency
+  - Objectives endpoints now use `/objectives/*` prefix for consistency
 - **Frontend Updates**:
   - Updated `templates/index.html` to use new `/api/fetch-questions` endpoint
 - **Test Updates**:
@@ -61,7 +70,8 @@
   - Updated test files to patch functions in `question_app.api.questions` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.chat` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.system_prompt` instead of `question_app.main`
-  - Fixed import paths for Canvas-related, question-related, and system prompt functions
+  - Updated test files to patch functions in `question_app.api.objectives` instead of `question_app.main`
+  - Fixed import paths for Canvas-related, question-related, system prompt, and objectives functions
   - Fixed AI service mocking to target correct import paths
 
 ### Updated Documentation
@@ -97,5 +107,6 @@
   - `question_app.api.questions` for question functionality
   - `question_app.api.chat` for chat and vector store functionality
   - `question_app.api.system_prompt` for system prompt functionality
+  - `question_app.api.objectives` for objectives functionality
   - `question_app.services.ai_service` for AI functionality
 - **Documentation**: Refer to `docs/api_structure.md` for detailed API documentation

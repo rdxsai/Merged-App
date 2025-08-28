@@ -17,6 +17,7 @@ questionapp/
 │       │   ├── canvas.py     # Canvas LMS integration endpoints
 │       │   ├── questions.py  # Question CRUD endpoints
 │       │   ├── chat.py       # RAG-based chat endpoints
+│       │   ├── objectives.py # Learning objectives management endpoints
 │       │   └── system_prompt.py  # System prompt management endpoints
 │       ├── core/             # Core application logic
 │       ├── models/           # Pydantic models and data structures
@@ -211,6 +212,7 @@ The application follows a modular architecture:
   - **Canvas API** (`canvas.py`): Canvas LMS integration endpoints
   - **Questions API** (`questions.py`): Question CRUD operations
   - **Chat API** (`chat.py`): RAG-based chat functionality
+  - **Objectives API** (`objectives.py`): Learning objectives management
   - Additional API modules can be added for other functionality
 - **Core Layer** (`src/question_app/core/`): Core application logic
 - **Models Layer** (`src/question_app/models/`): Data models and schemas
@@ -243,6 +245,11 @@ The API is organized into focused modules for better maintainability:
 - `POST /chat/create-vector-store` - Create vector store from questions
 - `GET /chat/system-prompt` - Chat system prompt management
 - `GET /chat/welcome-message` - Welcome message management
+
+### Learning Objectives Management (`/objectives/*`)
+
+- `GET /objectives/` - Learning objectives management page
+- `POST /objectives/` - Save learning objectives
 
 See `docs/api_structure.md` for detailed API documentation.
 

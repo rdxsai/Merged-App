@@ -345,11 +345,11 @@ Additional API Modules
 
 **Purpose**: Further organize API endpoints by functionality
 **Planned Structure**:
-- ``api/questions.py``: Question management endpoints
-- ``api/chat.py``: Chat assistant endpoints
+- ``api/questions.py``: Question management endpoints (✅ Implemented)
+- ``api/chat.py``: Chat assistant endpoints (✅ Implemented)
 - ``api/ai.py``: AI feedback generation endpoints
-- ``api/objectives.py``: Learning objectives endpoints
-- ``api/canvas.py``: Canvas integration endpoints
+- ``api/objectives.py``: Learning objectives endpoints (✅ Implemented)
+- ``api/canvas.py``: Canvas integration endpoints (✅ Implemented)
 - ``api/system_prompt.py``: System prompt management endpoints (✅ Implemented)
 
 Core Package

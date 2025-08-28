@@ -159,8 +159,8 @@ class TestFullWorkflow:
         """Test learning objectives management workflow"""
         objectives_file = os.path.join(temp_data_dir, "learning_objectives.json")
 
-        with patch("question_app.main.load_objectives") as mock_load:
-            with patch("question_app.main.save_objectives") as mock_save:
+        with patch("question_app.api.objectives.load_objectives") as mock_load:
+            with patch("question_app.api.objectives.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
 
@@ -332,8 +332,8 @@ class TestDataConsistency:
     @pytest.mark.integration
     def test_objectives_data_consistency(self, client):
         """Test that objectives data remains consistent"""
-        with patch("question_app.main.load_objectives") as mock_load:
-            with patch("question_app.main.save_objectives") as mock_save:
+        with patch("question_app.api.objectives.load_objectives") as mock_load:
+            with patch("question_app.api.objectives.save_objectives") as mock_save:
                 mock_load.return_value = []
                 mock_save.return_value = True
 

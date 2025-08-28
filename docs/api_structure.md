@@ -75,6 +75,27 @@ Contains all system prompt management functionality:
 - Proper error handling and logging
 - HTML template rendering for web interface
 
+### Objectives API (`src/question_app/api/objectives.py`)
+
+Contains all learning objectives management functionality:
+
+#### Endpoints:
+
+- `GET /objectives/` - Learning objectives management page
+- `POST /objectives/` - Save learning objectives
+
+#### Functions:
+
+- `load_objectives()` - Load learning objectives from file
+- `save_objectives()` - Save learning objectives to file
+
+#### Features:
+
+- Learning objectives management interface
+- JSON API for saving objectives
+- Proper error handling and logging
+- HTML template rendering for web interface
+
 ### Chat API (`src/question_app/api/chat.py`)
 
 Contains all RAG-based chat functionality and vector store operations:
@@ -132,11 +153,12 @@ Contains AI-related business logic:
 The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router, questions_router, chat_router, system_prompt_router
+from .api import canvas_router, questions_router, chat_router, system_prompt_router, objectives_router
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
 app.include_router(system_prompt_router)
+app.include_router(objectives_router)
 ```
 
 ## Benefits
@@ -152,11 +174,11 @@ app.include_router(system_prompt_router)
 
 Additional API modules can be created for:
 
-- Learning objectives management
 - System configuration
 - User authentication and authorization
 - Additional AI integrations
 - Analytics and reporting
+- Additional Canvas integrations
 
 ## Usage
 
