@@ -109,23 +109,27 @@ def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
     feedback = re.sub(r"Incorrect\.", "", feedback, flags=re.IGNORECASE)
     feedback = re.sub(r"Good job!", "", feedback, flags=re.IGNORECASE)
     feedback = re.sub(r"Try again\.", "", feedback, flags=re.IGNORECASE)
-    
+
     # Remove weight indicators
     feedback = re.sub(r"\(Weight:\s*\d+%?\)", "", feedback, flags=re.IGNORECASE)
-    
+
     # Remove correctness indicators
     feedback = re.sub(r"\[✓\s*CORRECT\]", "", feedback, flags=re.IGNORECASE)
     feedback = re.sub(r"\[✗\s*INCORRECT\]", "", feedback, flags=re.IGNORECASE)
-    
+
     # Remove answer text prefix if provided
     if answer_text and feedback.startswith(f"{answer_text}:"):
-        feedback = feedback[len(f"{answer_text}:"):].strip()
+        feedback = feedback[len(f"{answer_text}:") :].strip()
     elif answer_text and feedback.startswith(f"{answer_text} "):
-        feedback = feedback[len(f"{answer_text} "):].strip()
+        feedback = feedback[len(f"{answer_text} ") :].strip()
 
     # Clean up whitespace but preserve newlines
-    feedback = re.sub(r"[ \t]+", " ", feedback)  # Replace multiple spaces/tabs with single space
-    feedback = re.sub(r"\n\s*\n", "\n\n", feedback)  # Normalize multiple newlines to double newlines
+    feedback = re.sub(
+        r"[ \t]+", " ", feedback
+    )  # Replace multiple spaces/tabs with single space
+    feedback = re.sub(
+        r"\n\s*\n", "\n\n", feedback
+    )  # Normalize multiple newlines to double newlines
     feedback = feedback.strip()
 
     return feedback
@@ -167,41 +171,54 @@ def extract_topic_from_text(text: str) -> str:
     """
     if not text:
         return "general"
-    
+
     # Simple keyword-based topic extraction
     text_lower = text.lower()
-    
+
     # Accessibility keywords
     accessibility_keywords = [
-        "accessibility", "screen reader", "alt text", "wcag", "aria", 
-        "accessible", "disability", "assistive"
+        "accessibility",
+        "screen reader",
+        "alt text",
+        "wcag",
+        "aria",
+        "accessible",
+        "disability",
+        "assistive",
     ]
     if any(word in text_lower for word in accessibility_keywords):
         return "accessibility"
-    
+
     # Navigation keywords
     navigation_keywords = ["navigation", "menu", "nav", "breadcrumb", "sitemap"]
     if any(word in text_lower for word in navigation_keywords):
         return "navigation"
-    
+
     # Forms keywords
     forms_keywords = ["form", "input", "label", "field", "submit", "validation"]
     if any(word in text_lower for word in forms_keywords):
         return "forms"
-    
+
     # Media keywords
     media_keywords = ["video", "audio", "image", "caption", "transcript", "media"]
     if any(word in text_lower for word in media_keywords):
         return "media"
-    
+
     # Keyboard keywords
     keyboard_keywords = ["keyboard", "shortcut", "tab", "focus", "arrow"]
     if any(word in text_lower for word in keyboard_keywords):
         return "keyboard"
-    
+
     # Content keywords
-    content_keywords = ["content", "semantic", "html", "structure", "heading", "element"]
+    content_keywords = [
+        "content",
+        "semantic",
+        "html",
+        "structure",
+        "heading",
+        "element",
+    ]
     if any(word in text_lower for word in content_keywords):
         return "content"
-    
+
     return "general"

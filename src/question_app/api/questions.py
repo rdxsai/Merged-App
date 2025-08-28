@@ -10,15 +10,15 @@ from fastapi.templating import Jinja2Templates
 
 from ..core import config, get_logger
 from ..models import QuestionUpdate
-from ..utils import (
-    load_questions,
-    save_questions,
-    load_objectives,
-    load_system_prompt,
-    get_all_existing_tags,
-    extract_topic_from_text,
-)
 from ..services.ai_service import generate_feedback_with_ai
+from ..utils import (
+    extract_topic_from_text,
+    get_all_existing_tags,
+    load_objectives,
+    load_questions,
+    load_system_prompt,
+    save_questions,
+)
 
 logger = get_logger(__name__)
 
@@ -38,14 +38,9 @@ async def delete_question(question_id: int):
 
         if save_questions(questions):
             logger.info(f"Deleted question {question_id}")
-            return {
-                "success": True, 
-                "message": "Question deleted successfully"
-            }
+            return {"success": True, "message": "Question deleted successfully"}
         else:
-            raise HTTPException(
-                status_code=500, detail="Failed to save changes"
-            )
+            raise HTTPException(status_code=500, detail="Failed to save changes")
     except Exception as e:
         logger.error(f"Error deleting question {question_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -150,9 +145,7 @@ async def create_new_question(question_data: QuestionUpdate):
                 "question_id": new_id,
             }
         else:
-            raise HTTPException(
-                status_code=500, detail="Failed to save new question"
-            )
+            raise HTTPException(status_code=500, detail="Failed to save new question")
     except Exception as e:
         logger.error(f"Error creating new question: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -180,9 +173,7 @@ async def edit_question(request: Request, question_id: int):
 
     # Ensure question has a topic field (backward compatibility)
     if "topic" not in question:
-        question["topic"] = extract_topic_from_text(
-            question.get("question_text", "")
-        )
+        question["topic"] = extract_topic_from_text(question.get("question_text", ""))
 
     # Ensure question has a tags field (backward compatibility)
     if "tags" not in question:

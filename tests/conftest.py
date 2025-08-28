@@ -100,7 +100,7 @@ def sample_questions() -> List[Dict[str, Any]]:
                     "weight": 100.0,
                 },
             ],
-        }
+        },
     ]
 
 

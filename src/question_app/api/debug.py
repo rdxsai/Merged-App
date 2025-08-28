@@ -8,7 +8,7 @@ This module contains all debugging and testing functionality including:
 """
 
 import os
-from typing import Dict, Any  # noqa: F401
+from typing import Any, Dict  # noqa: F401
 
 import httpx
 from fastapi import APIRouter
@@ -30,13 +30,13 @@ SYSTEM_PROMPT_FILE = "config/system_prompt.txt"
 async def debug_question(question_id: int):
     """
     Debug endpoint to inspect a specific question.
-    
+
     This endpoint provides detailed information about a specific question
     including its structure, content length, and metadata.
-    
+
     Args:
         question_id (int): The ID of the question to debug.
-        
+
     Returns:
         Dict[str, Any]: Debug information about the question including:
             - question_found: Whether the question exists
@@ -61,19 +61,11 @@ async def debug_question(question_id: int):
             "question_found": True,
             "question_id": question.get("id"),
             "question_type": question.get("question_type"),
-            "question_text_length": len(
-                question.get("question_text", "")
-            ),
+            "question_text_length": len(question.get("question_text", "")),
             "answers_count": len(question.get("answers", [])),
-            "has_correct_comments": bool(
-                question.get("correct_comments")
-            ),
-            "has_incorrect_comments": bool(
-                question.get("incorrect_comments")
-            ),
-            "has_neutral_comments": bool(
-                question.get("neutral_comments")
-            ),
+            "has_correct_comments": bool(question.get("correct_comments")),
+            "has_incorrect_comments": bool(question.get("incorrect_comments")),
+            "has_neutral_comments": bool(question.get("neutral_comments")),
             "question_keys": list(question.keys()),
             "total_questions": len(questions),
         }
@@ -89,10 +81,10 @@ async def debug_question(question_id: int):
 async def debug_config():
     """
     Debug endpoint to check configuration.
-    
+
     This endpoint provides information about the application's configuration
     including Canvas LMS settings, Azure OpenAI settings, and system status.
-    
+
     Returns:
         Dict[str, Any]: Configuration debug information including:
             - canvas_configured: Whether Canvas is properly configured
@@ -108,7 +100,7 @@ async def debug_config():
             - ollama_host_with_protocol: Full Ollama URL with protocol
     """
     # Configuration is now handled by the core config module
-    
+
     return {
         "canvas_configured": config.validate_canvas_config(),
         "azure_configured": config.validate_azure_openai_config(),
@@ -130,10 +122,10 @@ async def debug_config():
 async def test_ollama_connection():
     """
     Test Ollama connection and model availability.
-    
+
     This endpoint tests the connection to the Ollama service and checks
     if the configured embedding model is available.
-    
+
     Returns:
         Dict[str, Any]: Ollama connection test results including:
             - ollama_connected: Whether Ollama is reachable
@@ -161,8 +153,9 @@ async def test_ollama_connection():
                     "ollama_connected": True,
                     "ollama_host": ollama_host,
                     "available_models": model_names,
-                            "embedding_model_available": config.OLLAMA_EMBEDDING_MODEL in model_names,
-        "configured_model": config.OLLAMA_EMBEDDING_MODEL,
+                    "embedding_model_available": config.OLLAMA_EMBEDDING_MODEL
+                    in model_names,
+                    "configured_model": config.OLLAMA_EMBEDDING_MODEL,
                 }
             else:
                 return {

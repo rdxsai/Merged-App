@@ -20,7 +20,9 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_success(self, client, sample_questions):
         """Test successful questions fetch"""
-        with patch("question_app.api.canvas.fetch_all_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.canvas.fetch_all_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.canvas.save_questions", return_value=True):
                 response = client.post("/api/fetch-questions")
                 assert response.status_code == 200
@@ -30,14 +32,18 @@ class TestQuestionsAPI:
 
     def test_fetch_questions_save_failure(self, client, sample_questions):
         """Test questions fetch with save failure"""
-        with patch("question_app.api.canvas.fetch_all_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.canvas.fetch_all_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.canvas.save_questions", return_value=False):
                 response = client.post("/api/fetch-questions")
                 assert response.status_code == 500
 
     def test_delete_question_success(self, client, sample_questions):
         """Test successful question deletion"""
-        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.questions.save_questions", return_value=True):
                 response = client.delete("/questions/1")
                 assert response.status_code == 200
@@ -54,7 +60,9 @@ class TestQuestionsAPI:
 
     def test_delete_question_save_failure(self, client, sample_questions):
         """Test question deletion with save failure"""
-        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.questions.save_questions", return_value=False):
                 response = client.delete("/questions/1")
                 assert response.status_code == 500
@@ -65,7 +73,9 @@ class TestQuestionCRUD:
 
     def test_get_question_edit_page(self, client, sample_questions):
         """Test getting question edit page"""
-        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=sample_questions
+        ):
             response = client.get("/questions/1")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
@@ -155,7 +165,9 @@ class TestQuestionCRUD:
             ],
         }
 
-        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.questions.save_questions", return_value=True):
                 response = client.post("/questions/1", data=question_data)
                 # The endpoint might return 405 for method not allowed or 302 for success
@@ -172,7 +184,9 @@ class TestQuestionCRUD:
     def test_update_question_save_failure(self, client, sample_questions):
         """Test question update with save failure"""
         question_data = {"question_text": "Updated question"}
-        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=sample_questions
+        ):
             with patch("question_app.api.questions.save_questions", return_value=False):
                 response = client.post("/questions/1", data=question_data)
                 # The endpoint might return 405 for method not allowed or 500 for server error

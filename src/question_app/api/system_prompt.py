@@ -12,10 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from ..core import get_logger
-from ..utils import (
-    load_system_prompt,
-    save_system_prompt,
-)
+from ..utils import load_system_prompt, save_system_prompt
 
 logger = get_logger(__name__)
 
@@ -31,8 +28,7 @@ async def get_system_prompt_page(request: Request):
     """Get the system prompt editing page"""
     prompt = load_system_prompt()
     return templates.TemplateResponse(
-        "system_prompt_edit.html", 
-        {"request": request, "current_prompt": prompt}
+        "system_prompt_edit.html", {"request": request, "current_prompt": prompt}
     )
 
 
@@ -49,15 +45,9 @@ async def save_system_prompt_endpoint(prompt: str = Form(...)):
     try:
         if save_system_prompt(prompt):
             logger.info("System prompt updated")
-            return {
-                "success": True, 
-                "message": "System prompt saved successfully"
-            }
+            return {"success": True, "message": "System prompt saved successfully"}
         else:
-            raise HTTPException(
-                status_code=500, 
-                detail="Failed to save system prompt"
-            )
+            raise HTTPException(status_code=500, detail="Failed to save system prompt")
     except Exception as e:
         logger.error(f"Error saving system prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -66,6 +56,4 @@ async def save_system_prompt_endpoint(prompt: str = Form(...)):
 @router.get("/test", response_class=HTMLResponse)
 async def test_system_prompt_page(request: Request):
     """Test page for system prompt functionality"""
-    return templates.TemplateResponse(
-        "test_system_prompt.html", {"request": request}
-    )
+    return templates.TemplateResponse("test_system_prompt.html", {"request": request})

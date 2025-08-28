@@ -17,12 +17,12 @@ from fastapi.templating import Jinja2Templates
 
 from ..core import config, get_logger
 from ..utils import (
-    load_chat_system_prompt,
-    save_chat_system_prompt,
-    load_welcome_message,
-    save_welcome_message,
     get_default_chat_system_prompt,
     get_default_welcome_message,
+    load_chat_system_prompt,
+    load_welcome_message,
+    save_chat_system_prompt,
+    save_welcome_message,
 )
 from .vector_store import search_vector_store
 
@@ -155,9 +155,6 @@ async def chat_message(request: Request):
         raise HTTPException(
             status_code=500, detail=f"Failed to process chat message: {str(e)}"
         )
-
-
-
 
 
 # Chat system prompt management endpoints

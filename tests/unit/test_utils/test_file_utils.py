@@ -57,8 +57,7 @@ class TestFileOperations:
             {"id": 1, "question_text": "Test question 1"},
             {"id": 2, "question_text": "Test question 2"},
         ]
-        with patch("builtins.open",
-                  mock_open(read_data=json.dumps(sample_data))):
+        with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
             with patch("os.path.exists", return_value=True):
                 result = load_questions()
                 assert result == sample_data

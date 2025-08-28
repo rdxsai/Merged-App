@@ -28,12 +28,14 @@ router = APIRouter(prefix="/api", tags=["canvas"])
 
 class ConfigurationUpdate(BaseModel):
     """Model for configuration update requests."""
+
     course_id: str = None
     quiz_id: str = None
 
 
 class FetchQuestionsResponse(BaseModel):
     """Model for fetch questions response."""
+
     success: bool
     message: str
 
@@ -83,15 +85,12 @@ async def make_canvas_request(
             logger.error(f"HTTP error on attempt {attempt + 1}: {e}")
             if attempt == max_retries - 1:
                 raise HTTPException(
-                    status_code=e.response.status_code,
-                    detail=f"Canvas API error: {e}"
+                    status_code=e.response.status_code, detail=f"Canvas API error: {e}"
                 )
         except Exception as e:
             logger.error(f"Request error on attempt {attempt + 1}: {e}")
             if attempt == max_retries - 1:
-                raise HTTPException(
-                    status_code=500, detail=f"Request failed: {e}"
-                )
+                raise HTTPException(status_code=500, detail=f"Request failed: {e}")
 
     raise HTTPException(status_code=500, detail="Max retries exceeded")
 
@@ -122,14 +121,12 @@ def clean_question_text(text: str) -> str:
 
     # Remove script tags and their content
     text = re.sub(
-        r"<script[^>]*?>.*?</script>", "",
-        text, flags=re.IGNORECASE | re.DOTALL
+        r"<script[^>]*?>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL
     )
 
     # Remove style tags and their content
     text = re.sub(
-        r"<style[^>]*?>.*?</style>", "",
-        text, flags=re.IGNORECASE | re.DOTALL
+        r"<style[^>]*?>.*?</style>", "", text, flags=re.IGNORECASE | re.DOTALL
     )
 
     # Remove meta tags
@@ -167,8 +164,8 @@ async def fetch_courses() -> List[Dict[str, Any]]:
         missing_configs = config.get_missing_canvas_configs()
         logger.error(f"Missing Canvas configuration: {', '.join(missing_configs)}")
         raise HTTPException(
-            status_code=400, 
-            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}"
+            status_code=400,
+            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}",
         )
 
     headers = {"Authorization": f"Bearer {config.CANVAS_API_TOKEN}"}
@@ -244,8 +241,8 @@ async def fetch_quizzes(course_id: str) -> List[Dict[str, Any]]:
         missing_configs = config.get_missing_canvas_configs()
         logger.error(f"Missing Canvas configuration: {', '.join(missing_configs)}")
         raise HTTPException(
-            status_code=400, 
-            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}"
+            status_code=400,
+            detail=f"Canvas API configuration incomplete. Missing: {', '.join(missing_configs)}",
         )
 
     headers = {"Authorization": f"Bearer {config.CANVAS_API_TOKEN}"}
@@ -312,8 +309,8 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
     if not config.validate_canvas_config():
         missing_configs = config.get_missing_canvas_configs()
         raise HTTPException(
-            status_code=500, 
-            detail=f"Missing Canvas configuration: {', '.join(missing_configs)}"
+            status_code=500,
+            detail=f"Missing Canvas configuration: {', '.join(missing_configs)}",
         )
 
     headers = {
@@ -326,9 +323,7 @@ async def fetch_all_questions() -> List[Dict[str, Any]]:
     per_page = 100
 
     while True:
-        url = (
-            f"{config.CANVAS_BASE_URL}/api/v1/courses/{config.COURSE_ID}/quizzes/{config.QUIZ_ID}/questions"
-        )
+        url = f"{config.CANVAS_BASE_URL}/api/v1/courses/{config.COURSE_ID}/quizzes/{config.QUIZ_ID}/questions"
         params = f"?page={page}&per_page={per_page}"
 
         logger.info(f"Fetching page {page} from Canvas API")
@@ -362,7 +357,7 @@ def load_questions() -> List[Dict[str, Any]]:
     """Load questions from the data file."""
     import json
     from pathlib import Path
-    
+
     data_file = Path("data/quiz_questions.json")
     if data_file.exists():
         try:
@@ -377,11 +372,11 @@ def save_questions(questions: List[Dict[str, Any]]) -> bool:
     """Save questions to the data file."""
     import json
     from pathlib import Path
-    
+
     try:
         data_file = Path("data/quiz_questions.json")
         data_file.parent.mkdir(exist_ok=True)
-        
+
         with open(data_file, "w", encoding="utf-8") as f:
             json.dump(questions, f, indent=2, ensure_ascii=False)
         return True

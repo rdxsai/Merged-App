@@ -89,7 +89,10 @@ class TestAIFeedbackGeneration:
         question_data = {"id": 1, "question_text": "Test question"}
         system_prompt = "Test prompt"
 
-        with patch("question_app.core.config.Config.validate_azure_openai_config", return_value=False):
+        with patch(
+            "question_app.core.config.Config.validate_azure_openai_config",
+            return_value=False,
+        ):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)
@@ -257,7 +260,11 @@ class TestVectorStoreOperations:
         assert len(ids) == 2
 
         # Check main chunk content
-        main_chunk = [doc for doc in documents if "What is accessibility?" in doc and "A design principle" not in doc][0]
+        main_chunk = [
+            doc
+            for doc in documents
+            if "What is accessibility?" in doc and "A design principle" not in doc
+        ][0]
         assert "What is accessibility?" in main_chunk
         assert "Accessibility helps users with disabilities" in main_chunk
 
@@ -291,7 +298,10 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch(
+                "question_app.api.vector_store.get_ollama_embeddings",
+                return_value=[[0.1, 0.2, 0.3]],
+            ):
                 result = await search_vector_store("test query", n_results=2)
 
                 assert len(result) == 2
@@ -310,7 +320,10 @@ class TestVectorStoreOperations:
             }
             mock_client.return_value.get_collection.return_value = mock_collection
 
-            with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[[0.1, 0.2, 0.3]]):
+            with patch(
+                "question_app.api.vector_store.get_ollama_embeddings",
+                return_value=[[0.1, 0.2, 0.3]],
+            ):
                 result = await search_vector_store("test query")
 
                 assert result == []
@@ -318,7 +331,9 @@ class TestVectorStoreOperations:
     @pytest.mark.asyncio
     async def test_search_vector_store_embedding_failure(self):
         """Test vector store search with embedding failure"""
-        with patch("question_app.api.vector_store.get_ollama_embeddings", return_value=[]):
+        with patch(
+            "question_app.api.vector_store.get_ollama_embeddings", return_value=[]
+        ):
             result = await search_vector_store("test query")
 
             assert result == []
@@ -378,16 +393,25 @@ class TestAIIntegrationEndpoints:
         self, client, sample_questions
     ):
         """Test successful feedback generation endpoint"""
-        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
-            with patch("question_app.api.questions.load_questions", return_value=sample_questions):
-                with patch("question_app.services.ai_service.generate_feedback_with_ai") as mock_generate:
+        with patch(
+            "question_app.api.questions.load_system_prompt", return_value="Test prompt"
+        ):
+            with patch(
+                "question_app.api.questions.load_questions",
+                return_value=sample_questions,
+            ):
+                with patch(
+                    "question_app.services.ai_service.generate_feedback_with_ai"
+                ) as mock_generate:
                     mock_generate.return_value = {
                         "general_feedback": "Test feedback",
                         "answer_feedback": {"answer 1": "Test answer feedback"},
                         "token_usage": {"total_tokens": 100},
                     }
 
-                    with patch("question_app.api.questions.save_questions", return_value=True):
+                    with patch(
+                        "question_app.api.questions.save_questions", return_value=True
+                    ):
                         response = client.post("/questions/1/generate-feedback")
                         assert response.status_code == 200
                         data = response.json()
@@ -403,7 +427,9 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_generate_question_feedback_question_not_found(self, client):
         """Test feedback generation for non-existent question"""
-        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
+        with patch(
+            "question_app.api.questions.load_system_prompt", return_value="Test prompt"
+        ):
             with patch("question_app.api.questions.load_questions", return_value=[]):
                 response = client.post("/questions/999/generate-feedback")
                 assert response.status_code == 404
@@ -411,8 +437,13 @@ class TestAIIntegrationEndpoints:
     @pytest.mark.asyncio
     async def test_create_vector_store_success(self, client, sample_questions):
         """Test successful vector store creation"""
-        with patch("question_app.api.vector_store.load_questions", return_value=sample_questions):
-            with patch("question_app.api.vector_store.get_ollama_embeddings") as mock_embeddings:
+        with patch(
+            "question_app.api.vector_store.load_questions",
+            return_value=sample_questions,
+        ):
+            with patch(
+                "question_app.api.vector_store.get_ollama_embeddings"
+            ) as mock_embeddings:
                 mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
                 with patch("chromadb.PersistentClient") as mock_client:

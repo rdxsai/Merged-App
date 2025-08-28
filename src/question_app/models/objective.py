@@ -5,6 +5,7 @@ This module contains all Pydantic models related to learning objectives.
 """
 
 from typing import List
+
 from pydantic import BaseModel
 
 

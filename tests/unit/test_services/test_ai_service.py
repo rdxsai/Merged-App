@@ -83,7 +83,10 @@ class TestAIFeedbackGeneration:
         question_data = {"id": 1, "question_text": "Test question"}
         system_prompt = "Test prompt"
 
-        with patch("question_app.core.config.Config.validate_azure_openai_config", return_value=False):
+        with patch(
+            "question_app.core.config.Config.validate_azure_openai_config",
+            return_value=False,
+        ):
             with pytest.raises(Exception) as exc_info:
                 await generate_feedback_with_ai(question_data, system_prompt)
             assert "Azure OpenAI configuration incomplete" in str(exc_info.value.detail)
@@ -122,13 +125,7 @@ class TestAIFeedbackGeneration:
         system_prompt = "Test prompt"
 
         mock_ai_response = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "Invalid response format"
-                    }
-                }
-            ],
+            "choices": [{"message": {"content": "Invalid response format"}}],
             "usage": {
                 "prompt_tokens": 100,
                 "completion_tokens": 50,

@@ -34,14 +34,16 @@ import uvicorn
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-# TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
-# TODO: Offload vector store to S3 Vector Bucket
-
 # Import core modules
-from .core import config, create_app, register_routers, get_logger, get_templates
+from .core import config, create_app, get_logger, get_templates, register_routers
 
 # Import utility functions from organized modules
 from .utils import load_questions
+
+# TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
+# TODO: Offload vector store to S3 Vector Bucket
+
+
 
 # Set up logging
 logger = get_logger(__name__)

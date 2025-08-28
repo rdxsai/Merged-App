@@ -227,8 +227,13 @@ class TestFullWorkflow:
     @pytest.mark.integration
     def test_vector_store_workflow(self, client, sample_questions):
         """Test vector store creation workflow"""
-        with patch("question_app.api.vector_store.load_questions", return_value=sample_questions):
-            with patch("question_app.api.vector_store.get_ollama_embeddings") as mock_embeddings:
+        with patch(
+            "question_app.api.vector_store.load_questions",
+            return_value=sample_questions,
+        ):
+            with patch(
+                "question_app.api.vector_store.get_ollama_embeddings"
+            ) as mock_embeddings:
                 with patch("chromadb.PersistentClient") as mock_client:
                     # Mock embeddings
                     mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
@@ -255,7 +260,9 @@ class TestErrorHandling:
     def test_missing_configuration_handling(self, client):
         """Test handling of missing configuration"""
         # Test with missing Canvas configuration
-        with patch("question_app.core.config.Config.validate_canvas_config", return_value=False):
+        with patch(
+            "question_app.core.config.Config.validate_canvas_config", return_value=False
+        ):
             response = client.get("/api/courses")
             assert response.status_code == 400
 
@@ -275,9 +282,12 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_ai_service_errors(self, client, sample_questions):
         """Test handling of AI service errors"""
-        with patch("question_app.api.questions.load_system_prompt", return_value="Test prompt"):
+        with patch(
+            "question_app.api.questions.load_system_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "question_app.api.questions.load_questions", return_value=sample_questions
+                "question_app.api.questions.load_questions",
+                return_value=sample_questions,
             ):
                 with patch(
                     "question_app.api.questions.generate_feedback_with_ai",
@@ -289,7 +299,10 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_vector_store_errors(self, client, sample_questions):
         """Test handling of vector store errors"""
-        with patch("question_app.api.vector_store.load_questions", return_value=sample_questions):
+        with patch(
+            "question_app.api.vector_store.load_questions",
+            return_value=sample_questions,
+        ):
             with patch("chromadb.PersistentClient", side_effect=Exception("DB error")):
                 response = client.post("/vector-store/create")
                 assert response.status_code == 500
@@ -376,7 +389,9 @@ class TestPerformance:
                 }
             )
 
-        with patch("question_app.api.questions.load_questions", return_value=large_questions):
+        with patch(
+            "question_app.api.questions.load_questions", return_value=large_questions
+        ):
             with patch("question_app.api.questions.save_questions", return_value=True):
                 # Test operations on large dataset without template rendering
                 response = client.delete("/questions/50")

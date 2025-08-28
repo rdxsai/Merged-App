@@ -164,9 +164,16 @@ class TestFullWorkflow:
 
         # Mock all Canvas API calls
         with patch("question_app.api.canvas.fetch_courses", return_value=mock_courses):
-            with patch("question_app.api.canvas.fetch_quizzes", return_value=mock_quizzes):
-                with patch("question_app.api.canvas.fetch_all_questions", return_value=mock_questions):
-                    with patch("question_app.api.canvas.save_questions", return_value=True):
+            with patch(
+                "question_app.api.canvas.fetch_quizzes", return_value=mock_quizzes
+            ):
+                with patch(
+                    "question_app.api.canvas.fetch_all_questions",
+                    return_value=mock_questions,
+                ):
+                    with patch(
+                        "question_app.api.canvas.save_questions", return_value=True
+                    ):
                         # 1. Get courses
                         response = client.get("/api/courses")
                         assert response.status_code == 200
@@ -227,7 +234,10 @@ class TestFullWorkflow:
             mock_post.return_value = mock_response
 
             # Test AI feedback generation
-            with patch("question_app.api.questions.load_questions", return_value=[question_data]):
+            with patch(
+                "question_app.api.questions.load_questions",
+                return_value=[question_data],
+            ):
                 response = client.post("/api/generate-feedback/1")
                 # The endpoint might not exist or return different status codes
                 assert response.status_code in [200, 404, 422]

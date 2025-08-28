@@ -13,17 +13,20 @@ class TestConfig:
     def test_config_initialization(self):
         """Test config initialization with default values"""
         config = Config()
-        assert hasattr(config, 'COURSE_ID')
-        assert hasattr(config, 'QUIZ_ID')
-        assert hasattr(config, 'CANVAS_API_TOKEN')
-        assert hasattr(config, 'CANVAS_BASE_URL')
+        assert hasattr(config, "COURSE_ID")
+        assert hasattr(config, "QUIZ_ID")
+        assert hasattr(config, "CANVAS_API_TOKEN")
+        assert hasattr(config, "CANVAS_BASE_URL")
 
     def test_validate_canvas_config_valid(self):
         """Test canvas config validation with valid values"""
-        with patch.dict(os.environ, {
-            'CANVAS_API_TOKEN': 'test_token',
-            'CANVAS_BASE_URL': 'https://test.instructure.com'
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "CANVAS_API_TOKEN": "test_token",
+                "CANVAS_BASE_URL": "https://test.instructure.com",
+            },
+        ):
             config = Config()
             assert config.validate_canvas_config() is True
 

@@ -16,7 +16,7 @@ class TestAppCreation:
         """Test app creation"""
         test_app = create_app()
         assert test_app is not None
-        assert hasattr(test_app, 'title')
+        assert hasattr(test_app, "title")
         assert test_app.title == "Canvas Quiz Manager"
 
     def test_register_routers(self):
@@ -26,12 +26,14 @@ class TestAppCreation:
         # Check that routers are registered by looking for expected routes
         routes = [route.path for route in test_app.routes]
         # The home route might be registered differently, check for API routes instead
-        assert any("/api/" in route for route in routes)  # API routes should be registered
+        assert any(
+            "/api/" in route for route in routes
+        )  # API routes should be registered
 
     def test_app_has_expected_routes(self):
         """Test that the main app has expected routes"""
         client = TestClient(app)
-        
+
         # Test home route
         response = client.get("/")
         assert response.status_code in [200, 500]  # 500 if no data, 200 if data exists
@@ -39,7 +41,7 @@ class TestAppCreation:
     def test_app_has_api_routes(self):
         """Test that the app has API routes"""
         client = TestClient(app)
-        
+
         # Test API routes exist (they might return 200 for success or various error states)
         response = client.get("/api/courses")
         assert response.status_code in [200, 400, 405, 500]  # Various states
@@ -47,7 +49,10 @@ class TestAppCreation:
     def test_app_has_questions_routes(self):
         """Test that the app has questions routes"""
         client = TestClient(app)
-        
+
         # Test questions routes exist
         response = client.get("/questions/new")
-        assert response.status_code in [200, 500]  # 200 if template exists, 500 if error
+        assert response.status_code in [
+            200,
+            500,
+        ]  # 200 if template exists, 500 if error

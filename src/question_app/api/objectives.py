@@ -27,15 +27,14 @@ templates = Jinja2Templates(directory="templates")
 async def objectives_page(request: Request):
     """
     Learning objectives management page.
-    
+
     Returns:
-        HTMLResponse: Rendered objectives management page with current 
+        HTMLResponse: Rendered objectives management page with current
         objectives.
     """
     objectives = load_objectives()
     return templates.TemplateResponse(
-        "objectives.html", 
-        {"request": request, "objectives": objectives}
+        "objectives.html", {"request": request, "objectives": objectives}
     )
 
 
@@ -43,29 +42,26 @@ async def objectives_page(request: Request):
 async def save_objectives_endpoint(objectives_data: ObjectivesUpdate):
     """
     Save learning objectives.
-    
+
     Args:
         objectives_data (ObjectivesUpdate): The objectives data to save.
-        
+
     Returns:
         dict: Success response with message.
-        
+
     Raises:
         HTTPException: If saving fails.
     """
     try:
         # Convert Pydantic models to dictionaries
-        objectives_list = [
-            obj.model_dump() for obj in objectives_data.objectives
-        ]
+        objectives_list = [obj.model_dump() for obj in objectives_data.objectives]
 
         if save_objectives(objectives_list):
             logger.info(f"Saved {len(objectives_list)} learning objectives")
             return {
                 "success": True,
                 "message": (
-                    f"Successfully saved {len(objectives_list)} "
-                    f"learning objectives"
+                    f"Successfully saved {len(objectives_list)} " f"learning objectives"
                 ),
             }
         else:

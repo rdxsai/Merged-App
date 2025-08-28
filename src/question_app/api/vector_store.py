@@ -16,11 +16,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from ..core import config, get_logger
-from ..utils import (
-    clean_html_for_vector_store,
-    load_questions,
-    extract_topic_from_text,
-)
+from ..utils import clean_html_for_vector_store, extract_topic_from_text, load_questions
 
 logger = get_logger(__name__)
 
@@ -71,27 +67,31 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
         :func:`create_comprehensive_chunks`: Prepare text for embedding
     """
     embeddings = []
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         for i, text in enumerate(texts):
             try:
                 # Skip empty texts but add a zero vector
                 if not text.strip():
-                    logger.warning(f"Empty text at index {i}, skipping embedding generation")
-                    embeddings.append([0.0] * 768)  # Default dimension for nomic-embed-text
+                    logger.warning(
+                        f"Empty text at index {i}, skipping embedding generation"
+                    )
+                    embeddings.append(
+                        [0.0] * 768
+                    )  # Default dimension for nomic-embed-text
                     continue
 
                 # Prepare request payload
                 payload = {
                     "model": config.OLLAMA_EMBEDDING_MODEL,
-                    "prompt": text.strip()
+                    "prompt": text.strip(),
                 }
 
                 # Make request to Ollama
                 response = await client.post(
                     f"{config.OLLAMA_HOST}/api/embeddings",
                     json=payload,
-                    headers={"Content-Type": "application/json"}
+                    headers={"Content-Type": "application/json"},
                 )
                 response.raise_for_status()
 
@@ -109,7 +109,9 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
                     continue
 
                 embeddings.append(embedding)
-                logger.debug(f"Generated embedding {i+1}/{len(texts)} with {len(embedding)} dimensions")
+                logger.debug(
+                    f"Generated embedding {i+1}/{len(texts)} with {len(embedding)} dimensions"
+                )
 
                 # Small delay to avoid overwhelming the service
                 if i < len(texts) - 1:
@@ -129,7 +131,9 @@ async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
     return embeddings
 
 
-def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> Tuple[List[str], List[Dict[str, Any]], List[str]]:
+def create_comprehensive_chunks(
+    questions: List[Dict[str, Any]]
+) -> Tuple[List[str], List[Dict[str, Any]], List[str]]:
     """
     Create comprehensive chunks from quiz questions for vector store processing.
 
@@ -164,26 +168,26 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> Tuple[List[s
 
     for question in questions:
         question_id = question.get("id", "unknown")
-        
+
         # Clean and prepare question text
         question_text = clean_html_for_vector_store(question.get("question_text", ""))
-        
+
         # Clean general feedback
         general_feedback = clean_html_for_vector_store(
             question.get("neutral_comments", "")
         )
-        
+
         # Get topic (with fallback to extraction)
         topic = question.get("topic", "")
         if not topic:
             topic = extract_topic_from_text(question_text)
-        
+
         # Get tags
         tags = question.get("tags", "")
-        
+
         # Get learning objective
         learning_objective = question.get("learning_objective", "")
-        
+
         # Create main question chunk
         if question_text:
             main_content = f"Question: {question_text}"
@@ -191,16 +195,20 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> Tuple[List[s
                 main_content += f"\n\nGeneral Feedback: {general_feedback}"
             if learning_objective:
                 main_content += f"\n\nLearning Objective: {learning_objective}"
-            
+
             documents.append(main_content)
-            metadatas.append({
-                "question_id": question_id,
-                "chunk_type": "question",
-                "topic": topic,
-                "tags": tags,
-                "question_type": question.get("question_type", "multiple_choice_question"),
-                "learning_objective": learning_objective,
-            })
+            metadatas.append(
+                {
+                    "question_id": question_id,
+                    "chunk_type": "question",
+                    "topic": topic,
+                    "tags": tags,
+                    "question_type": question.get(
+                        "question_type", "multiple_choice_question"
+                    ),
+                    "learning_objective": learning_objective,
+                }
+            )
             ids.append(f"q_{question_id}_main")
 
         # Create answer-specific chunks
@@ -208,26 +216,34 @@ def create_comprehensive_chunks(questions: List[Dict[str, Any]]) -> Tuple[List[s
         for i, answer in enumerate(answers):
             answer_text = clean_html_for_vector_store(answer.get("text", ""))
             answer_feedback = clean_html_for_vector_store(answer.get("comments", ""))
-            
+
             if answer_text:
-                answer_content = f"Question: {question_text}\n\nAnswer {i+1}: {answer_text}"
+                answer_content = (
+                    f"Question: {question_text}\n\nAnswer {i+1}: {answer_text}"
+                )
                 if answer_feedback:
                     answer_content += f"\n\nAnswer Feedback: {answer_feedback}"
-                
+
                 documents.append(answer_content)
-                metadatas.append({
-                    "question_id": question_id,
-                    "chunk_type": "answer",
-                    "answer_index": i,
-                    "answer_weight": answer.get("weight", 0),
-                    "topic": topic,
-                    "tags": tags,
-                    "question_type": question.get("question_type", "multiple_choice_question"),
-                    "learning_objective": learning_objective,
-                })
+                metadatas.append(
+                    {
+                        "question_id": question_id,
+                        "chunk_type": "answer",
+                        "answer_index": i,
+                        "answer_weight": answer.get("weight", 0),
+                        "topic": topic,
+                        "tags": tags,
+                        "question_type": question.get(
+                            "question_type", "multiple_choice_question"
+                        ),
+                        "learning_objective": learning_objective,
+                    }
+                )
                 ids.append(f"q_{question_id}_answer_{i}")
 
-    logger.info(f"Created {len(documents)} comprehensive chunks from {len(questions)} questions")
+    logger.info(
+        f"Created {len(documents)} comprehensive chunks from {len(questions)} questions"
+    )
     return documents, metadatas, ids
 
 
@@ -401,18 +417,18 @@ async def search_vector_store_endpoint(query: str, n_results: int = 5):
     try:
         if not query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
-        
+
         if n_results < 1 or n_results > 20:
             n_results = 5
 
         logger.info(f"Searching vector store for: {query}")
         results = await search_vector_store(query, n_results=n_results)
-        
+
         return {
             "success": True,
             "query": query,
             "results": results,
-            "total_results": len(results)
+            "total_results": len(results),
         }
 
     except HTTPException:
@@ -429,17 +445,17 @@ async def get_vector_store_status():
     """Get the current status of the vector store"""
     try:
         client = chromadb.PersistentClient(path="./vector_store")
-        
+
         try:
             collection = client.get_collection("quiz_questions")
             count = collection.count()
-            
+
             return {
                 "success": True,
                 "status": "active",
                 "collection_name": "quiz_questions",
                 "document_count": count,
-                "vector_store_path": "./vector_store"
+                "vector_store_path": "./vector_store",
             }
         except Exception:
             return {
@@ -447,7 +463,7 @@ async def get_vector_store_status():
                 "status": "not_initialized",
                 "collection_name": "quiz_questions",
                 "document_count": 0,
-                "vector_store_path": "./vector_store"
+                "vector_store_path": "./vector_store",
             }
 
     except Exception as e:
@@ -462,20 +478,17 @@ async def delete_vector_store():
     """Delete the entire vector store"""
     try:
         client = chromadb.PersistentClient(path="./vector_store")
-        
+
         try:
             client.delete_collection("quiz_questions")
             logger.info("Vector store collection deleted successfully")
-            
-            return {
-                "success": True,
-                "message": "Vector store deleted successfully"
-            }
+
+            return {"success": True, "message": "Vector store deleted successfully"}
         except Exception as e:
             logger.warning(f"Error deleting collection (may not exist): {e}")
             return {
                 "success": True,
-                "message": "Vector store was already deleted or does not exist"
+                "message": "Vector store was already deleted or does not exist",
             }
 
     except Exception as e:
