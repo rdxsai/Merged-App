@@ -14,7 +14,9 @@ questionapp/
 │       ├── main.py           # FastAPI application entry point
 │       ├── api/              # API endpoints and routers
 │       │   ├── __init__.py   # API module exports
-│       │   └── canvas.py     # Canvas LMS integration endpoints
+│       │   ├── canvas.py     # Canvas LMS integration endpoints
+│       │   ├── questions.py  # Question CRUD endpoints
+│       │   └── chat.py       # RAG-based chat endpoints
 │       ├── core/             # Core application logic
 │       ├── models/           # Pydantic models and data structures
 │       ├── services/         # Business logic and external integrations
@@ -206,6 +208,8 @@ The application follows a modular architecture:
 
 - **API Layer** (`src/question_app/api/`): FastAPI endpoints and routers
   - **Canvas API** (`canvas.py`): Canvas LMS integration endpoints
+  - **Questions API** (`questions.py`): Question CRUD operations
+  - **Chat API** (`chat.py`): RAG-based chat functionality
   - Additional API modules can be added for other functionality
 - **Core Layer** (`src/question_app/core/`): Core application logic
 - **Models Layer** (`src/question_app/models/`): Data models and schemas
@@ -223,13 +227,21 @@ The API is organized into focused modules for better maintainability:
 - `POST /api/configuration` - Update course and quiz configuration
 - `POST /api/fetch-questions` - Fetch questions from Canvas API
 
-### Web Interface (`/*`)
+### Question Management (`/*`)
 
 - `GET /` - Main application page
 - `GET /questions/{id}` - Question edit page
 - `GET /questions/new` - New question creation page
 - `POST /questions/{id}/generate-feedback` - Generate AI feedback
 - And more...
+
+### Chat Interface (`/chat/*`)
+
+- `GET /chat/` - Chat interface page
+- `POST /chat/message` - Process chat messages with RAG
+- `POST /chat/create-vector-store` - Create vector store from questions
+- `GET /chat/system-prompt` - Chat system prompt management
+- `GET /chat/welcome-message` - Welcome message management
 
 See `docs/api_structure.md` for detailed API documentation.
 

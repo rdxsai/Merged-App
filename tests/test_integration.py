@@ -197,8 +197,8 @@ class TestFullWorkflow:
         assert response.status_code == 200
 
         # 2. Send chat message (mocked)
-        with patch("question_app.main.search_vector_store") as mock_search:
-            with patch("question_app.main.load_chat_system_prompt") as mock_prompt:
+        with patch("question_app.api.chat.search_vector_store") as mock_search:
+            with patch("question_app.api.chat.load_chat_system_prompt") as mock_prompt:
                 with patch("httpx.AsyncClient.post") as mock_post:
                     mock_search.return_value = [
                         {
@@ -227,8 +227,8 @@ class TestFullWorkflow:
     @pytest.mark.integration
     def test_vector_store_workflow(self, client, sample_questions):
         """Test vector store creation workflow"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
-            with patch("question_app.main.get_ollama_embeddings") as mock_embeddings:
+        with patch("question_app.api.chat.load_questions", return_value=sample_questions):
+            with patch("question_app.api.chat.get_ollama_embeddings") as mock_embeddings:
                 with patch("chromadb.PersistentClient") as mock_client:
                     # Mock embeddings
                     mock_embeddings.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
@@ -240,7 +240,7 @@ class TestFullWorkflow:
                     )
 
                     # Create vector store
-                    response = client.post("/create-vector-store")
+                    response = client.post("/chat/create-vector-store")
                     assert response.status_code == 200
                     data = response.json()
                     assert data["success"] is True
@@ -289,9 +289,9 @@ class TestErrorHandling:
     @pytest.mark.integration
     def test_vector_store_errors(self, client, sample_questions):
         """Test handling of vector store errors"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
+        with patch("question_app.api.chat.load_questions", return_value=sample_questions):
             with patch("chromadb.PersistentClient", side_effect=Exception("DB error")):
-                response = client.post("/create-vector-store")
+                response = client.post("/chat/create-vector-store")
                 assert response.status_code == 500
 
 

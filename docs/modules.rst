@@ -19,7 +19,8 @@ Package Structure
    ├── api/                     # API endpoints and routers
    │   ├── __init__.py          # API module exports
    │   ├── canvas.py            # Canvas LMS integration endpoints
-   │   └── questions.py         # Question CRUD operations and endpoints
+   │   ├── questions.py         # Question CRUD operations and endpoints
+   │   └── chat.py              # RAG-based chat functionality and vector store operations
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
    │   ├── question.py          # Question-related models
@@ -217,6 +218,48 @@ The Questions API module contains all question-related CRUD operations and endpo
    
    # Include in FastAPI app
    app.include_router(questions_router)
+
+Chat API
+~~~~~~~~
+
+**File**: ``api/chat.py``
+
+The Chat API module contains all RAG-based chat functionality and vector store operations:
+
+- RAG-based chat interface with semantic search
+- Vector store creation and management using ChromaDB
+- Ollama embedding integration for local AI processing
+- Chat system prompt and welcome message management
+- Comprehensive error handling and logging
+
+**Key Functions**:
+- ``get_ollama_embeddings()``: Generate embeddings using Ollama
+- ``create_comprehensive_chunks()``: Create text chunks for vector store
+- ``search_vector_store()``: Search vector store for similar content
+- ``load_chat_system_prompt()``: Load chat system prompt
+- ``save_chat_system_prompt()``: Save chat system prompt
+- ``load_welcome_message()``: Load welcome message
+- ``save_welcome_message()``: Save welcome message
+
+**Endpoints**:
+- `GET /chat/` - Chat interface page
+- `POST /chat/message` - Process chat messages with RAG
+- `POST /chat/create-vector-store` - Create ChromaDB vector store from questions
+- `GET /chat/system-prompt` - Chat system prompt edit page
+- `POST /chat/system-prompt` - Save chat system prompt
+- `GET /chat/system-prompt/default` - Get default chat system prompt
+- `GET /chat/welcome-message` - Get chat welcome message
+- `POST /chat/welcome-message` - Save chat welcome message
+- `GET /chat/welcome-message/default` - Get default welcome message
+
+**Usage**:
+
+.. code-block:: python
+
+   from question_app.api.chat import router as chat_router
+   
+   # Include in FastAPI app
+   app.include_router(chat_router)
 
 Services Package
 ---------------

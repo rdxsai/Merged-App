@@ -321,8 +321,8 @@ class TestChatAPI:
 
         mock_ai_response = "This is a helpful response."
 
-        with patch("question_app.main.search_vector_store", return_value=mock_chunks):
-            with patch("question_app.main.load_chat_system_prompt", return_value="Test prompt"):
+        with patch("question_app.api.chat.search_vector_store", return_value=mock_chunks):
+            with patch("question_app.api.chat.load_chat_system_prompt", return_value="Test prompt"):
                 with patch("httpx.AsyncClient.post") as mock_post:
                     mock_response = MagicMock()
                     mock_response.status_code = 200
@@ -480,17 +480,17 @@ class TestChatSystemPromptAPI:
 
     def test_get_chat_system_prompt_page(self, client):
         """Test getting chat system prompt edit page"""
-        with patch("question_app.main.load_chat_system_prompt", return_value="Test chat prompt"):
-            with patch("question_app.main.get_default_chat_system_prompt", return_value="Default chat prompt"):
-                response = client.get("/chat-system-prompt")
+        with patch("question_app.api.chat.load_chat_system_prompt", return_value="Test chat prompt"):
+            with patch("question_app.api.chat.get_default_chat_system_prompt", return_value="Default chat prompt"):
+                response = client.get("/chat/system-prompt")
                 assert response.status_code == 200
                 assert "text/html" in response.headers["content-type"]
 
     def test_save_chat_system_prompt_success(self, client):
         """Test successful chat system prompt save"""
-        with patch("question_app.main.save_chat_system_prompt", return_value=True):
+        with patch("question_app.api.chat.save_chat_system_prompt", return_value=True):
             response = client.post(
-                "/chat-system-prompt", data={"prompt": "New chat system prompt"}
+                "/chat/system-prompt", data={"prompt": "New chat system prompt"}
             )
             assert response.status_code == 200
             data = response.json()
@@ -498,21 +498,21 @@ class TestChatSystemPromptAPI:
 
     def test_save_chat_system_prompt_empty(self, client):
         """Test chat system prompt save with empty prompt"""
-        response = client.post("/chat-system-prompt", data={"prompt": ""})
+        response = client.post("/chat/system-prompt", data={"prompt": ""})
         assert response.status_code == 400
 
     def test_save_chat_system_prompt_failure(self, client):
         """Test chat system prompt save failure"""
-        with patch("question_app.main.save_chat_system_prompt", return_value=False):
+        with patch("question_app.api.chat.save_chat_system_prompt", return_value=False):
             response = client.post(
-                "/chat-system-prompt", data={"prompt": "New chat system prompt"}
+                "/chat/system-prompt", data={"prompt": "New chat system prompt"}
             )
             assert response.status_code == 500
 
     def test_get_default_chat_system_prompt(self, client):
         """Test getting default chat system prompt"""
-        with patch("question_app.main.get_default_chat_system_prompt", return_value="Default prompt"):
-            response = client.get("/chat-system-prompt/default")
+        with patch("question_app.api.chat.get_default_chat_system_prompt", return_value="Default prompt"):
+            response = client.get("/chat/system-prompt/default")
             assert response.status_code == 200
             data = response.json()
             assert data["default_prompt"] == "Default prompt"
@@ -523,17 +523,17 @@ class TestChatWelcomeMessageAPI:
 
     def test_get_chat_welcome_message(self, client):
         """Test getting current chat welcome message"""
-        with patch("question_app.main.load_welcome_message", return_value="Welcome to the chat!"):
-            response = client.get("/chat-welcome-message")
+        with patch("question_app.api.chat.load_welcome_message", return_value="Welcome to the chat!"):
+            response = client.get("/chat/welcome-message")
             assert response.status_code == 200
             data = response.json()
             assert data["welcome_message"] == "Welcome to the chat!"
 
     def test_save_chat_welcome_message_json_success(self, client):
         """Test successful chat welcome message save with JSON"""
-        with patch("question_app.main.save_welcome_message", return_value=True):
+        with patch("question_app.api.chat.save_welcome_message", return_value=True):
             response = client.post(
-                "/chat-welcome-message",
+                "/chat/welcome-message",
                 json={"welcome_message": "New welcome message"},
                 headers={"content-type": "application/json"}
             )
@@ -543,9 +543,9 @@ class TestChatWelcomeMessageAPI:
 
     def test_save_chat_welcome_message_form_success(self, client):
         """Test successful chat welcome message save with form data"""
-        with patch("question_app.main.save_welcome_message", return_value=True):
+        with patch("question_app.api.chat.save_welcome_message", return_value=True):
             response = client.post(
-                "/chat-welcome-message",
+                "/chat/welcome-message",
                 data={"welcome_message": "New welcome message"}
             )
             assert response.status_code == 200
@@ -554,22 +554,22 @@ class TestChatWelcomeMessageAPI:
 
     def test_save_chat_welcome_message_empty(self, client):
         """Test chat welcome message save with empty message"""
-        response = client.post("/chat-welcome-message", json={"welcome_message": ""})
+        response = client.post("/chat/welcome-message", json={"welcome_message": ""})
         assert response.status_code == 400
 
     def test_save_chat_welcome_message_failure(self, client):
         """Test chat welcome message save failure"""
-        with patch("question_app.main.save_welcome_message", return_value=False):
+        with patch("question_app.api.chat.save_welcome_message", return_value=False):
             response = client.post(
-                "/chat-welcome-message",
+                "/chat/welcome-message",
                 json={"welcome_message": "New welcome message"}
             )
             assert response.status_code == 500
 
     def test_get_default_chat_welcome_message(self, client):
         """Test getting default chat welcome message"""
-        with patch("question_app.main.get_default_welcome_message", return_value="Default welcome"):
-            response = client.get("/chat-welcome-message/default")
+        with patch("question_app.api.chat.get_default_welcome_message", return_value="Default welcome"):
+            response = client.get("/chat/welcome-message/default")
             assert response.status_code == 200
             data = response.json()
             assert data["default_welcome_message"] == "Default welcome"

@@ -292,7 +292,7 @@ Your capabilities include:
 - Helping with learning objectives and educational content
 - Answering questions about Canvas LMS functionality
 
-Always be helpful, educational, and supportive in your responses. Focus on learning outcomes and educational value."""
+When providing responses, use the context from the quiz questions database to give accurate and relevant information. Always be helpful, educational, and supportive in your responses. Focus on learning outcomes and educational value."""
 
 
 def get_default_welcome_message() -> str:

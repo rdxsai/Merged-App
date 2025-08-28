@@ -109,6 +109,19 @@ def clean_answer_feedback(feedback: str, answer_text: str = "") -> str:
     feedback = re.sub(r"Incorrect\.", "", feedback, flags=re.IGNORECASE)
     feedback = re.sub(r"Good job!", "", feedback, flags=re.IGNORECASE)
     feedback = re.sub(r"Try again\.", "", feedback, flags=re.IGNORECASE)
+    
+    # Remove weight indicators
+    feedback = re.sub(r"\(Weight:\s*\d+%?\)", "", feedback, flags=re.IGNORECASE)
+    
+    # Remove correctness indicators
+    feedback = re.sub(r"\[✓\s*CORRECT\]", "", feedback, flags=re.IGNORECASE)
+    feedback = re.sub(r"\[✗\s*INCORRECT\]", "", feedback, flags=re.IGNORECASE)
+    
+    # Remove answer text prefix if provided
+    if answer_text and feedback.startswith(f"{answer_text}:"):
+        feedback = feedback[len(f"{answer_text}:"):].strip()
+    elif answer_text and feedback.startswith(f"{answer_text} "):
+        feedback = feedback[len(f"{answer_text} "):].strip()
 
     # Clean up whitespace
     feedback = re.sub(r"\s+", " ", feedback).strip()
@@ -156,15 +169,37 @@ def extract_topic_from_text(text: str) -> str:
     # Simple keyword-based topic extraction
     text_lower = text.lower()
     
-    if any(word in text_lower for word in ["math", "algebra", "calculus", "equation"]):
-        return "mathematics"
-    elif any(word in text_lower for word in ["history", "historical", "past"]):
-        return "history"
-    elif any(word in text_lower for word in ["science", "scientific", "experiment"]):
-        return "science"
-    elif any(word in text_lower for word in ["literature", "book", "author", "poem"]):
-        return "literature"
-    elif any(word in text_lower for word in ["computer", "programming", "code"]):
-        return "computer_science"
-    else:
-        return "general"
+    # Accessibility keywords
+    accessibility_keywords = [
+        "accessibility", "screen reader", "alt text", "wcag", "aria", 
+        "accessible", "disability", "assistive"
+    ]
+    if any(word in text_lower for word in accessibility_keywords):
+        return "accessibility"
+    
+    # Navigation keywords
+    navigation_keywords = ["navigation", "menu", "nav", "breadcrumb", "sitemap"]
+    if any(word in text_lower for word in navigation_keywords):
+        return "navigation"
+    
+    # Forms keywords
+    forms_keywords = ["form", "input", "label", "field", "submit", "validation"]
+    if any(word in text_lower for word in forms_keywords):
+        return "forms"
+    
+    # Media keywords
+    media_keywords = ["video", "audio", "image", "caption", "transcript", "media"]
+    if any(word in text_lower for word in media_keywords):
+        return "media"
+    
+    # Keyboard keywords
+    keyboard_keywords = ["keyboard", "shortcut", "tab", "focus", "arrow"]
+    if any(word in text_lower for word in keyboard_keywords):
+        return "keyboard"
+    
+    # Content keywords
+    content_keywords = ["content", "semantic", "html", "structure", "heading", "element"]
+    if any(word in text_lower for word in content_keywords):
+        return "content"
+    
+    return "general"

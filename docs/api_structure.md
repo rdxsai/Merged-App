@@ -51,6 +51,41 @@ Contains all question-related CRUD operations and endpoints:
 - Proper error handling and logging
 - Backward compatibility with existing data structure
 
+### Chat API (`src/question_app/api/chat.py`)
+
+Contains all RAG-based chat functionality and vector store operations:
+
+#### Endpoints:
+
+- `GET /chat/` - Chat interface page
+- `POST /chat/message` - Process chat messages with RAG
+- `POST /chat/create-vector-store` - Create ChromaDB vector store from questions
+- `GET /chat/system-prompt` - Chat system prompt edit page
+- `POST /chat/system-prompt` - Save chat system prompt
+- `GET /chat/system-prompt/default` - Get default chat system prompt
+- `GET /chat/welcome-message` - Get chat welcome message
+- `POST /chat/welcome-message` - Save chat welcome message
+- `GET /chat/welcome-message/default` - Get default welcome message
+
+#### Functions:
+
+- `get_ollama_embeddings()` - Generate embeddings using Ollama
+- `create_comprehensive_chunks()` - Create text chunks for vector store
+- `search_vector_store()` - Search vector store for similar content
+- `load_chat_system_prompt()` - Load chat system prompt
+- `save_chat_system_prompt()` - Save chat system prompt
+- `load_welcome_message()` - Load welcome message
+- `save_welcome_message()` - Save welcome message
+
+#### Features:
+
+- RAG-based chat interface with semantic search
+- Vector store creation and management using ChromaDB
+- Ollama embedding integration for local AI processing
+- Chat system prompt and welcome message management
+- Comprehensive error handling and logging
+- HTML template rendering for web interface
+
 ## Services
 
 ### AI Service (`src/question_app/services/ai_service.py`)
@@ -73,9 +108,10 @@ Contains AI-related business logic:
 The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router, questions_router
+from .api import canvas_router, questions_router, chat_router
 app.include_router(canvas_router)
 app.include_router(questions_router)
+app.include_router(chat_router)
 ```
 
 ## Benefits
@@ -93,9 +129,9 @@ Additional API modules can be created for:
 
 - Learning objectives management
 - System configuration
-- Chat assistant functionality
-- Vector store management
 - User authentication and authorization
+- Additional AI integrations
+- Analytics and reporting
 
 ## Usage
 

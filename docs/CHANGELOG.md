@@ -19,6 +19,15 @@
   - Included AI feedback generation integration
   - Maintained HTML template rendering for web interface
 
+- **Chat API Module** (`src/question_app/api/chat.py`)
+
+  - Extracted RAG-based chat functionality from main.py
+  - Organized chat endpoints, vector store operations, and embedding generation
+  - Added comprehensive chat interface with semantic search capabilities
+  - Included chat system prompt and welcome message management
+  - Maintained vector store creation and search functionality
+  - Added Ollama embedding integration for local AI processing
+
 - **AI Service Module** (`src/question_app/services/ai_service.py`)
   - Extracted AI feedback generation logic from main.py
   - Separated AI business logic from API endpoints
@@ -31,11 +40,13 @@
   - `/fetch-questions` → `/api/fetch-questions`
   - Canvas endpoints now use `/api/*` prefix for consistency
   - Question endpoints maintain original paths for backward compatibility
+  - Chat endpoints now use `/chat/*` prefix for consistency
 - **Frontend Updates**:
   - Updated `templates/index.html` to use new `/api/fetch-questions` endpoint
 - **Test Updates**:
   - Updated test files to patch functions in `question_app.api.canvas` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.questions` instead of `question_app.main`
+  - Updated test files to patch functions in `question_app.api.chat` instead of `question_app.main`
   - Fixed import paths for Canvas-related and question-related functions
   - Fixed AI service mocking to target correct import paths
 
@@ -66,9 +77,10 @@
 ### Migration Notes
 
 - **Frontend**: Update any hardcoded `/fetch-questions` calls to `/api/fetch-questions`
-- **API Consumers**: Canvas endpoints now use `/api/*` prefix
+- **API Consumers**: Canvas endpoints now use `/api/*` prefix, chat endpoints use `/chat/*` prefix
 - **Testing**: Update test patches to use appropriate modules:
   - `question_app.api.canvas` for Canvas functionality
   - `question_app.api.questions` for question functionality
+  - `question_app.api.chat` for chat and vector store functionality
   - `question_app.services.ai_service` for AI functionality
 - **Documentation**: Refer to `docs/api_structure.md` for detailed API documentation

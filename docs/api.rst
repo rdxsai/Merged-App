@@ -200,7 +200,7 @@ The vector store management system uses ChromaDB to create and maintain semantic
 search capabilities for the question database, enabling intelligent retrieval
 and RAG functionality.
 
-.. http:post:: /create-vector-store
+.. http:post:: /chat/create-vector-store
 
    Create ChromaDB vector store from questions.
 
@@ -220,7 +220,7 @@ The chat assistant provides an intelligent interface for querying the question d
 using RAG (Retrieval-Augmented Generation) technology, combining vector search with
 AI-powered responses.
 
-.. http:get:: /chat
+.. http:get:: /chat/
 
    Display chat assistant page.
 
@@ -241,39 +241,39 @@ AI-powered responses.
    **Request Body:** JSON with message and max_chunks
    **Response:** JSON with AI response and retrieved chunks
 
-.. http:get:: /chat-system-prompt
+.. http:get:: /chat/system-prompt
 
    Display chat system prompt edit page.
 
    **Response:** HTML page with prompt editor
 
-.. http:post:: /chat-system-prompt
+.. http:post:: /chat/system-prompt
 
    Save chat system prompt.
 
    **Request Body:** Form data with prompt text
    **Response:** JSON with success status
 
-.. http:get:: /chat-system-prompt/default
+.. http:get:: /chat/system-prompt/default
 
    Get default chat system prompt.
 
    **Response:** JSON with default prompt
 
-.. http:get:: /chat-welcome-message
+.. http:get:: /chat/welcome-message
 
    Get current chat welcome message.
 
    **Response:** JSON with welcome message
 
-.. http:post:: /chat-welcome-message
+.. http:post:: /chat/welcome-message
 
    Save chat welcome message.
 
    **Request Body:** JSON or form data with message
    **Response:** JSON with success status
 
-.. http:get:: /chat-welcome-message/default
+.. http:get:: /chat/welcome-message/default
 
    Get default chat welcome message.
 

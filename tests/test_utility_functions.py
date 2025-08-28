@@ -8,7 +8,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from question_app.main import (
+from question_app.utils import (
     clean_answer_feedback,
     clean_html_for_vector_store,
     clean_question_text,
@@ -267,7 +267,7 @@ class TestTopicExtraction:
         """Test extracting topic with feedback text"""
         question = "What is accessibility?"
         feedback = "This relates to screen readers and WCAG guidelines."
-        result = extract_topic_from_text(question, feedback)
+        result = extract_topic_from_text(question)
         assert result == "accessibility"
 
 
