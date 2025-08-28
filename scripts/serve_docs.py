@@ -17,7 +17,7 @@ Key Features:
 - Graceful error handling and shutdown
 
 Author: Robert Fentress <learn@vt.edu>
-Version: 0.1.0
+Version: 0.2.0
 """
 
 import os

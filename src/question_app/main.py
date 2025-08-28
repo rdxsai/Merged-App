@@ -29,7 +29,7 @@ Architecture:
 Authors:
   - Bryce Kayanuma <BrycePK@vt.edu>
   - Robert Fentress <learn@vt.edu>
-Version: 0.1.0
+Version: 0.2.0
 """
 
 import uvicorn

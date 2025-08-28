@@ -17,7 +17,7 @@ Key Features:
 - Configurable checking options
 
 Author: Robert Fentress <learn@vt.edu>
-Version: 0.1.0
+Version: 0.2.0
 """
 
 import subprocess
