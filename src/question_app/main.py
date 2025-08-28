@@ -28,13 +28,13 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import httpx
 import uvicorn
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -54,18 +54,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import API routers
-from .api import canvas_router, questions_router, chat_router
+from .api import canvas_router, questions_router, chat_router, system_prompt_router
 
 # Import utility functions from organized modules
 from .utils import (
     load_questions,
-    save_questions,
     load_objectives,
     save_objectives,
     load_system_prompt,
-    save_system_prompt,
     clean_answer_feedback,
-    get_all_existing_tags,
 )
 
 app = FastAPI(title="Canvas Quiz Manager")
@@ -78,6 +75,7 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
+app.include_router(system_prompt_router)
 
 # Configuration from environment
 CANVAS_BASE_URL = os.getenv("CANVAS_BASE_URL")
@@ -641,34 +639,7 @@ async def home(request: Request):
 
 
 
-@app.get("/system-prompt", response_class=HTMLResponse)
-async def get_system_prompt_page(request: Request):
-    """Get the system prompt editing page"""
-    prompt = load_system_prompt()
-    return templates.TemplateResponse(
-        "system_prompt_edit.html", {"request": request, "current_prompt": prompt}
-    )
 
-
-@app.get("/system-prompt/api")
-async def get_system_prompt_api():
-    """Get the current system prompt as JSON (for API calls)"""
-    prompt = load_system_prompt()
-    return {"prompt": prompt}
-
-
-@app.post("/system-prompt")
-async def save_system_prompt_endpoint(prompt: str = Form(...)):
-    """Save the system prompt"""
-    try:
-        if save_system_prompt(prompt):
-            logger.info("System prompt updated")
-            return {"success": True, "message": "System prompt saved successfully"}
-        else:
-            raise HTTPException(status_code=500, detail="Failed to save system prompt")
-    except Exception as e:
-        logger.error(f"Error saving system prompt: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -707,10 +678,7 @@ async def debug_question(question_id: int):
 
 
 
-@app.get("/test-system-prompt", response_class=HTMLResponse)
-async def test_system_prompt_page(request: Request):
-    """Test page for system prompt functionality"""
-    return templates.TemplateResponse("test_system_prompt.html", {"request": request})
+
 
 
 @app.get("/objectives", response_class=HTMLResponse)

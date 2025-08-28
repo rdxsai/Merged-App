@@ -272,7 +272,7 @@ Managing System Prompts
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:8000/api/system-prompt",
+                "http://localhost:8000/system-prompt",
                 data={"prompt": new_prompt}
             )
             

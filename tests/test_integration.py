@@ -72,8 +72,8 @@ class TestFullWorkflow:
             "question_app.main.DATA_FILE",
             os.path.join(temp_data_dir, "quiz_questions.json"),
         ):
-            with patch("question_app.main.load_questions") as mock_load:
-                with patch("question_app.main.save_questions") as mock_save:
+            with patch("question_app.api.questions.load_questions") as mock_load:
+                with patch("question_app.api.questions.save_questions") as mock_save:
                     mock_load.return_value = []
                     mock_save.return_value = True
 
@@ -376,8 +376,8 @@ class TestPerformance:
                 }
             )
 
-        with patch("question_app.main.load_questions", return_value=large_questions):
-            with patch("question_app.main.save_questions", return_value=True):
+        with patch("question_app.api.questions.load_questions", return_value=large_questions):
+            with patch("question_app.api.questions.save_questions", return_value=True):
                 # Test operations on large dataset without template rendering
                 response = client.delete("/questions/50")
                 assert response.status_code == 200

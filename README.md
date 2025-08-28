@@ -16,7 +16,8 @@ questionapp/
 │       │   ├── __init__.py   # API module exports
 │       │   ├── canvas.py     # Canvas LMS integration endpoints
 │       │   ├── questions.py  # Question CRUD endpoints
-│       │   └── chat.py       # RAG-based chat endpoints
+│       │   ├── chat.py       # RAG-based chat endpoints
+│       │   └── system_prompt.py  # System prompt management endpoints
 │       ├── core/             # Core application logic
 │       ├── models/           # Pydantic models and data structures
 │       ├── services/         # Business logic and external integrations

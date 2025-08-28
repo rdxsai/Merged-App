@@ -51,6 +51,30 @@ Contains all question-related CRUD operations and endpoints:
 - Proper error handling and logging
 - Backward compatibility with existing data structure
 
+### System Prompt API (`src/question_app/api/system_prompt.py`)
+
+Contains all system prompt management functionality:
+
+#### Endpoints:
+
+- `GET /system-prompt/` - System prompt edit page
+- `GET /system-prompt/api` - Get current system prompt as JSON
+- `POST /system-prompt/` - Save system prompt
+- `GET /system-prompt/test` - Test system prompt functionality page
+
+#### Functions:
+
+- `load_system_prompt()` - Load system prompt from file
+- `save_system_prompt()` - Save system prompt to file
+
+#### Features:
+
+- System prompt editing interface
+- API access to system prompt
+- Test functionality for system prompts
+- Proper error handling and logging
+- HTML template rendering for web interface
+
 ### Chat API (`src/question_app/api/chat.py`)
 
 Contains all RAG-based chat functionality and vector store operations:
@@ -108,10 +132,11 @@ Contains AI-related business logic:
 The API routers are automatically included in the main FastAPI application:
 
 ```python
-from .api import canvas_router, questions_router, chat_router
+from .api import canvas_router, questions_router, chat_router, system_prompt_router
 app.include_router(canvas_router)
 app.include_router(questions_router)
 app.include_router(chat_router)
+app.include_router(system_prompt_router)
 ```
 
 ## Benefits

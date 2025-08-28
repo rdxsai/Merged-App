@@ -4,6 +4,18 @@
 
 ### Added
 
+- **System Prompt API Module** (`src/question_app/api/system_prompt.py`)
+
+  - Extracted system prompt management endpoints from main.py
+  - Organized system prompt functionality into dedicated module
+  - Added system prompt editing, API access, and test functionality
+  - Maintained HTML template rendering for web interface
+  - Added proper error handling and logging
+
+### Added
+
+### Added
+
 - **Canvas API Module** (`src/question_app/api/canvas.py`)
 
   - Extracted Canvas-related endpoints from main.py
@@ -41,13 +53,15 @@
   - Canvas endpoints now use `/api/*` prefix for consistency
   - Question endpoints maintain original paths for backward compatibility
   - Chat endpoints now use `/chat/*` prefix for consistency
+  - System prompt endpoints now use `/system-prompt/*` prefix for consistency
 - **Frontend Updates**:
   - Updated `templates/index.html` to use new `/api/fetch-questions` endpoint
 - **Test Updates**:
   - Updated test files to patch functions in `question_app.api.canvas` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.questions` instead of `question_app.main`
   - Updated test files to patch functions in `question_app.api.chat` instead of `question_app.main`
-  - Fixed import paths for Canvas-related and question-related functions
+  - Updated test files to patch functions in `question_app.api.system_prompt` instead of `question_app.main`
+  - Fixed import paths for Canvas-related, question-related, and system prompt functions
   - Fixed AI service mocking to target correct import paths
 
 ### Updated Documentation
@@ -55,7 +69,7 @@
 - **README.md**: Added API structure section and updated project structure
 - **docs/api.rst**: Updated module organization and endpoint documentation
 - **docs/modules.rst**: Added API package and Services package documentation
-- **docs/api_structure.md**: Updated with Questions API and AI Service information
+- **docs/api_structure.md**: Updated with Questions API, System Prompt API, and AI Service information
 
 ### Architecture Improvements
 
@@ -68,8 +82,8 @@
 
 ### Technical Details
 
-- **Router Integration**: Both Canvas and Questions API routers are automatically included in main FastAPI app
-- **Function Organization**: Canvas-related and question-related functions moved from main.py to dedicated modules
+- **Router Integration**: Canvas, Questions, Chat, and System Prompt API routers are automatically included in main FastAPI app
+- **Function Organization**: Canvas-related, question-related, and system prompt functions moved from main.py to dedicated modules
 - **Import Structure**: Clean separation between API modules, services, and main application
 - **Error Handling**: Maintained consistent error handling across all endpoints
 - **Service Layer**: Introduced services package for business logic separation
@@ -82,5 +96,6 @@
   - `question_app.api.canvas` for Canvas functionality
   - `question_app.api.questions` for question functionality
   - `question_app.api.chat` for chat and vector store functionality
+  - `question_app.api.system_prompt` for system prompt functionality
   - `question_app.services.ai_service` for AI functionality
 - **Documentation**: Refer to `docs/api_structure.md` for detailed API documentation

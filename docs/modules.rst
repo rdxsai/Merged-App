@@ -20,7 +20,8 @@ Package Structure
    │   ├── __init__.py          # API module exports
    │   ├── canvas.py            # Canvas LMS integration endpoints
    │   ├── questions.py         # Question CRUD operations and endpoints
-   │   └── chat.py              # RAG-based chat functionality and vector store operations
+   │   ├── chat.py              # RAG-based chat functionality and vector store operations
+   │   └── system_prompt.py     # System prompt management endpoints
    ├── models/                  # Data models and schemas
    │   ├── __init__.py
    │   ├── question.py          # Question-related models
@@ -349,7 +350,7 @@ Additional API Modules
 - ``api/ai.py``: AI feedback generation endpoints
 - ``api/objectives.py``: Learning objectives endpoints
 - ``api/canvas.py``: Canvas integration endpoints
-- ``api/system.py``: System configuration endpoints
+- ``api/system_prompt.py``: System prompt management endpoints (✅ Implemented)
 
 Core Package
 ~~~~~~~~~~~

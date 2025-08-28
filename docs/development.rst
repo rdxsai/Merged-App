@@ -62,9 +62,16 @@ Project Structure
    │       │   ├── __init__.py
    │       │   ├── file_utils.py # File I/O operations
    │       │   └── text_utils.py # Text processing utilities
-   │       ├── api/            # API endpoints (future)
+   │       ├── api/            # API endpoints
+   │       │   ├── __init__.py
+   │       │   ├── canvas.py
+   │       │   ├── questions.py
+   │       │   ├── chat.py
+   │       │   └── system_prompt.py
    │       ├── core/           # Core configuration (future)
-   │       └── services/       # Business logic (future)
+   │       └── services/       # Business logic
+   │           ├── __init__.py
+   │           └── ai_service.py
    ├── pyproject.toml          # Poetry configuration
    ├── requirements.txt        # Dependencies
    ├── pytest.ini             # Test configuration

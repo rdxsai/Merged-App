@@ -134,8 +134,8 @@ class TestQuestionsAPI:
 
     def test_delete_question_success(self, client, sample_questions):
         """Test successful question deletion"""
-        with patch("question_app.main.load_questions", return_value=sample_questions):
-            with patch("question_app.main.save_questions", return_value=True):
+        with patch("question_app.api.questions.load_questions", return_value=sample_questions):
+            with patch("question_app.api.questions.save_questions", return_value=True):
                 response = client.delete("/questions/1")
                 assert response.status_code == 200
                 data = response.json()
@@ -213,8 +213,8 @@ class TestQuestionCRUD:
             ],
         }
 
-        with patch("question_app.main.load_questions", return_value=[]):
-            with patch("question_app.main.save_questions", return_value=True):
+        with patch("question_app.api.questions.load_questions", return_value=[]):
+            with patch("question_app.api.questions.save_questions", return_value=True):
                 response = client.post("/questions/new", json=question_data)
                 assert response.status_code == 200
                 data = response.json()
@@ -267,14 +267,14 @@ class TestSystemPromptAPI:
 
     def test_get_system_prompt_page(self, client):
         """Test getting system prompt edit page"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+        with patch("question_app.api.system_prompt.load_system_prompt", return_value="Test prompt"):
             response = client.get("/system-prompt")
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
 
     def test_get_system_prompt_api(self, client):
         """Test getting system prompt via API"""
-        with patch("question_app.main.load_system_prompt", return_value="Test prompt"):
+        with patch("question_app.api.system_prompt.load_system_prompt", return_value="Test prompt"):
             response = client.get("/system-prompt/api")
             assert response.status_code == 200
             data = response.json()
@@ -282,7 +282,7 @@ class TestSystemPromptAPI:
 
     def test_save_system_prompt_success(self, client):
         """Test successful system prompt save"""
-        with patch("question_app.main.save_system_prompt", return_value=True):
+        with patch("question_app.api.system_prompt.save_system_prompt", return_value=True):
             response = client.post(
                 "/system-prompt", data={"prompt": "New system prompt"}
             )
@@ -292,7 +292,7 @@ class TestSystemPromptAPI:
 
     def test_save_system_prompt_failure(self, client):
         """Test system prompt save failure"""
-        with patch("question_app.main.save_system_prompt", return_value=False):
+        with patch("question_app.api.system_prompt.save_system_prompt", return_value=False):
             response = client.post(
                 "/system-prompt", data={"prompt": "New system prompt"}
             )
@@ -580,6 +580,6 @@ class TestSystemPromptTestAPI:
 
     def test_get_test_system_prompt_page(self, client):
         """Test getting system prompt test page"""
-        response = client.get("/test-system-prompt")
+        response = client.get("/system-prompt/test")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
