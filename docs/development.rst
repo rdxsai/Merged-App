@@ -1,7 +1,7 @@
 Development Guide
 =================
 
-This guide provides information for developers working on the Canvas Quiz Manager application.
+This guide provides comprehensive information for developers working on the Canvas Quiz Manager application, covering setup, practices, workflows, and best practices.
 
 Development Setup
 ----------------
@@ -46,7 +46,7 @@ Initial Setup
       poetry run pre-commit install
 
 Project Structure
-----------------
+-----------------
 
 .. code-block:: text
 
@@ -100,39 +100,26 @@ Project Structure
        ├── index.rst
        └── ...
 
-Code Style
-----------
+Code Style and Standards
+------------------------
 
-Formatting
-~~~~~~~~~~
+Formatting and Linting
+~~~~~~~~~~~~~~~~~~~~~
 
-The project uses Black for code formatting:
+The project uses automated tools for code quality. For detailed tool usage, see :doc:`development_tools`.
+
+Basic commands:
 
 .. code-block:: bash
 
-   # Format code with Black and isort (recommended)
+   # Format code
    poetry run format
 
-   # Or format with Black only
-   poetry run black .
+   # Lint code
+   poetry run lint
 
-Import Sorting
-~~~~~~~~~~~~~
-
-Use isort for import sorting:
-
-.. code-block:: bash
-
-   poetry run isort .
-
-Linting
-~~~~~~~
-
-Use flake8 for linting:
-
-.. code-block:: bash
-
-   poetry run flake8 .
+   # Type checking
+   poetry run type-check
 
 Pre-commit Hooks
 ~~~~~~~~~~~~~~~~
@@ -147,25 +134,64 @@ The project includes pre-commit hooks that run automatically:
    - trailing-whitespace: Remove trailing whitespace
    - end-of-file-fixer: Ensure files end with newline
 
+Docstring Standards
+~~~~~~~~~~~~~~~~~~
+
+Follow Google-style docstrings:
+
+.. code-block:: python
+
+   def function_name(param1: str, param2: int = 0) -> bool:
+       """Short description of function.
+
+       Longer description if needed.
+
+       Args:
+           param1: Description of param1
+           param2: Description of param2, defaults to 0
+
+       Returns:
+           Description of return value
+
+       Raises:
+           ValueError: When something goes wrong
+
+       Note:
+           Additional notes about the function
+       """
+       pass
+
 Testing
 -------
+
+Testing Philosophy
+~~~~~~~~~~~~~~~~~
+
+The project follows a comprehensive testing strategy:
+
+- **Unit Tests**: Test individual functions and classes in isolation
+- **Integration Tests**: Test component interactions and data flow
+- **API Tests**: Test HTTP endpoints and request/response handling
+- **AI Integration Tests**: Test external AI service interactions
 
 Running Tests
 ~~~~~~~~~~~~
 
+Basic test commands (see :doc:`development_tools` for advanced options):
+
 .. code-block:: bash
 
    # Run all tests
-   poetry run pytest
+   poetry run test
 
    # Run with coverage
-   poetry run pytest --cov=question_app
+   poetry run test --coverage
 
-   # Run specific test file
-   poetry run pytest tests/test_api_endpoints.py
-
-   # Run with verbose output
-   poetry run pytest -v
+   # Run specific test types
+   poetry run test --type unit
+   poetry run test --type integration
+   poetry run test --type ai
+   poetry run test --type api
 
 Test Structure
 ~~~~~~~~~~~~~
@@ -178,14 +204,6 @@ Test Structure
    ├── test_api_endpoints.py          # API endpoint tests
    ├── test_integration.py            # Integration tests
    └── test_utility_functions.py      # Utility function tests
-
-Test Categories
-~~~~~~~~~~~~~~
-
-1. **Unit Tests**: Test individual functions and classes
-2. **Integration Tests**: Test component interactions
-3. **API Tests**: Test HTTP endpoints
-4. **AI Integration Tests**: Test external AI services
 
 Writing Tests
 ~~~~~~~~~~~~
@@ -237,17 +255,15 @@ Documentation
 Building Documentation
 ~~~~~~~~~~~~~~~~~~~~~
 
+Basic documentation commands (see :doc:`development_tools` for advanced options):
+
 .. code-block:: bash
 
-   # Install Sphinx dependencies
-   pip install sphinx sphinx-rtd-theme
-
    # Build documentation
-   cd docs
-   make html
+   poetry run docs-simple
 
-   # View documentation
-   open _build/html/index.html
+   # Serve documentation locally
+   poetry run docs-serve
 
 Documentation Structure
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -262,34 +278,8 @@ Documentation Structure
    ├── installation.rst     # Installation guide
    ├── usage.rst            # Usage guide
    ├── configuration.rst    # Configuration guide
-   └── development.rst      # This development guide
-
-Docstring Standards
-~~~~~~~~~~~~~~~~~~
-
-Follow Google-style docstrings:
-
-.. code-block:: python
-
-   def function_name(param1: str, param2: int = 0) -> bool:
-       """Short description of function.
-
-       Longer description if needed.
-
-       Args:
-           param1: Description of param1
-           param2: Description of param2, defaults to 0
-
-       Returns:
-           Description of return value
-
-       Raises:
-           ValueError: When something goes wrong
-
-       Note:
-           Additional notes about the function
-       """
-       pass
+   ├── development.rst      # This development guide
+   └── development_tools.rst # Development tools reference
 
 Development Workflow
 -------------------
@@ -309,13 +299,14 @@ Feature Development
    - Add tests for new functionality
    - Update documentation
 
-3. **Run tests and checks**
+3. **Run quality checks**
 
    .. code-block:: bash
 
-      poetry run pytest
       poetry run format
       poetry run lint
+      poetry run type-check
+      poetry run test
 
 4. **Commit changes**
 
@@ -403,8 +394,8 @@ Use built-in debug endpoints:
 - `/debug/ollama-test`: Test Ollama connection
 - `/debug/question/{id}`: Debug specific question
 
-Development Tools
-----------------
+Development Environment
+----------------------
 
 IDE Configuration
 ~~~~~~~~~~~~~~~~
@@ -633,3 +624,4 @@ Getting Help
 - **Discussions**: Use GitHub Discussions for questions
 - **Documentation**: Check the docs directory
 - **Logs**: Review `canvas_app.log` for errors
+- **Development Tools**: See :doc:`development_tools` for detailed tool usage

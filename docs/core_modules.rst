@@ -19,12 +19,14 @@ The configuration module centralizes all environment variable loading and provid
 methods for the application's configuration.
 
 Key Features:
+
 - Centralized environment variable loading
 - Configuration validation methods
 - Helper methods for checking missing configuration
 - Type-safe configuration access
 
 Example Usage:
+
 .. code-block:: python
 
     from question_app.core import config
@@ -50,12 +52,14 @@ Core Logging Module
 The logging module provides centralized logging configuration and setup for the application.
 
 Key Features:
+
 - Centralized logging configuration
 - Consistent logging format across the application
 - Helper functions for getting logger instances
 - Configurable log levels and handlers
 
 Example Usage:
+
 .. code-block:: python
 
     from question_app.core import get_logger
@@ -75,6 +79,7 @@ Core App Setup Module
 The app setup module handles FastAPI application creation and configuration.
 
 Key Features:
+
 - FastAPI application creation
 - Router registration
 - Template setup
@@ -82,6 +87,7 @@ Key Features:
 - Middleware configuration
 
 Example Usage:
+
 .. code-block:: python
 
     from question_app.core import create_app, register_routers
@@ -100,6 +106,7 @@ Core Module Exports
 The core module exports provide a clean API for accessing core functionality.
 
 Available Exports:
+
 - ``config``: Configuration instance
 - ``Config``: Configuration class
 - ``setup_logging``: Logging setup function
@@ -109,6 +116,7 @@ Available Exports:
 - ``get_templates``: Template getter function
 
 Example Usage:
+
 .. code-block:: python
 
     from question_app.core import (
@@ -134,6 +142,7 @@ Migration Guide
 If you're updating existing code to use the core modules:
 
 1. **Replace direct environment variable access**:
+   
    .. code-block:: python
 
        # Old way
@@ -145,6 +154,7 @@ If you're updating existing code to use the core modules:
        canvas_url = config.CANVAS_BASE_URL
 
 2. **Replace logging setup**:
+
    .. code-block:: python
 
        # Old way
@@ -156,6 +166,7 @@ If you're updating existing code to use the core modules:
        logger = get_logger(__name__)
 
 3. **Update test patches**:
+
    .. code-block:: python
 
        # Old way

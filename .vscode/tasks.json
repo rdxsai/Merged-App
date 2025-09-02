@@ -131,7 +131,7 @@
     {
       "label": "Docs: Serve",
       "type": "shell",
-      "command": "poetry run serve-docs",
+      "command": "poetry run docs-serve",
       "problemMatcher": []
     }
   ]

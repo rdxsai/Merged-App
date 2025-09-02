@@ -176,6 +176,7 @@ The Canvas API module contains all Canvas LMS integration endpoints and utilitie
 - Canvas API request utilities
 
 **Key Functions**:
+
 - ``fetch_courses()``: Fetch courses from Canvas LMS
 - ``fetch_quizzes(course_id)``: Fetch quizzes for a specific course
 - ``fetch_all_questions()``: Fetch all questions from a Canvas quiz
@@ -183,6 +184,7 @@ The Canvas API module contains all Canvas LMS integration endpoints and utilitie
 - ``clean_question_text()``: Clean HTML tags from question text
 
 **Endpoints**:
+
 - `GET /api/courses` - Get all available courses
 - `GET /api/courses/{course_id}/quizzes` - Get all quizzes for a specific course
 - `POST /api/configuration` - Update course and quiz configuration
@@ -210,6 +212,7 @@ The Questions API module contains all question-related CRUD operations and endpo
 - Proper error handling and logging
 
 **Endpoints**:
+
 - `DELETE /questions/{question_id}` - Delete a question
 - `GET /questions/new` - Show new question creation page
 - `POST /questions/new` - Create a new question
@@ -239,12 +242,14 @@ The Chat API module contains all RAG-based chat functionality:
 - Comprehensive error handling and logging
 
 **Key Functions**:
+
 - ``load_chat_system_prompt()``: Load chat system prompt
 - ``save_chat_system_prompt()``: Save chat system prompt
 - ``load_welcome_message()``: Load welcome message
 - ``save_welcome_message()``: Save welcome message
 
 **Endpoints**:
+
 - `GET /chat/` - Chat interface page
 - `POST /chat/message` - Process chat messages with RAG
 
@@ -278,11 +283,13 @@ The Vector Store API module contains all vector store operations and semantic se
 - Vector store status monitoring
 
 **Key Functions**:
+
 - ``get_ollama_embeddings()``: Generate embeddings using Ollama
 - ``create_comprehensive_chunks()``: Create text chunks for vector store
 - ``search_vector_store()``: Search vector store for similar content
 
 **Endpoints**:
+
 - `POST /vector-store/create` - Create ChromaDB vector store from questions
 - `GET /vector-store/search` - Search vector store for relevant content
 - `GET /vector-store/status` - Get vector store status
@@ -315,15 +322,18 @@ The AI Service module contains AI-related business logic:
 - Token usage tracking
 
 **Key Functions**:
+
 - ``generate_feedback_with_ai()``: Generate educational feedback using Azure OpenAI
 
 **Features**:
+
 - Azure OpenAI API integration
 - Structured feedback parsing
 - Error handling and retry logic
 - Token usage statistics
 
 **Usage**:
+
 
 .. code-block:: python
 
@@ -380,6 +390,7 @@ Additional API Modules
 
 **Purpose**: Further organize API endpoints by functionality
 **Planned Structure**:
+
 - ``api/questions.py``: Question management endpoints (✅ Implemented)
 - ``api/chat.py``: Chat assistant endpoints (✅ Implemented)
 - ``api/ai.py``: AI feedback generation endpoints
@@ -392,12 +403,14 @@ Core Package
 
 **Purpose**: Application core configuration and setup
 **Implemented Structure**:
+
 - ``core/config.py``: Centralized configuration management ✅
 - ``core/logging.py``: Centralized logging configuration ✅
 - ``core/app.py``: FastAPI application setup ✅
 - ``core/__init__.py``: Core module exports ✅
 
 **Key Features**:
+
 - Centralized environment variable management
 - Configuration validation and error reporting
 - Consistent logging across the application
@@ -410,6 +423,7 @@ Services Package
 
 **Purpose**: Business logic and external service integrations
 **Planned Structure**:
+
 - ``services/canvas_service.py``: Canvas LMS integration
 - ``services/ai_service.py``: AI service integration
 - ``services/embedding_service.py``: Embedding generation

@@ -33,5 +33,11 @@
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "notebook.formatOnSave.enabled": true,
   "python.analysis.extraPaths": ["${workspaceFolder}/src"],
-  "python.envFile": "${workspaceFolder}/.env"
+  "python.envFile": "${workspaceFolder}/.env",
+
+  // Workbench settings
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+  "workbench.colorTheme": "Default Dark+",
+  "workbench.iconTheme": "vs-seti"
 }

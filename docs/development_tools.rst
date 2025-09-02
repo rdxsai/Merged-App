@@ -1,9 +1,27 @@
-Development Tools
-=================
+Development Tools Reference
+===========================
 
-This section documents the various development tools and scripts available for
-the Canvas Quiz Manager project. These tools help maintain code quality,
-run tests, and manage documentation.
+This reference documents the development tools and scripts available for the Canvas Quiz Manager project. For general development practices and workflows, see :doc:`development`.
+
+Overview
+--------
+
+The project provides a comprehensive set of development tools accessible via Poetry scripts:
+
+.. code-block:: bash
+
+   # Code quality tools
+   poetry run format          # Format code with Black and isort
+   poetry run lint            # Comprehensive linting and formatting
+   poetry run type-check      # Static type checking
+
+   # Testing tools
+   poetry run test            # Unified test runner
+
+   # Documentation tools
+   poetry run docs            # Build documentation (requires make)
+   poetry run docs-simple     # Build documentation (no make required)
+   poetry run docs-serve      # Serve documentation locally
 
 Code Quality Tools
 -----------------
@@ -112,11 +130,8 @@ Multiple options for building and serving documentation:
    # Build documentation (no make required)
    poetry run docs-simple
 
-   # Build and serve documentation in one command
+   # Serve documentation locally
    poetry run docs-serve
-
-   # Serve existing documentation
-   poetry run serve-docs
 
 Documentation Features:
 
@@ -134,16 +149,16 @@ The documentation server provides local hosting with enhanced features:
 .. code-block:: bash
 
    # Basic serving
-   poetry run serve-docs
+   poetry run docs-serve
 
    # Custom port and host
-   poetry run serve-docs --port 8080 --host 0.0.0.0
+   poetry run docs-serve --port 8080 --host 0.0.0.0
 
    # Skip building (assume docs exist)
-   poetry run serve-docs --no-build
+   poetry run docs-serve --no-build
 
    # Don't auto-open browser
-   poetry run serve-docs --no-browser
+   poetry run docs-serve --no-browser
 
 Server Features:
 
@@ -153,8 +168,8 @@ Server Features:
 - **Configurable**: Custom port and host settings
 - **Graceful Shutdown**: Clean server termination
 
-Script Details
--------------
+Script Implementation Details
+----------------------------
 
 serve_docs.py
 ~~~~~~~~~~~~
@@ -194,7 +209,7 @@ The type checking script provides comprehensive static type analysis.
 - Installation guidance
 - Configurable checking options
 
-scripts/run_tests.py
+run_tests.py
 ~~~~~~~~~~~
 
 The test runner script provides unified testing interface with enhanced features.
@@ -252,11 +267,11 @@ The dedicated formatting script provides code formatting without linting checks.
 - Comprehensive error reporting
 - Clean, simple interface
 
-Integration
-----------
-
 CI/CD Integration
-~~~~~~~~~~~~~~~~
+----------------
+
+Pipeline Integration
+~~~~~~~~~~~~~~~~~~~
 
 These tools are designed to integrate seamlessly with CI/CD pipelines:
 
@@ -269,19 +284,12 @@ These tools are designed to integrate seamlessly with CI/CD pipelines:
    poetry run lint --format && poetry run test --fast
 
    # Documentation pipeline
-   poetry run docs-simple && poetry run serve-docs --no-build
+   poetry run docs-simple && poetry run docs-serve --no-build
 
-Development Workflow
-~~~~~~~~~~~~~~~~~~~
+Advanced Workflows
+~~~~~~~~~~~~~~~~~
 
-Recommended development workflow:
-
-1. **Code Quality**: Run linting and type checking
-2. **Testing**: Execute relevant test suites
-3. **Documentation**: Build and verify documentation
-4. **Integration**: Run full pipeline before commits
-
-Example workflow:
+Complex development workflows:
 
 .. code-block:: bash
 
@@ -295,6 +303,9 @@ Example workflow:
    poetry run type-check --tool both
    poetry run test --coverage
    poetry run docs-simple
+
+   # Pre-commit validation
+   poetry run lint --check-only && poetry run type-check && poetry run test --fast
 
 Troubleshooting
 --------------
@@ -336,3 +347,40 @@ For issues with development tools:
 2. Review the tool's documentation in this section
 3. Check the project's issue tracker
 4. Verify all dependencies are properly installed
+
+Tool Configuration
+-----------------
+
+Black Configuration
+~~~~~~~~~~~~~~~~~~
+
+Black is configured in `pyproject.toml`:
+
+.. code-block:: toml
+
+   [tool.black]
+   line-length = 88
+   target-version = ['py311']
+
+Isort Configuration
+~~~~~~~~~~~~~~~~~~
+
+Isort is configured in `pyproject.toml`:
+
+.. code-block:: toml
+
+   [tool.isort]
+   profile = "black"
+   multi_line_output = 3
+
+Mypy Configuration
+~~~~~~~~~~~~~~~~~
+
+Mypy configuration can be added to `pyproject.toml`:
+
+.. code-block:: toml
+
+   [tool.mypy]
+   python_version = "3.11"
+   strict = true
+   ignore_missing_imports = true

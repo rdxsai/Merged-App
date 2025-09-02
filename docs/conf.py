@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
+    "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,7 +51,7 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+source_suffix = [".rst", ".md"]
 
 # The master toctree document.
 master_doc = "index"
@@ -127,3 +128,5 @@ html_css_files = [
 html_js_files = [
     "custom.js",
 ]
+
+

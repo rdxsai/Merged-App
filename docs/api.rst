@@ -9,24 +9,29 @@ Module Organization
 The application is organized into focused modules for better maintainability:
 
 **API Modules** (`src/question_app/api/`)
+
    - ``canvas.py``: Canvas LMS integration endpoints and utilities
    - ``questions.py``: Question CRUD operations and endpoints
    - Additional API modules can be added for other functionality
 
 **Models** (`src/question_app/models/`)
+
    - ``question.py``: Question and answer data models
    - ``objective.py``: Learning objective data models
 
 **Utilities** (`src/question_app/utils/`)
+
    - ``file_utils.py``: File I/O operations for data persistence
    - ``text_utils.py``: Text processing and cleaning functions
 
 **Main Application** (`src/question_app/main.py`)
+
    - FastAPI application setup and configuration
    - Router integration and orchestration
    - Web interface endpoints
 
 **Services** (`src/question_app/services/`)
+
    - ``ai_service.py``: AI feedback generation and Azure OpenAI integration
 
 Authentication
@@ -56,6 +61,7 @@ Home Page
    **Response:** HTML page with questions table, search functionality, and management tools
 
    **Features:**
+
    - View all questions in a paginated table
    - Search and filter questions
    - Quick access to question editing
@@ -78,6 +84,7 @@ including editing, creating, updating, and deleting questions.
    **Response:** HTML page with question edit form
 
    **Features:**
+
    - Edit question text and HTML content
    - Modify answer options and correct answers
    - Update question metadata (points, type, position)
@@ -165,6 +172,7 @@ for quiz questions, helping instructors improve question quality and student lea
    **Response:** JSON with generated feedback
 
    **Features:**
+
    - AI-powered educational feedback generation
    - Customizable system prompts for feedback style
    - Integration with Azure OpenAI services
@@ -213,6 +221,7 @@ enabling intelligent retrieval and RAG functionality through ChromaDB integratio
    **Response:** JSON with creation status and statistics
 
    **Features:**
+
    - ChromaDB vector database integration
    - Semantic embedding generation using Ollama
    - Automatic vector store creation from questions
@@ -224,6 +233,7 @@ enabling intelligent retrieval and RAG functionality through ChromaDB integratio
    Search vector store for relevant content.
 
    **Query Parameters:**
+
    - ``query``: Search query text
    - ``n_results``: Number of results to return (default: 5, max: 20)
 
@@ -255,6 +265,7 @@ AI-powered responses.
    **Response:** HTML page with chat interface
 
    **Features:**
+
    - Interactive chat interface
    - RAG-powered question retrieval
    - Semantic search across question database
@@ -321,6 +332,7 @@ to curriculum design and assessment alignment.
    **Response:** HTML page with objectives editor
 
    **Features:**
+
    - Create and edit learning objectives
    - Organize objectives by categories
    - Set priority levels for objectives
@@ -358,7 +370,7 @@ Debug and Testing
 
    **Response:** JSON with question debug info
 
-.. http:get:: /test-system-prompt
+.. http:get:: /system-prompt/test
 
    Display system prompt testing page.
 
@@ -370,12 +382,14 @@ Data Models
 The data models are organized in the ``src/question_app/models/`` package:
 
 **Question Models** (`models/question.py`)
+
    - ``Answer``: Quiz answer option model
    - ``Question``: Complete quiz question model
    - ``QuestionUpdate``: Model for updating questions
    - ``NewQuestion``: Model for creating new questions
 
 **Objective Models** (`models/objective.py`)
+
    - ``LearningObjective``: Learning objective model
    - ``ObjectivesUpdate``: Model for updating objectives
 
@@ -550,6 +564,7 @@ Utility Functions
 The application provides utility functions organized in the ``src/question_app/utils/`` package:
 
 **File Utilities** (`utils/file_utils.py`)
+
    - ``load_questions()``: Load questions from JSON file
    - ``save_questions()``: Save questions to JSON file
    - ``load_objectives()``: Load learning objectives from JSON file
@@ -562,6 +577,7 @@ The application provides utility functions organized in the ``src/question_app/u
    - ``save_welcome_message()``: Save chat welcome message to file
 
 **Text Utilities** (`utils/text_utils.py`)
+
    - ``clean_question_text()``: Remove unwanted HTML tags from question text
    - ``clean_html_for_vector_store()``: Clean HTML for vector store processing
    - ``clean_answer_feedback()``: Clean and format answer feedback text

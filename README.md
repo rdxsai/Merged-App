@@ -164,8 +164,7 @@ poetry run type-check     # Type checking with mypy
 # Documentation
 poetry run docs           # Build documentation
 poetry run docs-simple    # Build docs without make
-poetry run serve-docs     # Serve documentation locally
-poetry run docs-serve     # Build and serve docs
+poetry run docs-serve     # Serve docs locally
 ```
 
 ### Development Workflow
@@ -338,6 +337,14 @@ See `docs/api_structure.md` for detailed API documentation.
 3. Make your changes
 4. Run tests and linting
 5. Submit a pull request
+
+## 📄 Documentation
+
+### Available Scripts
+
+- `poetry run docs` - Build HTML documentation
+- `poetry run docs-simple` - Build docs without make dependency
+- `poetry run docs-serve` - Serve documentation locally
 
 ## 📄 License
 

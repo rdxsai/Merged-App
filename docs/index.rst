@@ -1,5 +1,5 @@
-Canvas Quiz Manager Documentation
-================================
+Question App Documentation
+=========================
 
 A comprehensive web application for managing Canvas LMS quiz questions with AI-powered feedback generation and an intelligent chat assistant using RAG (Retrieval-Augmented Generation).
 
@@ -7,22 +7,22 @@ A comprehensive web application for managing Canvas LMS quiz questions with AI-p
    :maxdepth: 2
    :caption: Contents:
 
-   modules
-   core_modules
-   api
-   api_examples
    installation
-   usage
+   api
    configuration
    development
-   development_tools
    testing
    troubleshooting
+   modules
+   core_modules
+   api_examples
+   usage
+   development_tools
 
 Overview
 --------
 
-The Canvas Quiz Manager is a FastAPI-based web application that provides:
+The Question App is a FastAPI-based web application that provides:
 
 * **Canvas LMS Integration**: Fetch and manage quiz questions from Canvas LMS
 * **AI-Powered Feedback**: Generate educational feedback using Azure OpenAI
@@ -93,6 +93,16 @@ Development
 -----------
 
 See :doc:`development` for development setup and guidelines.
+
+Testing
+-------
+
+See :doc:`testing` for testing strategies and guidelines.
+
+Troubleshooting
+--------------
+
+See :doc:`troubleshooting` for common issues and solutions.
 
 Indices and tables
 ==================
