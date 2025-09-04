@@ -40,7 +40,7 @@ Create a `.env` file in the project root with the following variables:
 
 ```bash
 # Canvas LMS Configuration
-CANVAS_BASE_URL=https://your-institution.instructure.com
+CANVAS_BASE_URL=https://canvas.vt.edu
 CANVAS_API_TOKEN=your_canvas_api_token
 COURSE_ID=your_course_id
 QUIZ_ID=your_quiz_id
@@ -117,15 +117,20 @@ http://localhost:8080
    curl -fsSL https://ollama.ai/install.sh | sh
    ```
 
-2. **Download Embedding Model**:
+2. **Start Ollama Service** (new terminal):
+
+   Open a new terminal window or tab and start the Ollama service. Leave this running while you use the app.
+
+   ```bash
+   ollama serve
+   ```
+
+3. **Download Embedding Model** (original terminal):
+
+   With the service running, pull the embedding model in your original terminal.
 
    ```bash
    ollama pull nomic-embed-text
-   ```
-
-3. **Start Ollama Service**:
-   ```bash
-   ollama serve
    ```
 
 ## Development Setup

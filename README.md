@@ -89,7 +89,7 @@ questionapp/
    Create a `.env` file in the project root with your configuration:
 
    ```env
-   CANVAS_BASE_URL=your_canvas_url
+   CANVAS_BASE_URL=https://canvas.vt.edu
    CANVAS_API_TOKEN=your_canvas_token
    COURSE_ID=your_course_id
    QUIZ_ID=your_quiz_id
@@ -99,6 +99,18 @@ questionapp/
    AZURE_OPENAI_SUBSCRIPTION_KEY=your_subscription_key
    OLLAMA_HOST=http://localhost:11434
    OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+   ```
+
+   Optional: if you plan to use local embeddings via Ollama, start the Ollama
+   service in a new terminal and then pull the embedding model in your current
+   terminal:
+
+   ```bash
+   # New terminal - keep this running
+   ollama serve
+
+   # Original terminal
+   ollama pull nomic-embed-text
    ```
 
 4. **Run the application:**
