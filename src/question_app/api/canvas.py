@@ -9,6 +9,7 @@ This module contains all Canvas LMS integration endpoints including:
 """
 
 import asyncio
+import html
 import random
 import re
 from typing import Any, Dict, List, Optional, Union
@@ -16,6 +17,7 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from bs4 import BeautifulSoup
 
 from ..core import config, get_logger
 
@@ -95,47 +97,343 @@ async def make_canvas_request(
     raise HTTPException(status_code=500, detail="Max retries exceeded")
 
 
+# Compiled regex patterns for performance
+_INLINE_CODE_PATTERNS = {
+    'html_tags': re.compile(r'(?<!`)<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>(?!`)', re.IGNORECASE),
+    'html_attributes': re.compile(r'(?<!`)(\b(?:aria-|data-)?[a-zA-Z-]+\s*=\s*["\'][^"\']*["\'])(?!`)', re.IGNORECASE),
+    'css_selectors': re.compile(r'(?<!`)([.#][a-zA-Z][a-zA-Z0-9_-]*|\[[^\]]+\])(?!`)', re.IGNORECASE),
+    'html_entities': re.compile(r'&lt;([a-zA-Z][a-zA-Z0-9]*)\b[^&]*&gt;', re.IGNORECASE),
+    'technical_terms': re.compile(r'\b([a-zA-Z][a-zA-Z0-9]*)\s+(element|tag|attribute|property)\b', re.IGNORECASE)
+}
+
+def _classify_content_type(soup: BeautifulSoup, original_text: str) -> str:
+    """
+    Enhanced classification system to distinguish between different content types.
+    
+    Returns: 'code_sample', 'mixed_content', 'formatted_text', or 'inline_mentions'
+    """
+    # Get text content for analysis
+    text_content = soup.get_text().lower()
+    
+    # Count different types of elements
+    structural_elements = soup.find_all(['div', 'form', 'input', 'button', 'select', 'textarea', 'table', 'tr', 'td', 'fieldset', 'legend'])
+    formatting_elements = soup.find_all(['strong', 'em', 'b', 'i', 'code', 'a', 'ul', 'ol', 'li'])
+    semantic_elements = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'blockquote'])
+    
+    # Check for question context clues
+    question_indicators = ['what is wrong', 'which is better', 'what should', 'how to', 'why', 'when to use']
+    has_question_context = any(indicator in text_content for indicator in question_indicators)
+    
+    # Analyze content structure
+    total_elements = len(structural_elements) + len(formatting_elements) + len(semantic_elements)
+    structural_ratio = len(structural_elements) / max(total_elements, 1)
+    
+    # Check for inline code patterns in original text
+    inline_code_count = sum(len(pattern.findall(original_text)) for pattern in _INLINE_CODE_PATTERNS.values())
+    
+    # Classification logic
+    if len(structural_elements) >= 3 or (len(structural_elements) >= 2 and structural_ratio > 0.4):
+        return 'code_sample'
+    elif len(structural_elements) >= 1 and has_question_context and inline_code_count > 0:
+        return 'mixed_content'
+    elif len(formatting_elements) > 0 or len(semantic_elements) > 1:
+        return 'formatted_text'
+    else:
+        return 'inline_mentions'
+
+
+def _add_inline_code_formatting(text: str) -> str:
+    """
+    Add inline code formatting to technical terms and HTML references.
+    
+    Handles HTML tags, attributes, CSS selectors, ARIA patterns, and technical terms.
+    """
+    if not text or '`' in text:  # Skip if already has backticks
+        return text
+    
+    try:
+        # Decode HTML entities first
+        text = html.unescape(text)
+        
+        # Pattern 1: HTML entities like &lt;div&gt; → `<div>`
+        text = _INLINE_CODE_PATTERNS['html_entities'].sub(r'`<\1>`', text)
+        
+        # Pattern 2: HTML tags like <button> → `<button>`
+        def format_html_tag(match):
+            tag = match.group(0)
+            # Don't format if it looks like actual HTML structure (has content after >)
+            if '>' in tag and not tag.endswith('>'):
+                return tag
+            return f'`{tag}`'
+        
+        text = _INLINE_CODE_PATTERNS['html_tags'].sub(format_html_tag, text)
+        
+        # Pattern 3: HTML attributes like role="button" → `role="button"`
+        text = _INLINE_CODE_PATTERNS['html_attributes'].sub(r'`\1`', text)
+        
+        # Pattern 4: CSS selectors like .class, #id → `.class`, `#id`
+        text = _INLINE_CODE_PATTERNS['css_selectors'].sub(r'`\1`', text)
+        
+        # Pattern 5: Technical terms like "button element" → "`<button>` element"
+        def format_technical_term(match):
+            element_name = match.group(1).lower()
+            term_type = match.group(2).lower()
+            if term_type in ['element', 'tag']:
+                return f'`<{element_name}>` {term_type}'
+            return match.group(0)
+        
+        text = _INLINE_CODE_PATTERNS['technical_terms'].sub(format_technical_term, text)
+        
+        # Clean up common formatting artifacts
+        text = re.sub(r'`{2,}', '`', text)  # Remove double backticks
+        text = re.sub(r'`\s*`', '', text)   # Remove empty backticks
+        
+        return text
+        
+    except Exception as e:
+        logger.warning(f"Error in inline code formatting: {e}")
+        return text
+
+
+def _convert_html_to_markdown(soup: BeautifulSoup) -> str:
+    """
+    Enhanced HTML to Markdown converter with comprehensive element handling.
+    
+    Handles all standard HTML elements with proper nesting and edge cases.
+    """
+    try:
+        # Handle pre/code blocks first (preserve existing formatting)
+        for pre in soup.find_all('pre'):
+            code_content = pre.get_text()
+            if code_content.strip():
+                pre.replace_with(f"\n```\n{code_content}\n```\n")
+            else:
+                pre.decompose()
+        
+        # Handle standalone code elements (not in pre)
+        for code in soup.find_all('code'):
+            if not code.find_parent('pre'):  # Only if not already in a pre block
+                code_text = code.get_text()
+                if code_text.strip():
+                    code.replace_with(f"`{code_text}`")
+        
+        # Convert headings (preserve hierarchy)
+        for i in range(1, 7):
+            for heading in soup.find_all(f'h{i}'):
+                heading_text = heading.get_text().strip()
+                if heading_text:
+                    heading.replace_with(f"\n{'#' * i} {heading_text}\n")
+        
+        # Convert formatting elements
+        for strong in soup.find_all(['strong', 'b']):
+            strong_text = strong.get_text()
+            if strong_text.strip():
+                strong.replace_with(f"**{strong_text}**")
+        
+        for em in soup.find_all(['em', 'i']):
+            em_text = em.get_text()
+            if em_text.strip():
+                em.replace_with(f"*{em_text}*")
+        
+        # Convert links (preserve href)
+        for link in soup.find_all('a'):
+            href = link.get('href', '').strip()
+            text = link.get_text().strip()
+            if text:
+                if href and href != '#':
+                    link.replace_with(f"[{text}]({href})")
+                else:
+                    link.replace_with(text)
+        
+        # Convert lists (handle nesting)
+        for ul in soup.find_all('ul'):
+            items = []
+            for li in ul.find_all('li', recursive=False):
+                li_text = li.get_text().strip()
+                if li_text:
+                    items.append(f"- {li_text}")
+            if items:
+                ul.replace_with('\n' + '\n'.join(items) + '\n')
+        
+        for ol in soup.find_all('ol'):
+            items = []
+            for i, li in enumerate(ol.find_all('li', recursive=False), 1):
+                li_text = li.get_text().strip()
+                if li_text:
+                    items.append(f"{i}. {li_text}")
+            if items:
+                ol.replace_with('\n' + '\n'.join(items) + '\n')
+        
+        # Convert paragraphs (preserve structure)
+        for p in soup.find_all('p'):
+            p_text = p.get_text().strip()
+            if p_text:
+                p.replace_with(f"\n{p_text}\n")
+        
+        # Get final text and clean up
+        result = soup.get_text()
+        
+        # Normalize whitespace
+        result = re.sub(r'\n\s*\n\s*\n+', '\n\n', result)  # Max 2 consecutive newlines
+        result = re.sub(r'[ \t]+', ' ', result)  # Normalize spaces
+        result = result.strip()
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in HTML to Markdown conversion: {e}")
+        return soup.get_text().strip()
+
+
 def clean_question_text(text: str) -> str:
     """
-    Remove unwanted HTML tags from question text.
+    Comprehensive Canvas HTML quiz question to Markdown converter.
 
-    This function specifically targets link, script, style, and meta tags that
-    are commonly included in Canvas question text but are not relevant for
-    display or processing.
+    Intelligently handles different content types:
+    - Inline code mentions: HTML tags/attributes in regular text → `<button>`, `role="application"`
+    - Formatted text: HTML formatting → Markdown (strong → **bold**, em → *italic*)
+    - Code samples: Substantial HTML structures → fenced code blocks
+    - Mixed content: Separates instructional text from code demonstrations
 
     Args:
-        text (str): The HTML text to clean.
+        text (str): Raw HTML from Canvas quiz question
 
     Returns:
-        str: The cleaned text with unwanted HTML tags removed and whitespace normalized.
+        str: Clean Markdown with appropriate inline code and formatting
 
-    Note:
-        The function preserves the content within other HTML tags while removing
-        only the specified unwanted tag types.
+    Examples:
+        Inline mentions: 'Use <button> instead of <span>' → 'Use `<button>` instead of `<span>`'
+        Formatted text: '<strong>Important:</strong> use <code>aria-label</code>' → '**Important:** use `aria-label`'
+        Code sample: 'Fix this: <div><input type="text"></div>' → 'Fix this:\n\n```html\n<div><input type="text"></div>\n```'
+        HTML entities: '&lt;div&gt; element' → '`<div>` element'
     """
     if not text:
         return text
 
-    # Remove link tags (CSS files)
-    text = re.sub(r"<link[^>]*?>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    try:
+        # Store original text for pattern analysis
+        original_text = text
+        
+        # Parse the HTML
+        soup = BeautifulSoup(text, 'html.parser')
 
-    # Remove script tags and their content
-    text = re.sub(
-        r"<script[^>]*?>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
+        # Remove unwanted elements but preserve content structure
+        for unwanted in soup(['script', 'style', 'link', 'meta']):
+            unwanted.decompose()
 
-    # Remove style tags and their content
-    text = re.sub(
-        r"<style[^>]*?>.*?</style>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
+        # Clean up cosmetic spans while preserving semantic ones
+        for span in soup.find_all('span'):
+            has_semantic_attrs = (
+                span.get('id') or 
+                span.get('role') or 
+                any(attr.startswith('aria-') for attr in span.attrs.keys())
+            )
+            
+            is_cosmetic = (
+                span.get('style') or 
+                (span.get('class') and any('hljs' in cls for cls in span.get('class', [])))
+            )
+            
+            if is_cosmetic and not has_semantic_attrs:
+                span.replace_with(span.get_text())
+                logger.debug("Removed cosmetic span")
+            elif has_semantic_attrs:
+                logger.debug(f"Preserved semantic span with id={span.get('id')}")
 
-    # Remove meta tags
-    text = re.sub(r"<meta[^>]*?>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        # Remove style attributes and hljs classes
+        for element in soup.find_all():
+            if element.get('style'):
+                del element['style']
+            if element.get('class'):
+                classes = [c for c in element.get('class', []) if not c.startswith('hljs')]
+                if classes:
+                    element['class'] = classes
+                else:
+                    del element['class']
 
-    # Clean up any extra whitespace that may have been left behind
-    text = re.sub(r"\s+", " ", text).strip()
-
-    return text
+        # Enhanced content classification
+        content_type = _classify_content_type(soup, original_text)
+        logger.debug(f"Content classified as: {content_type}")
+        
+        if content_type == 'code_sample':
+            # Handle substantial code demonstrations
+            result_parts = []
+            processed_elements = set()
+            
+            for element in soup.find_all(['p', 'div', 'pre', 'code', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                if element in processed_elements or any(ancestor in processed_elements for ancestor in element.parents):
+                    continue
+                
+                inner_html = ''.join(str(child) for child in element.children)
+                
+                # Check if this element contains structural HTML
+                has_structural_html = bool(re.search(r'<(div|form|input|button|select|textarea|table|fieldset)[^>]*>', inner_html, re.IGNORECASE))
+                
+                if element.name in ['pre', 'code'] or has_structural_html:
+                    # This is a code block
+                    if element.name in ['pre', 'code']:
+                        code_content = element.get_text().strip()
+                    else:
+                        code_content = inner_html.strip()
+                    
+                    if code_content:
+                        result_parts.append(f"```html\n{code_content}\n```")
+                        logger.debug(f"Added code block from <{element.name}>")
+                else:
+                    # This is instructional text - apply inline code formatting
+                    text_content = element.get_text().strip()
+                    if text_content:
+                        formatted_text = _add_inline_code_formatting(text_content)
+                        result_parts.append(formatted_text)
+                        logger.debug(f"Added instruction text from <{element.name}>")
+                
+                processed_elements.add(element)
+                for child in element.find_all():
+                    processed_elements.add(child)
+            
+            return '\n\n'.join(result_parts) if result_parts else _add_inline_code_formatting(soup.get_text().strip())
+        
+        elif content_type == 'mixed_content':
+            # Handle questions with both text and code elements
+            markdown_text = _convert_html_to_markdown(soup)
+            formatted_text = _add_inline_code_formatting(markdown_text)
+            
+            # Clean up whitespace
+            formatted_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', formatted_text)
+            formatted_text = re.sub(r'[ \t]+', ' ', formatted_text)
+            
+            return formatted_text.strip()
+        
+        elif content_type == 'formatted_text':
+            # Handle regular questions with HTML formatting
+            markdown_text = _convert_html_to_markdown(soup)
+            
+            # Apply inline code formatting to any technical terms
+            formatted_text = _add_inline_code_formatting(markdown_text)
+            
+            # Clean up whitespace
+            formatted_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', formatted_text)
+            formatted_text = re.sub(r'[ \t]+', ' ', formatted_text)
+            
+            return formatted_text.strip()
+        
+        else:  # inline_mentions
+            # Handle questions with just inline code references
+            plain_text = soup.get_text().strip()
+            formatted_text = _add_inline_code_formatting(plain_text)
+            
+            return formatted_text
+            
+    except Exception as e:
+        logger.error(f"Error in clean_question_text: {e}")
+        # Fallback to basic processing
+        try:
+            soup = BeautifulSoup(text, 'html.parser')
+            for unwanted in soup(['script', 'style', 'link', 'meta']):
+                unwanted.decompose()
+            return _add_inline_code_formatting(soup.get_text().strip())
+        except:
+            return text.strip()
 
 
 async def fetch_courses() -> List[Dict[str, Any]]:

@@ -3,7 +3,7 @@ Question API module for the Question App.
 
 This module contains all question-related CRUD operations and endpoints.
 """
-
+import markdown2
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -159,7 +159,11 @@ async def edit_question(request: Request, question_id: int):
 
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-
+    
+    question_text_html = markdown2.markdown(
+        question.get('question_text' , ''),
+        extras = ["fenced-code-blocks"]
+    )
     # Find previous and next question IDs for navigation
     question_ids = [q.get("id") for q in questions]
     current_index = question_ids.index(question_id)
@@ -206,6 +210,7 @@ async def edit_question(request: Request, question_id: int):
         {
             "request": request,
             "question": question,
+            "question_text_html":question_text_html,
             "available_topics": available_topics,
             "existing_tags": existing_tags,
             "learning_objectives": learning_objectives,

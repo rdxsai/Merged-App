@@ -45,6 +45,7 @@ Recent Improvements (v0.3.0):
 import uvicorn
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse
+import markdown2
 
 # Import core modules
 from .core import config, create_app, get_logger, get_templates, register_routers
@@ -89,6 +90,12 @@ async def home(request: Request):
     try:
         questions = load_questions()
         templates = get_templates(app)
+
+        for q in questions:
+            q['question_text_html'] = markdown2.markdown(
+                q.get('question_text', ''),
+                extras = ["fenced-code-blocks"]
+            )
 
         # Create response with cache-busting headers
         response = templates.TemplateResponse(

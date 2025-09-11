@@ -50,6 +50,35 @@
         .answer-feedback-editor .CodeMirror {
             min-height: 100px;
         }
+        
+        /* Ensure code blocks display properly in both preview sections */
+        .question-text-preview pre,
+        .question-preview pre {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        
+        .question-text-preview code,
+        .question-preview code {
+            background-color: #f8f9fa;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875em;
+        }
+        
+        .question-text-preview pre code,
+        .question-preview pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            display: block;
+            white-space: pre;
+        }
     </style>
 </head>
 <body>
@@ -118,11 +147,12 @@
                         <span class="badge bg-primary">{{ current_position }} / {{ total_questions }}</span>
                     </div>
                     <div class="progress">
+                        {% set progress_percent = (((current_position or 0) / (total_questions or 1)) * 100) | round(1) if total_questions else 0 %}
                         <div class="progress-bar progress-bar-custom" role="progressbar" 
-                             style="width: {{ (current_position / total_questions * 100)|round(1) }}%"
-                             aria-valuenow="{{ current_position }}" 
+                             data-progress="{{ progress_percent }}"
+                             aria-valuenow="{{ current_position or 0 }}" 
                              aria-valuemin="0" 
-                             aria-valuemax="{{ total_questions }}">
+                             aria-valuemax="{{ total_questions or 1 }}">
                         </div>
                     </div>
                 </div>
@@ -179,7 +209,7 @@
                                 </span>
                             </div>
                             <div class="question-text-preview mb-3">
-                                {{ question.question_text | striptags | safe }}
+                                {{ question_text_html | safe }}
                             </div>
                             {% if question.answers %}
                             <div class="answers-preview">
@@ -188,6 +218,9 @@
                                     {% for answer in question.answers %}
                                     <div class="list-group-item d-flex justify-content-between align-items-start">
                                         <div class="ms-2 me-auto">
+                                            {% set _text = (answer.text or '') %}
+                                            {% set _html = (answer.html or '') %}
+                                            {% set display_text = (answer.text if answer.text and answer.text|trim else (answer.html|default('')|striptags)) %}
                                             <div class="fw-bold">
                                                 {% if question.question_type == 'matching_question' %}
                                                 <i class="fas fa-link text-info"></i>
@@ -196,13 +229,13 @@
                                                 {% else %}
                                                 <i class="fas fa-circle text-muted"></i>
                                                 {% endif %}
-                                                {{ answer.text }}
+                                                {{ display_text | escape }}
                                                 {% if question.question_type == 'matching_question' and answer.right %}
-                                                <br><small class="text-muted">→ {{ answer.right }}</small>
+                                                <br><small class="text-muted">→ {{ answer.right | escape}}</small>
                                                 {% endif %}
                                             </div>
                                             {% if answer.html %}
-                                            <small class="text-muted">{{ answer.html | safe }}</small>
+                                            
                                             {% endif %}
                                         </div>
                                         {% if question.question_type == 'matching_question' %}
@@ -339,13 +372,10 @@
                                         <div class="col-md-1">
                                             <label class="form-label">Correct:</label>
                                             <div class="text-center">
-                                                <button type="button" class="btn btn-sm correctness-button" 
+                                                <button type="button" class="btn btn-sm correctness-button {% if answer.weight is defined and answer.weight > 0 %}btn-success{% else %}btn-danger{% endif %}" 
                                                         data-answer-id="{{ answer.id }}" 
                                                         data-question-type="{{ question.question_type }}"
-                                                        style="background-color: {% if answer.weight is defined and answer.weight > 0 %}#28a745{% else %}#dc3545{% endif %}; 
-                                                               color: white; 
-                                                               border: none; 
-                                                               min-width: 60px;"
+                                                        style="color: white; border: none; min-width: 60px;"
                                                         title="Click to toggle correctness">
                                                     {% if answer.weight is defined and answer.weight > 0 %}True{% else %}False{% endif %}
                                                 </button>
@@ -360,7 +390,7 @@
                                         <div class="col-md-12">
                                         {% endif %}
                                             <label class="form-label">{% if question.question_type == 'matching_question' %}Left Side (Item to Match):{% else %}Answer Text:{% endif %}</label>
-                                            <textarea name="answer_text_{{ answer.id }}" class="form-control" rows="2">{{ answer.text }}</textarea>
+                                            <textarea name="answer_text_{{ answer.id }}" class="form-control answer-text-editor" rows="2">{{ answer.text }}</textarea>
                                         </div>
                                     </div>
                                     
@@ -436,21 +466,68 @@
         </div>
     </div>
 
+    <!-- Configuration data -->
+    <div id="app-config" 
+         data-question-id="{% if is_new_question %}new{% else %}{{ question.id }}{% endif %}"
+         data-is-new-question="{{ 'true' if is_new_question else 'false' }}"
+         style="display: none;"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SimpleMDE JS -->
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
     <script>
-        const questionId = {% if is_new_question %}'new'{% else %}{{ question.id }}{% endif %};
+    function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+        // Get configuration from data attributes
+        const configElement = document.getElementById('app-config');
+        const questionId = configElement.dataset.questionId;
+        const isNewQuestion = configElement.dataset.isNewQuestion === 'true';
+        let currentQuestionId = questionId;
+        
         let saveTimeout;
         let isSaving = false;
         let isGeneratingFeedback = false;
-        let isNewQuestion = {{ 'true' if is_new_question else 'false' }};
-        let currentQuestionId = {% if is_new_question %}'new'{% else %}{{ question.id }}{% endif %};
         
         // Initialize SimpleMDE editors
         let questionTextEditor;
         let generalFeedbackEditor;
         let answerFeedbackEditors = [];
+        let answerTextEditors = [];
+
+
+        function initializeAnswerTextEditors(){
+            const textTextareas = document.querySelectorAll('.answer-text-editor');
+            textTextareas.forEach((textarea, index) => {
+                const editor = new SimpleMDE({
+                    element: textarea,
+                    spellChecker: false,
+                    toolbar: [
+                        "bold", "italic", "strikethrough", "|", "quote", "code", "|", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "fullscreen", "guide"
+                    ],
+                    forceSync: true,
+                    placeholder: "Enter answer text here...",
+                    status : false
+                });
+                editor.codemirror.on("change" , function() {
+                    updateAnswerPreview();
+                    scheduleAutoSave();
+                });
+
+                //Store editor reference for later access
+                answerTextEditors.push({
+                    textarea : textarea,
+                    editor : editor,
+                    answerId : textarea.name.replace('answer_text_' , '')
+                });
+            });
+        }
         
         // Helper function to clean feedback text
         function cleanFeedbackText(feedback, answerText = '') {
@@ -517,7 +594,8 @@
 
         // Initialize editors when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize SimpleMDE for answer feedback textareas
+            // Initialize SimpleMDE for answer feedback textareas and for Answer text areas as well
+            initializeAnswerTextEditors();
             initializeAnswerFeedbackEditors();
             
             // Initialize SimpleMDE for question text
@@ -582,6 +660,9 @@
             updateTagsPreview();
             updateObjectivePreview();
             
+            // Don't overwrite the backend-rendered Question Preview on page load
+            // updateFullQuestionPreview();
+            
             // Manual save button for new questions
             const manualSaveBtn = document.getElementById('manualSaveBtn');
             if (manualSaveBtn) {
@@ -611,6 +692,18 @@
                 });
             }
         });
+
+
+        function getAnswerTextContent(answerId){
+            const editorData = answerTextEditors.find(item => item.answerId == answerId);
+            if(editorData && editorData.editor) {
+                return editorData.editor.value();
+            } else{
+                const textarea = document.querySelector(`textarea[name="answer_text_${answerId}"]`);
+                return textarea ? textarea.value : '';
+            }
+        }
+
 
         // Function to update preview button appearance based on current mode
         function updatePreviewButton(editor) {
@@ -817,13 +910,70 @@
             }
         }
 
+        // Debug content sources for comparison
+        function debugContentSources() {
+            console.log('=== CONTENT SOURCE COMPARISON ===');
+            
+            // Get template content (Question Details source)
+            const templateContent = document.querySelector('.question-text-preview').innerHTML;
+            console.log('Template content (Question Details):', JSON.stringify(templateContent));
+            
+            // Get SimpleMDE content (Question Preview source)
+            const simpleMDEContent = questionTextEditor.value();
+            console.log('SimpleMDE content (Question Preview):', JSON.stringify(simpleMDEContent));
+            
+            // Get raw textarea content for comparison
+            const textareaContent = document.getElementById('questionText').value;
+            console.log('Raw textarea content:', JSON.stringify(textareaContent));
+            
+            console.log('Content lengths - Template:', templateContent.length, 'SimpleMDE:', simpleMDEContent.length, 'Textarea:', textareaContent.length);
+            console.log('=== END CONTENT COMPARISON ===');
+        }
+
+        // Convert Markdown to HTML for preview display
+        function convertMarkdownToHtml(markdown){
+            if (!markdown) return '';
+            let html = markdown;
+            
+            html = html.replace(/```(html)?\n([\s\S]*?)\n```/g, function(match, lang, code){
+                const escapedCode = escapeHtml(code);
+                return `<pre><code>${escapedCode}</code></pre>`;
+            });
+            
+            html = html.replace(/`([^`\n]+)`/g, function(match, code){
+                const escapedCode = escapeHtml(code);
+                return `<code>${escapedCode}</code>`;
+            });
+
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            const parts = html.split(/(<pre><code>[\s\S]*?<\/code><\/pre>)/);
+            html = parts.map((part , index) => {
+                if (index % 2 == 0) {
+                    return part.replace(/\n/g, '<br>');
+                } else {
+                    return part;
+                }
+            }).join('');
+
+            html = html.replace(/<br>\s*<pre>/g, '<pre>');
+            html = html.replace(/<\/pre>\s*<br>/g, '</pre>');
+
+            return html;
+
+        }
+
         // Update the entire question preview when changes are made
         function updateFullQuestionPreview() {
             // Update question text preview
             const questionText = questionTextEditor.value();
             const questionTextPreview = document.querySelector('.question-text-preview');
+            
             if (questionTextPreview) {
-                questionTextPreview.textContent = questionText.replace(/<[^>]*>/g, ''); // Strip HTML tags
+                // Convert Markdown to HTML for proper preview display
+                const htmlContent = convertMarkdownToHtml(questionText);
+                questionTextPreview.innerHTML = htmlContent;
             }
             
             // Update topic, tags, and objective previews
@@ -847,11 +997,13 @@
             
             answerItems.forEach((item, index) => {
                 const answerId = item.dataset.answerId;
-                const answerTextInput = item.querySelector(`textarea[name="answer_text_${answerId}"]`);
+                const answerMarkdown = getAnswerTextContent(answerId);
                 const weightInput = item.querySelector(`input[name="answer_weight_${answerId}"]`);
+                const answerHtml = convertMarkdownToHtml(answerMarkdown);
+
+
                 
-                if (answerTextInput) {
-                    const answerText = answerTextInput.value;
+                if (answerMarkdown) {
                     const weight = weightInput ? parseFloat(weightInput.value) || 0 : 0;
                     const isCorrect = weight > 0;
                     
@@ -863,7 +1015,7 @@
                         <div class="ms-2 me-auto">
                             <div class="fw-bold">
                                 <i class="fas ${isCorrect ? 'fa-check-circle text-success' : 'fa-circle text-muted'}"></i>
-                                ${answerText}
+                                ${answerHtml}
                             </div>
                         </div>
                         <span class="badge bg-primary rounded-pill">${weight}%</span>
@@ -1209,7 +1361,7 @@
                 const answerId = item.dataset.answerId;
                 const answer = {
                     id: parseInt(answerId),
-                    text: formData.get(`answer_text_${answerId}`) || '',
+                    text : getAnswerTextContent(answerId) || '',
                     html: formData.get(`answer_html_${answerId}`) || '',
                     comments: getAnswerFeedbackContent(answerId) || '',
                     comments_html: formData.get(`answer_comments_html_${answerId}`) || ''
@@ -1486,7 +1638,7 @@
         // Tag input functionality
         const tagsInput = document.getElementById('tagsInput');
         const tagSuggestions = document.getElementById('tagSuggestions');
-        const existingTags = {{ existing_tags | tojson }};
+        const existingTags = {{ existing_tags | tojson | safe }};
         
         if (tagsInput && tagSuggestions) {
             // Show suggestions on focus and input
