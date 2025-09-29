@@ -16,7 +16,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from ..core import config, get_logger
-from ..utils import clean_html_for_vector_store, extract_topic_from_text, load_questions
+from ..utils import clean_question_text, extract_topic_from_text, load_questions, clean_answer_feedback
 
 logger = get_logger(__name__)
 
@@ -170,10 +170,10 @@ def create_comprehensive_chunks(
         question_id = question.get("id", "unknown")
 
         # Clean and prepare question text
-        question_text = clean_html_for_vector_store(question.get("question_text", ""))
+        question_text = clean_question_text(question.get("question_text", ""))
 
         # Clean general feedback
-        general_feedback = clean_html_for_vector_store(
+        general_feedback = clean_question_text(
             question.get("neutral_comments", "")
         )
 
@@ -214,8 +214,9 @@ def create_comprehensive_chunks(
         # Create answer-specific chunks
         answers = question.get("answers", [])
         for i, answer in enumerate(answers):
-            answer_text = clean_html_for_vector_store(answer.get("text", ""))
-            answer_feedback = clean_html_for_vector_store(answer.get("comments", ""))
+            answer_text = clean_question_text(answer.get("text", ""))
+            answer_feedback = clean_answer_feedback(answer.get("comments", ""))
+            answer_feedback = clean_question_text(answer_feedback)
 
             if answer_text:
                 answer_content = (
