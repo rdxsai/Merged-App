@@ -17,11 +17,19 @@ from fastapi import APIRouter, HTTPException
 
 from ..core import config, get_logger
 from ..utils import clean_question_text, extract_topic_from_text, load_questions, clean_answer_feedback
+from ..services.tutor.interfaces import VectorStoreInterface
+
 
 logger = get_logger(__name__)
 
 # Create router for vector store endpoints
 router = APIRouter(prefix="/vector-store", tags=["vector-store"])
+
+
+class ChromaVectorStoreService(VectorStoreInterface):
+
+    async def search(self, query:str , n_results : int = 3) -> List[Dict[str , Any]]:
+        return await search_vector_store(query , n_results=n_results)
 
 
 async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:

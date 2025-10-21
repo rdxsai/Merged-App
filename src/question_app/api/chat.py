@@ -11,11 +11,14 @@ This module contains all RAG-based chat functionality including:
 """
 
 from typing import Dict
-
+from fastapi.openapi.utils import status_code_ranges
+from pydantic import BaseModel
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+from docs import conf
 
 from ..core import config, get_logger
 from ..utils import (
@@ -27,6 +30,9 @@ from ..utils import (
     save_welcome_message,
 )
 from .vector_store import search_vector_store
+from ..services.tutor.hybrid_system import HybridCrewAISocraticSystem
+from ..api.vector_store import ChromaVectorStoreService
+from question_app.api import vector_store
 
 logger = get_logger(__name__)
 
@@ -36,7 +42,6 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 # Templates setup
 templates = Jinja2Templates(directory="templates")
 
-
 # Chat endpoints
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request):
@@ -44,122 +49,46 @@ async def chat_page(request: Request):
     return templates.TemplateResponse("chat.html", {"request": request})
 
 
+#Define a pydantic model for incoming request body
+class ChatMessage(BaseModel):
+    message : str
+    student_id : str
+
 @router.post("/message")
-async def chat_message(request: Request):
-    """Process chat message with RAG using vector store"""
+async def handle_chat_message(chat_message : ChatMessage):
+    logger.info(f"Received chat message for student_id: {chat_message.student_id}")
     try:
-        # Parse request body
-        body = await request.json()
-        user_message = body.get("message", "").strip()
-        max_chunks = body.get("max_chunks", 3)
-
-        # Validate max_chunks
-        if not isinstance(max_chunks, int) or max_chunks < 1 or max_chunks > 10:
-            max_chunks = 3
-
-        if not user_message:
-            raise HTTPException(status_code=400, detail="Message cannot be empty")
-
-        logger.info(f"=== Chat Message Processing Started ===")
-        logger.info(f"User message: {user_message}")
-        logger.info(f"Max chunks requested: {max_chunks}")
-
-        # Search vector store for relevant chunks
-        logger.info("Searching vector store for relevant context...")
-        retrieved_chunks = await search_vector_store(user_message, n_results=max_chunks)
-        logger.info(f"Retrieved {len(retrieved_chunks)} chunks")
-
-        # Build context from retrieved chunks
-        context_parts = []
-        for i, chunk in enumerate(retrieved_chunks):
-            context_parts.append(f"Context {i+1}:\n{chunk['content']}")
-
-        context = (
-            "\n\n".join(context_parts)
-            if context_parts
-            else "No relevant context found."
+        vector_service = ChromaVectorStoreService() #creating the tool that will search the vector store
+        tutor_system = HybridCrewAISocraticSystem(
+            azure_config={
+                "api_key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
+                "endpoint" : config.AZURE_OPENAI_ENDPOINT,
+                "deployment_name": config.AZURE_OPENAI_DEPLOYMENT_ID,
+                "api_version": config.AZURE_OPENAI_API_VERSION
+            },
+            vector_store_service=vector_service,
+            db_path="socratic_tutor.db"
         )
 
-        # Load custom chat system prompt and inject context
-        chat_system_prompt_template = load_chat_system_prompt()
-        system_prompt = chat_system_prompt_template.format(context=context)
-
-        # Prepare messages for Azure OpenAI
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ]
-
-        # Call Azure OpenAI for chat completion
-        logger.info("Calling Azure OpenAI for chat completion...")
-
-        url = (
-            f"{config.AZURE_OPENAI_ENDPOINT}/us-east/deployments/"
-            f"{config.AZURE_OPENAI_DEPLOYMENT_ID}/chat/completions"
-            f"?api-version={config.AZURE_OPENAI_API_VERSION}"
+        result = await tutor_system.conduct_socratic_session(
+            student_id=chat_message.student_id,
+            student_response=chat_message.message
         )
 
-        headers: Dict[str, str] = {
-            "Ocp-Apim-Subscription-Key": str(
-                config.AZURE_OPENAI_SUBSCRIPTION_KEY or ""
-            ),
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "messages": messages,
-            "max_tokens": 800,
-            "temperature": 0.7,
-            "top_p": 0.9,
-        }
-
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-
-            if response.status_code != 200:
-                error_text = response.text
-                logger.error(f"Azure OpenAI API error: {error_text}")
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"AI service error: {error_text}",
-                )
-
-            result = response.json()
-
-            if "choices" not in result or not result["choices"]:
-                raise HTTPException(
-                    status_code=500, detail="Invalid response from AI service"
-                )
-
-            ai_response = result["choices"][0]["message"]["content"]
-
-            # Log token usage if available
-            if "usage" in result:
-                usage = result["usage"]
-                logger.info(
-                    f"Token usage - Prompt: {usage.get('prompt_tokens', 0)}, "
-                    f"Completion: {usage.get('completion_tokens', 0)}, "
-                    f"Total: {usage.get('total_tokens', 0)}"
-                )
-
-        logger.info("Chat message processed successfully")
-
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500 , detail = result.get("error" , "An unknown error occured in tutoring session"))
         return {
-            "response": ai_response,
-            "retrieved_chunks": retrieved_chunks,
-            "context_used": len(context_parts) > 0,
+            "response" : result.get("tutor_response"),
+            "session_metadata" : result.get("session_metadata")
         }
-
     except HTTPException as e:
-        logger.error(f"HTTP Exception in chat_message: {e.detail}")
+        logger.error(f"HTTP Exception in handle_chat_message : {e.detail}")
         raise e
     except Exception as e:
-        logger.error(f"Unexpected error in chat_message: {e}")
-        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Unexpected error in handle_chat_message : {e}" , exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Failed to process chat message: {str(e)}"
+            status_code=500 , detail = f"Failed to process chat message : {str(e)}"
         )
-
 
 # Chat system prompt management endpoints
 @router.get("/system-prompt", response_class=HTMLResponse)
