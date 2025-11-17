@@ -139,6 +139,45 @@ class SocraticAgent:
             return f"Task processing error in {self.role}: {str(e)}"
 
 
+class CoordinatorAgent(SocraticAgent):
+
+    def __init__(self , client = AzureAPIMClient) -> None:
+        super().__init__(
+            role = "Socratic Session Coordinator",
+            goal = "Analyze the user's input to determine its primary intent, either 'conceptual_question' or 'code_analysis_request'",
+            backstory = """You are the central "brain" of a tutoring system. 
+            You do not answer the student. Your job is to classify the user's
+            input so it can be routed to the correct specialist agent.""",
+            client = client
+        )
+
+    def decide_intent(self, student_response : str) -> str:
+        task_description = f"""
+        Analyze the following user input. Classify it as either:
+        1. 'conceptual_question': For general questions, statements, or answers about web accessibility concepts (e.g., "what is alt text?", "I think it's for screen readers").
+        2. 'code_analysis_request': If the user has included a code snippet (HTML, CSS, JS) for review or has asked a question directly about a piece of code.
+
+        User Input: "{student_response}"
+
+        Respond with ONLY a JSON object in this exact format:
+        {{"intent": "YOUR_CLASSIFICATION_HERE"}}
+        """
+        try:
+            repsonse_json = self.execute_task(task_description , context = "")
+            intent = json.loads(repsonse_json).get("intent" , "conceptual_question")
+
+            if intent not in ["conceptual_question" , "code_analysis_request"]:
+                logger.warning(f"CoordinatorAgent returned non-standard intent: {intent}")
+                return "conceptual_question"
+            logger.info(f"CoordinatorAgent decided intent : {intent}")
+            return intent
+
+        except Exception as e:
+            logger.error(f"CoordinatorAgent failed : {e} , Defaulting to 'conceptual_question'")
+            return "conceptual_question"
+
+
+
 class ResponseAnalystAgent(SocraticAgent):
     """Agent for analyzing student responses"""
 
@@ -155,7 +194,7 @@ class ResponseAnalystAgent(SocraticAgent):
         )
 
     def analyze_response(
-        self, student_response: str, profile: StudentProfile
+        self, student_response: str, profile: StudentProfile, context : str = ""
     ) -> Dict[str, Any]:
         """Analyze student response and return structured analysis"""
 
@@ -242,7 +281,7 @@ class ProgressTrackerAgent(SocraticAgent):
         )
 
     def assess_progress(
-        self, analysis: Dict[str, Any], profile: StudentProfile
+        self, analysis: Dict[str, Any], profile: StudentProfile, context : str = ""
     ) -> Dict[str, Any]:
         """Assess learning progress and advancement readiness"""
 
@@ -338,6 +377,7 @@ class QuestionGeneratorAgent(SocraticAgent):
         progress: Dict[str, Any],
         profile: StudentProfile,
         student_response: str,
+        context : str = ""
     ) -> str:
         """Generate strategic Socratic questions based on analysis"""
 
@@ -403,6 +443,7 @@ class SessionOrchestratorAgent(SocraticAgent):
         progress: Dict[str, Any],
         questions: str,
         profile: StudentProfile,
+        context : str = ""
     ) -> str:
         """Create the final orchestrated Socratic response"""
 
@@ -440,12 +481,45 @@ class SessionOrchestratorAgent(SocraticAgent):
             logger.error(f"Session orchestration failed: {e}")
             return questions  # Fallback to just the questions
 
+class CodeAnalyzerAgent(SocraticAgent):
+    
+    def __init__(self, client:AzureAPIMClient):
+        super().__init__(
+            role = "Expert Web Accessibility Code Analyst",
+            goal = "Analyze a snippet of HTML, CSS, or JS and identify potential accessibility issues. Provide your analysis in a structured list.",
+            backstory = """You are an expert on WCAG and web accessibility. 
+            You do not talk to the student. You are a tool that provides technical analysis.
+            Your job is to find common errors like missing alt text, non-semantic HTML (e.g., div used as a button), or poor color contrast hints.""",
+            client = client
+        )
+
+    def analyze_code_snippet(self, code_snippet:str):
+        task_description = f"""
+        Analyze the following code snippet for potential accessibility errors.
+        List 1-3 potential issues you find. Be concise and return your analysis as a simple string.
+        If no errors are found, respond with "No obvious accessibility errors found."
+
+        Code Snippet:
+        ```
+        {code_snippet}
+        ```
+        
+        Your Analysis:
+        """
+
+        try:
+            analysis = self.execute_task(task_description, context="")
+            logger.info("CodeAnalyzerAgent completed analysis")
+            return analysis
+        except Exception as e:
+            logger.error(f"CodeAnalyzerAgent fauled : {e}")
+            return "Error during code analysis"
 
 # ============================================================================
 # HYBRID CREWAI SYSTEM
 # ============================================================================
 
-
+MIN_COSINE_SIMILARITY = 0.3
 class HybridCrewAISocraticSystem:
     """Socratic system that simulates CrewAI coordination using working backend"""
 
@@ -469,9 +543,18 @@ class HybridCrewAISocraticSystem:
         self.db_path = db_path
         
 
-        # Initialize simulated agents
+        #THE NEW AGENT TEAM
+        #1. The brain agent
+        self.coordinator_agent = CoordinatorAgent(self.client)
+
+        #2. Workflow A specialist
         self.response_analyst = ResponseAnalystAgent(self.client)
         self.progress_tracker = ProgressTrackerAgent(self.client)
+
+        #3. Workflow B specialist
+        self.code_analyzer = CodeAnalyzerAgent(self.client)
+
+        #4. Shared specialists
         self.question_generator = QuestionGeneratorAgent(self.client)
         self.session_orchestrator = SessionOrchestratorAgent(self.client)
 
@@ -692,134 +775,106 @@ class HybridCrewAISocraticSystem:
         else:
             raise RuntimeError(f"Failed to save student profile for {name}")
 
-    async def conduct_socratic_session(
-        self, student_id: str, student_response: str
-    ) -> Dict[str, Any]:
-        """
-        Conduct a Socratic tutoring session with coordinated AI agents.
+    async def get_rag_context(self, query:str) -> str:
+            logger.info(f"Retrieving Context for : {query[:50]}...")
+            retrieved_chunks_with_scores = await self.vector_store.search(query = query)
 
-        This method orchestrates a complete Socratic tutoring session using
-        multiple specialized AI agents that work together to provide personalized
-        learning experiences. The session follows a structured approach:
+            #chunk filtering
+            high_quality_chunks = []
+            for chunk in retrieved_chunks_with_scores:
+                distance = chunk.get('distance' , 1)
+                similarity = 1 - distance
+                if similarity >= MIN_COSINE_SIMILARITY:
+                    high_quality_chunks.append(chunk.get('content' , ''))
+            if not high_quality_chunks:
+                logger.info(f"No high-quality chunk found for user query. Proceeding without passing context.")
+                return ""
+            
+            context_for_agents = "\n--\n".join(high_quality_chunks)
+            logger.debug(f"Context for agents : \n{context_for_agents}")
+            return context_for_agents
 
-        1. **Response Analysis**: Analyzes the student's response for understanding
-        2. **Progress Tracking**: Updates learning progress and metrics
-        3. **Question Generation**: Creates strategic Socratic questions
-        4. **Session Orchestration**: Coordinates all agents for final response
+    async def conduct_socratic_session(self, student_id : str , student_response : str) -> Dict[str, Any]:
+            profile = self.db.load_student_profile(student_id)
+            if not profile:
+                raise ValueError(f"Student {student_id} not found")
+            logger.info(f"Starting Session for {profile.name}")
+            profile.total_sessions +=1
 
-        Args:
-            student_id (str): Unique identifier for the student
-                (e.g., "a1b2c3d4", "student123")
-            student_response (str): Student's response to the previous question
-                or their input for the session (e.g., "I think the derivative is 2x")
+            try:
+                intent = self.coordinator_agent.decide_intent(student_response)
 
-        Returns:
-            Dict[str, Any]: Comprehensive session results containing:
-                - tutor_response (str): AI tutor's response/question
-                - student_profile (Dict): Updated student profile data
-                - session_metadata (Dict): Session information including:
-                    - session_number (int): Current session number
-                    - knowledge_level (str): Updated knowledge level
-                    - session_phase (str): Current session phase
-                    - consecutive_correct (int): Correct response streak
-                    - analysis (Dict): Response analysis results
-                    - progress (Dict): Progress tracking data
-                    - agents_coordination (str): Coordination status
-                - status (str): "success" or "error"
-                - error (str): Error message if session failed
-                - fallback (bool): True if fallback response was used
+                final_response = ""
+                analysis = {}
+                progress = {}
+                rag_context = ""
 
-        Raises:
-            ValueError: If student_id is not found in the system
-            Exception: For other unexpected errors during session execution
+                if intent == "conceptual_question":
+                    logger.info("Executing Workflow A")
+                    rag_context = await self.get_rag_context(student_response)
+                    analysis = self.response_analyst.analyze_response(
+                        student_response , profile, context=rag_context
+                    )
+                    progress = self.progress_tracker.assess_progress(
+                        analysis, profile , context=rag_context
+                    )
+                    questions = self.question_generator.generate_questions(
+                        analysis, progress, profile, student_response, context = rag_context
+                    )
+                    final_response = self.session_orchestrator.orchestrate_response( analysis, progress, questions, profile, context = rag_context)
 
-        Example:
-            >>> system = HybridCrewAISocraticSystem()
-            >>> result = system.conduct_socratic_session(
-            ...     student_id="a1b2c3d4",
-            ...     student_response="I think the derivative of x² is 2x"
-            ... )
-            >>> print(result['tutor_response'])
-            >>> print(f"Session #{result['session_metadata']['session_number']}")
-            >>> print(f"Knowledge Level: {result['session_metadata']['knowledge_level']}")
+                elif intent == "code_analysis_request":
+                    logger.info("Executing Workflow B")
+                    code_analysis_result = self.code_analyzer.analyze_code_snippet(student_response)
+                    search_query = student_response + "\n" + code_analysis_result
+                    rag_context = await self.get_rag_context(search_query)
 
-        Note:
-            The session automatically updates the student's profile with new
-            learning progress, knowledge level, and session metrics. If any
-            agent fails, the system provides a fallback response to maintain
-            session continuity.
-        """
+                    analysis = {
+                        "response_type" : "code_snippet",
+                        "intervention_needed" : "probe_deeper",
+                        "technical_analysis" : code_analysis_result
+                    }  
 
-        # Load student profile
-        profile = self.db.load_student_profile(student_id)
-        if not profile:
-            raise ValueError(f"Student {student_id} not found")
+                    progress = {}
+                    task_for_questioner = f"""
+                    A student provided a code snippet. My analysis found these issues:
+                    {code_analysis_result}
+                
+                    Here is the relevant context from our knowledge base:
+                    {rag_context}
 
-        logger.info(f"Starting hybrid CrewAI session for {profile.name}")
-        profile.total_sessions += 1
+                    Your task: Based *only* on the analysis and the context, generate a single
+                    Socratic question that will guide the student to discover one
+                    of these errors on their own. Do not give the answer.
+                    """
+
+                    questions = self.question_generator.execute_task(task_for_questioner, context=rag_context)
+                    final_response = self.session_orchestrator.orchestrate_response(analysis , progress , questions , profile , context= rag_context)
+                
+                logger.info(f"Triage session completed successfully for {profile.name}")
+
+                return {
+                    "tutor_response" : final_response,
+                    "student_profile" : asdict(profile),
+                    "session_metadata" : {
+                        "session_number" : profile.total_sessions,
+                        "intent_executed" : intent,
+                        "analysis" : safe_serialize(analysis),
+                        "progress" : safe_serialize(progress),
+                    },
+                    "status" : "success"
+                }
+            except Exception as e:
+                logger.error(f"Triage Session execution failed : {e}", exc_info=True)
+                return{
+                    "tutor_response" : "I apologize, but I'm having a small issue. Could you rephrase that?",
+                    "error" : str(e) , "fallback" : True , "status" : "error"
+                }
 
 
 
-        try:
-            #New step for RAG pipeline
-            logger.info(f"Retrieving context for : '{student_response[:50]}...")
-            retrieved_chunks = await self.vector_store.search(query=student_response)
-            context_for_agents = "\n--\n".join(
-                [chunk.get('content' , '') for chunk in retrieved_chunks]
-            )
-            # Step 1: Response Analysis
-            logger.info("🤖 Agent 1: Analyzing student response...")
-            analysis = self.analyst_agent.analyze_response(student_response, profile, context = context_for_agents)
 
-            # Step 2: Progress Tracking
-            logger.info("🤖 Agent 2: Tracking learning progress...")
-            progress = self.progress_agent.assess_progress(analysis, profile , context = context_for_agents)
-
-            # Step 3: Question Generation
-            logger.info("🤖 Agent 3: Generating strategic questions...")
-            questions = self.questioner_agent.generate_questions(
-                analysis, progress, profile, student_response , context = context_for_agents
-            )
-
-            # Step 4: Session Orchestration
-            logger.info("🤖 Agent 4: Orchestrating final response...")
-            final_response = self.orchestrator_agent.orchestrate_response(
-                analysis, progress, questions, profile , context = context_for_agents
-            )
-
-            # Update student profile
-            self._update_student_profile(profile, analysis, progress)
-
-            # Save updated profile
-            self.db.save_student_profile(profile)
-
-            logger.info(
-                f"Hybrid CrewAI session completed successfully for {profile.name}"
-            )
-
-            return {
-                "tutor_response": final_response,
-                "student_profile": asdict(profile),
-                "session_metadata": {
-                    "session_number": profile.total_sessions,
-                    "knowledge_level": profile.knowledge_level.value,
-                    "session_phase": profile.session_phase.value,
-                    "consecutive_correct": profile.consecutive_correct,
-                    "analysis": safe_serialize(analysis),
-                    "progress": safe_serialize(progress),
-                    "agents_coordination": "successful",
-                },
-                "status": "success",
-            }
-
-        except Exception as e:
-            logger.error(f"Hybrid session execution failed: {e}")
-            return {
-                "tutor_response": "I apologize, but I'm having trouble processing your response right now. What aspects of this topic are you most curious about?",
-                "error": str(e),
-                "fallback": True,
-                "status": "error",
-            }
+            
 
     def _update_student_profile(
         self,
@@ -911,199 +966,5 @@ class HybridCrewAISocraticSystem:
         }
 
 
-# ============================================================================
-# COMMAND LINE INTERFACE
-# ============================================================================
 
 
-def main():
-    """Main CLI for the Hybrid CrewAI System"""
-
-    print("🎭 Hybrid CrewAI Socratic AI Tutoring System")
-    print("=" * 45)
-
-    # Load environment
-    load_dotenv()
-
-    # Check credentials
-    required_vars = [
-        "AZURE_OPENAI_API_KEY",
-        "AZURE_OPENAI_ENDPOINT",
-        "AZURE_OPENAI_DEPLOYMENT",
-    ]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-
-    if missing_vars:
-        print(f"❌ Missing environment variables: {', '.join(missing_vars)}")
-        return
-
-    # Initialize system
-    try:
-        azure_config = {
-            "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
-            "endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
-            "deployment_name": os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            "api_version": os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
-        }
-
-        # Use configured database path for CLI
-        cli_db_path = os.path.join("data", "socratic_tutor.db")
-        tutor = HybridCrewAISocraticSystem(azure_config, db_path=cli_db_path)
-        print("✅ Hybrid CrewAI system initialized successfully!\n")
-
-    except Exception as e:
-        print(f"❌ Initialization failed: {e}")
-        return
-
-    # Interactive menu
-    while True:
-        print("\n" + "=" * 35)
-        print("HYBRID CREWAI SOCRATIC MENU")
-        print("=" * 35)
-        print("1. Create new student")
-        print("2. Conduct session with agent coordination")
-        print("3. List students")
-        print("4. Student analytics")
-        print("5. Demo agent coordination")
-        print("0. Exit")
-
-        choice = input("\nSelect option (0-5): ").strip()
-
-        if choice == "0":
-            print("👋 Goodbye!")
-            break
-
-        elif choice == "1":
-            name = input("Student name: ").strip()
-            topic = input("Learning topic: ").strip()
-            initial = input("Initial response (optional): ").strip()
-
-            if name and topic:
-                try:
-                    student_id = tutor.create_student(name, topic, initial)
-                    print(f"✅ Created student: {name} (ID: {student_id})")
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-
-        elif choice == "2":
-            students = tutor.list_students()
-            if not students:
-                print("❌ No students found. Create one first.")
-                continue
-
-            print("\nAvailable students:")
-            for i, s in enumerate(students, 1):
-                print(
-                    f"{i}. {s['name']} - {s['topic']} (Level: {s['knowledge_level']})"
-                )
-
-            try:
-                idx = int(input(f"Select student (1-{len(students)}): ")) - 1
-                if 0 <= idx < len(students):
-                    student_id = students[idx]["id"]
-                    student_name = students[idx]["name"]
-
-                    print(f"\n🎭 Agent-Coordinated Session with {student_name}")
-                    print("Type 'quit' to end session\n")
-
-                    while True:
-                        response = input(f"{student_name}: ").strip()
-                        if response.lower() == "quit":
-                            break
-
-                        if response:
-                            try:
-                                result = tutor.conduct_socratic_session(
-                                    student_id, response
-                                )
-                                print(f"Tutor: {result['tutor_response']}\n")
-
-                                if "session_metadata" in result:
-                                    metadata = result["session_metadata"]
-                                    print(
-                                        f"📊 Session {metadata['session_number']} | Level: {metadata['knowledge_level']} | Correct: {metadata['consecutive_correct']} | Coordination: {metadata['agents_coordination']}"
-                                    )
-
-                            except Exception as e:
-                                print(f"❌ Session error: {e}\n")
-                else:
-                    print("❌ Invalid selection")
-            except ValueError:
-                print("❌ Please enter a valid number")
-
-        elif choice == "3":
-            students = tutor.list_students()
-            if students:
-                print(f"\n👥 Students ({len(students)} total):")
-                for s in students:
-                    print(
-                        f"• {s['name']} - {s['topic']} (Level: {s['knowledge_level']}, Sessions: {s['total_sessions']})"
-                    )
-            else:
-                print("❌ No students found")
-
-        elif choice == "4":
-            student_id = input("Enter student ID: ").strip()
-            if student_id:
-                try:
-                    analytics = tutor.get_student_analytics(student_id)
-                    if "error" not in analytics:
-                        info = analytics["student_info"]
-                        metrics = analytics["progress_metrics"]
-
-                        print(f"\n📊 Analytics for {info['name']}:")
-                        print(f"Knowledge Level: {info['knowledge_level']}")
-                        print(f"Session Phase: {info['session_phase']}")
-                        print(f"Total Sessions: {info['total_sessions']}")
-                        print(f"Consecutive Correct: {metrics['consecutive_correct']}")
-                        print(f"Engagement: {info['engagement_level']}")
-
-                        if metrics["understanding_progression"]:
-                            print("Progress Milestones:")
-                            for milestone in metrics["understanding_progression"]:
-                                print(f"  • {milestone}")
-                    else:
-                        print(f"❌ {analytics['error']}")
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-
-        elif choice == "5":
-            print("\n🎭 Hybrid CrewAI Demo with Agent Coordination")
-            try:
-                # Create demo student
-                demo_id = tutor.create_student(
-                    "Hybrid Demo",
-                    "Photosynthesis",
-                    "I think plants make food from sunlight somehow",
-                )
-                print("✅ Demo student created")
-
-                demo_responses = [
-                    "Plants use sunlight to make their food",
-                    "The leaves capture the sunlight energy",
-                    "I think they convert light energy into chemical energy",
-                    "Maybe they use carbon dioxide and water too?",
-                ]
-
-                print("\n🎭 Agent-Coordinated Socratic Dialogue:")
-                for i, response in enumerate(demo_responses, 1):
-                    print(f"\nRound {i}:")
-                    print(f"Student: {response}")
-
-                    result = tutor.conduct_socratic_session(demo_id, response)
-                    print(f"Tutor: {result['tutor_response']}")
-
-                    if "session_metadata" in result:
-                        metadata = result["session_metadata"]
-                        print(
-                            f"📊 Level: {metadata['knowledge_level']} | Consecutive: {metadata['consecutive_correct']} | Coordination: {metadata['agents_coordination']}"
-                        )
-
-                print("\n✅ Hybrid CrewAI demo completed!")
-
-            except Exception as e:
-                print(f"❌ Demo failed: {e}")
-
-
-if __name__ == "__main__":
-    main()

@@ -48,6 +48,11 @@ class Config:
         self.APP_TITLE: str = "Canvas Quiz Manager"
         self.LOG_FILE: str = "canvas_app.log"
 
+
+        #ChromaDB Configuration
+        self.CHROMA_HOST : str = os.getenv("CHROMA_HOST" , "localhost")
+        self.CHROMA_PORT : int = int(os.getenv("CHROMA_PORT" , 8000))
+
     def validate_canvas_config(self) -> bool:
         """Validate that Canvas configuration is complete."""
         return all(

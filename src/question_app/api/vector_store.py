@@ -9,6 +9,8 @@ This module contains all vector store operations including:
 """
 
 import asyncio
+import os
+from math import e
 from typing import Any, Dict, List, Tuple
 
 import chromadb
@@ -28,8 +30,65 @@ router = APIRouter(prefix="/vector-store", tags=["vector-store"])
 
 class ChromaVectorStoreService(VectorStoreInterface):
 
+    def __init__(self, collection_name : str = "quiz_questions"):
+        try:
+            self.client = chromadb.HttpClient(
+                host = os.getenv("CHROMA_HOST" , config.CHROMA_HOST or "localhost"),
+                port = os.getenv("CHROMA_PORT" , config.CHROMA_PORT or "8001")
+            )
+
+            self.collection = self.client.get_or_create_collection(
+                name = collection_name,
+                metadata={"hnsw:space" : "cosine"}
+            )
+
+            logger.info(f"ChromaDB serive initialized collection '{collection_name} loaded'")
+        
+        except Exception as e:
+            logger.critical(f"Failed to initialize ChromaDB serve : {e}" , exc_info=True)
+            self.client = None
+            self.collection = None
+
     async def search(self, query:str , n_results : int = 3) -> List[Dict[str , Any]]:
-        return await search_vector_store(query , n_results=n_results)
+
+        if not self.collection:
+            logger.error("ChromaDB search failed. Collection not initialized")
+            return []
+        
+        try:
+
+            logger.debug("Generating ollama embeddings")
+            query_embeddings_list = await get_ollama_embeddings([query])
+
+            if not query_embeddings_list or not query_embeddings_list[0]:
+                logger.error("Failed to generate query embeddings for search")
+                return []
+            query_vector = [query_embeddings_list[0]]
+            results = self.collection.query(
+                query_embeddings = query_vector,
+                n_results = n_results,
+                include = ["metadatas" , "documents" , "distances"]
+            )
+
+            if not results.get("documents") or not results.get('distances'):
+                return []
+            combined_results = []
+            docs = results['documents'][0]
+            metadatas = results['metadatas'][0]
+            distances = results['distances'][0]
+
+            for content, meta, dist in zip(docs , metadatas , distances):
+                chunk = meta
+                chunk['content'] = content
+                chunk['distance'] = dist
+                combined_results.append(chunk)
+            
+            return combined_results
+
+        except Exception as e:
+            logger.error(f"ChromaDB search failed : {e}")
+            return []
+
 
 
 async def get_ollama_embeddings(texts: List[str]) -> List[List[float]]:
@@ -280,7 +339,7 @@ async def search_vector_store(query: str, n_results: int = 5) -> List[Dict[str, 
         and returns an empty list if the search fails.
     """
     try:
-        client = chromadb.PersistentClient(path="./vector_store")
+        client = chromadb.HttpClient(host = config.CHROMA_HOST , port = config.CHROMA_PORT)
         collection = client.get_collection("quiz_questions")
 
         # Generate embedding for the query using Ollama
@@ -351,7 +410,7 @@ async def create_vector_store():
 
         # Initialize ChromaDB
         logger.info("Initializing ChromaDB client...")
-        client = chromadb.PersistentClient(path="./vector_store")
+        client = chromadb.HttpClient(host = config.CHROMA_HOST , port = config.CHROMA_PORT)
 
         # Delete existing collection if it exists
         try:
@@ -363,7 +422,8 @@ async def create_vector_store():
         # Create new collection
         collection = client.create_collection(
             name="quiz_questions",
-            metadata={"description": "Quiz questions with comprehensive content"},
+            metadata={"description": "Quiz questions with comprehensive content",
+            "hnsw:space" : "cosine"},
         )
 
         # Add documents to collection
@@ -459,7 +519,7 @@ async def search_vector_store_endpoint(query: str, n_results: int = 5):
 async def get_vector_store_status():
     """Get the current status of the vector store"""
     try:
-        client = chromadb.PersistentClient(path="./vector_store")
+        client = chromadb.HttpClient(host = config.CHROMA_HOST , port = config.CHROMA_PORT)
 
         try:
             collection = client.get_collection("quiz_questions")
@@ -492,7 +552,7 @@ async def get_vector_store_status():
 async def delete_vector_store():
     """Delete the entire vector store"""
     try:
-        client = chromadb.PersistentClient(path="./vector_store")
+        client = chromadb.HttpClient(host = config.CHROMA_HOST , port = config.CHROMA_PORT)
 
         try:
             client.delete_collection("quiz_questions")
