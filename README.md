@@ -367,6 +367,133 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Bryce Kayanuma** - _Initial work_ - [BrycePK@vt.edu](mailto:BrycePK@vt.edu)
 - **Robert Fentress** - [learn@vt.edu](mailto:learn@vt.edu)
 
+## 🤖 Setting Up RAG Pipeline for Conversations with Tutor
+
+This section provides step-by-step instructions to set up the RAG (Retrieval-Augmented Generation) pipeline for conversational interactions with the Socratic tutor. This process involves multiple terminal instances, so follow each step carefully.
+
+### Prerequisites
+
+- Docker installed on your machine
+- Poetry installed
+- Ollama installed
+
+### Setup Steps
+
+1. **Start ChromaDB Service**
+
+   Navigate to the root directory of the project (`questionapp`) and run:
+
+   ```bash
+   docker run -d \
+     --name socratic_chroma \
+     -p 8001:8000 \
+     -v "$(pwd)/data:/chroma/data" \
+     chromadb/chroma:latest
+   ```
+
+   This starts the ChromaDB service in a Docker container with persistent storage mounted to your local `data` directory.
+
+2. **Verify Container is Running**
+
+   In the same terminal, verify the container is running:
+
+   ```bash
+   docker ps
+   ```
+
+3. **Start Ollama Service**
+
+   Open a **new terminal instance** and start the Ollama service:
+
+   ```bash
+   ollama serve
+   ```
+
+   Keep this terminal running.
+
+4. **Pull Embedding Model**
+
+   Open another **new terminal instance** and pull the required embedding model (only needs to be done once):
+
+   ```bash
+   ollama pull nomic-embed-text
+   ```
+
+5. **Start the Application**
+
+   Open another **new terminal instance** and start the backend service:
+
+   ```bash
+   poetry run dev
+   ```
+
+   Keep this terminal running and wait for the backend service to start completely.
+
+6. **Create Vector Store**
+
+   Open another **new terminal instance** and create the vector store:
+
+   ```bash
+   curl -X POST http://localhost:8080/vector-store/create
+   ```
+
+   You should see success messages in the terminal where the backend is running.
+
+7. **Verify Vector Store Creation**
+
+   In the same terminal where you ran the vector store creation command, verify the setup:
+
+   ```bash
+   curl http://localhost:8080/vector-store/status | jq
+   ```
+
+   Expected output should look similar to:
+
+   ```json
+   [
+     {
+       "id": "8da6c836-8ef2-485c-9002-cbcda04fa4b6",
+       "name": "default_collection",
+       "metadata": {},
+       "dimension": 768,
+       "tenant": "default_tenant",
+       "database": "default_database"
+     }
+   ]
+   ```
+
+   **Optional: Test Chunk Retrieval**
+
+   To see the chunks retrieved from the vector store, you can run:
+
+   ```bash
+   curl -X POST http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections/<collection_id>/query \
+     -H "Content-Type: application/json" \
+     -d '{
+           "query_embeddings": [],
+           "query_texts": ["What purpose does document role serve?"],
+           "n_results": 5
+         }' | jq
+   ```
+
+8. **Start CLI Interface**
+
+   Open a final **new terminal instance** and start the CLI:
+
+   ```bash
+   poetry run python cli.py
+   ```
+
+   You should now see options for interacting with the Socratic tutor through the command-line interface.
+
+### Terminal Summary
+
+After setup, you should have the following terminals running:
+- Terminal 1: ChromaDB Docker container (can be closed after step 2)
+- Terminal 2: Ollama service (`ollama serve`)
+- Terminal 3: Backend application (`poetry run dev`)
+- Terminal 4: CLI interface (`poetry run python cli.py`)
+
 ## 🙏 Acknowledgments
 
 - Canvas LMS API
