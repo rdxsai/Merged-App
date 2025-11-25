@@ -12,7 +12,3 @@ __author__ = (
     "Bryce Kayanuma <BrycePK@vt.edu>, "
     "Robert Fentress <learn@vt.edu>"
 )
-
-from .main import app
-
-__all__ = ["app"]

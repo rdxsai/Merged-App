@@ -1,33 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas Quiz Manager</title>
-{#    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">#}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    {#
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">#}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- All your <style> and <script> in the head are correct and unchanged -->
     <style>
         .question-card {
             transition: transform 0.2s;
             cursor: pointer;
             position: relative;
         }
+
         .question-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             z-index: 10;
         }
+
         .question-text {
             max-height: 100px;
             overflow-y: auto;
         }
+
         .loading {
             display: none;
         }
+
         .question-type-badge {
             font-size: 0.8em;
         }
+
         .sticky-header {
             position: sticky;
             top: 0;
@@ -37,34 +46,40 @@
             padding: 1rem 0;
             margin-bottom: 1rem;
         }
+
         .header-buttons {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             flex-wrap: nowrap;
         }
+
         .header-buttons .btn {
             white-space: nowrap;
             flex-shrink: 0;
         }
+
         .question-card .dropdown-menu {
             z-index: 1051;
         }
+
         .dropdown-menu.show {
             display: block !important;
         }
     </style>
     <script>
+        // All your JavaScript is correct and unchanged
+        // (showAlert, showModal, loadCourses, loadQuizzes, etc.)
         console.log('🚀 Script loaded in head');
-        
+
         // Global variables
         let questionToDelete = null;
-        
+
         // Helper functions
         function showAlert(type, message) {
             const alertContainer = document.getElementById('alertContainer');
             if (!alertContainer) return;
-            
+
             const alert = document.createElement('div');
             alert.className = `alert alert-${type} alert-dismissible fade show`;
             alert.innerHTML = `
@@ -72,14 +87,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             alertContainer.appendChild(alert);
-            
+
             setTimeout(() => {
                 if (alert.parentNode) {
                     alert.remove();
                 }
             }, 5000);
         }
-        
+
         // Simple modal functions
         function showModal(modalId) {
             const modal = document.getElementById(modalId);
@@ -95,7 +110,7 @@
                 }
             }
         }
-        
+
         function hideModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
@@ -108,37 +123,37 @@
                 }
             }
         }
-        
+
         // Course and Quiz Management Functions
         async function loadCourses() {
             const courseSelect = document.getElementById('courseSelect');
             const currentCourseId = document.getElementById('currentCourseId').textContent;
-            
+
             try {
                 courseSelect.innerHTML = '<option value="">Loading courses...</option>';
-                
+
                 const response = await fetch('/api/courses');
                 const result = await response.json();
-                
+
                 if (response.ok && result.success) {
                     courseSelect.innerHTML = '<option value="">Select a course</option>';
-                    
+
                     result.courses.forEach(course => {
                         const option = document.createElement('option');
                         option.value = course.id;
                         option.textContent = `${course.course_code} - ${course.name}`;
                         option.setAttribute('data-term', course.term);
-                        
+
                         // Select current course if it matches
                         if (course.id.toString() === currentCourseId) {
                             option.selected = true;
                             // Load quizzes for current course
                             setTimeout(() => loadQuizzes(course.id), 100);
                         }
-                        
+
                         courseSelect.appendChild(option);
                     });
-                    
+
                     console.log(`✅ Loaded ${result.courses.length} courses`);
                 } else {
                     courseSelect.innerHTML = '<option value="">Error loading courses</option>';
@@ -150,43 +165,43 @@
                 showAlert('danger', `Error loading courses: ${error.message}`);
             }
         }
-        
+
         async function loadQuizzes(courseId) {
             const quizSelect = document.getElementById('quizSelect');
             const currentQuizId = document.getElementById('currentQuizId').textContent;
-            
+
             if (!courseId) {
                 quizSelect.innerHTML = '<option value="">Select a course first</option>';
                 quizSelect.disabled = true;
                 updateApplyButton();
                 return;
             }
-            
+
             try {
                 quizSelect.innerHTML = '<option value="">Loading quizzes...</option>';
                 quizSelect.disabled = false;
-                
+
                 const response = await fetch(`/api/courses/${courseId}/quizzes`);
                 const result = await response.json();
-                
+
                 if (response.ok && result.success) {
                     quizSelect.innerHTML = '<option value="">Select a quiz</option>';
-                    
+
                     result.quizzes.forEach(quiz => {
                         const option = document.createElement('option');
                         option.value = quiz.id;
                         option.textContent = `${quiz.title} (${quiz.question_count} questions)`;
                         option.setAttribute('data-published', quiz.published);
                         option.setAttribute('data-type', quiz.quiz_type);
-                        
+
                         // Select current quiz if it matches
                         if (quiz.id.toString() === currentQuizId) {
                             option.selected = true;
                         }
-                        
+
                         quizSelect.appendChild(option);
                     });
-                    
+
                     console.log(`✅ Loaded ${result.quizzes.length} quizzes for course ${courseId}`);
                 } else {
                     quizSelect.innerHTML = '<option value="">Error loading quizzes</option>';
@@ -197,38 +212,38 @@
                 quizSelect.innerHTML = '<option value="">Error loading quizzes</option>';
                 showAlert('danger', `Error loading quizzes: ${error.message}`);
             }
-            
+
             updateApplyButton();
         }
-        
+
         function updateApplyButton() {
             const courseSelect = document.getElementById('courseSelect');
             const quizSelect = document.getElementById('quizSelect');
             const applyBtn = document.getElementById('applyConfigBtn');
-            
+
             const courseSelected = courseSelect.value !== '';
             const quizSelected = quizSelect.value !== '';
-            
+
             applyBtn.disabled = !(courseSelected && quizSelected);
         }
-        
+
         async function applyConfiguration() {
             const courseSelect = document.getElementById('courseSelect');
             const quizSelect = document.getElementById('quizSelect');
             const applyBtn = document.getElementById('applyConfigBtn');
-            
+
             const courseId = courseSelect.value;
             const quizId = quizSelect.value;
-            
+
             if (!courseId || !quizId) {
                 showAlert('warning', 'Please select both a course and a quiz');
                 return;
             }
-            
+
             try {
                 applyBtn.disabled = true;
                 applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
-                
+
                 const response = await fetch('/api/configuration', {
                     method: 'POST',
                     headers: {
@@ -239,14 +254,14 @@
                         quiz_id: quizId
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     // Update current configuration display
                     document.getElementById('currentCourseId').textContent = courseId;
                     document.getElementById('currentQuizId').textContent = quizId;
-                    
+
                     showAlert('success', 'Configuration updated successfully! You can now fetch questions.');
                     console.log('✅ Configuration updated successfully');
                 } else {
@@ -261,41 +276,41 @@
                 updateApplyButton();
             }
         }
-        
-        
+
+
         // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('✅ DOM loaded, initializing...');
-            
+
             // Load courses on page load
             loadCourses();
-            
+
             // Course selection change event
             const courseSelect = document.getElementById('courseSelect');
             if (courseSelect) {
-                courseSelect.addEventListener('change', function() {
+                courseSelect.addEventListener('change', function () {
                     const courseId = this.value;
                     loadQuizzes(courseId);
                 });
             }
-            
+
             // Quiz selection change event
             const quizSelect = document.getElementById('quizSelect');
             if (quizSelect) {
-                quizSelect.addEventListener('change', function() {
+                quizSelect.addEventListener('change', function () {
                     updateApplyButton();
                 });
             }
-            
+
             // Apply configuration button
             const applyConfigBtn = document.getElementById('applyConfigBtn');
             if (applyConfigBtn) {
                 applyConfigBtn.addEventListener('click', applyConfiguration);
             }
-            
+
             // Modal close functionality
             document.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-backdrop') || 
+                if (e.target.classList.contains('modal-backdrop') ||
                     (e.target.hasAttribute('data-bs-dismiss') && e.target.getAttribute('data-bs-dismiss') === 'modal')) {
                     const modal = e.target.closest('.modal') || document.querySelector('.modal.show');
                     if (modal) {
@@ -303,25 +318,25 @@
                     }
                 }
             });
-            
+
             // Check if Bootstrap is loaded and provide fallback
             setTimeout(() => {
                 if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) {
                     console.log('⚠️ Bootstrap not loaded, implementing manual dropdown fallback');
-                    
+
                     // Manual dropdown implementation
                     document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(trigger => {
                         trigger.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            
+
                             // Close all other dropdowns first
                             document.querySelectorAll('.dropdown-menu').forEach(menu => {
                                 if (menu !== trigger.nextElementSibling) {
                                     menu.classList.remove('show');
                                 }
                             });
-                            
+
                             // Toggle current dropdown
                             const menu = trigger.nextElementSibling;
                             if (menu && menu.classList.contains('dropdown-menu')) {
@@ -329,7 +344,7 @@
                             }
                         });
                     });
-                    
+
                     // Close dropdowns when clicking outside
                     document.addEventListener('click', (e) => {
                         if (!e.target.closest('.dropdown')) {
@@ -342,7 +357,7 @@
                     console.log('✅ Bootstrap loaded successfully');
                 }
             }, 100);
-            
+
             // Refresh button
             const refreshBtn = document.getElementById('refreshBtn');
             if (refreshBtn) {
@@ -351,7 +366,7 @@
                     window.location.reload();
                 });
             }
-            
+
             // Fetch questions button
             const fetchBtn = document.getElementById('fetchBtn');
             if (fetchBtn) {
@@ -359,11 +374,11 @@
                     const loading = document.getElementById('loading');
                     loading.style.display = 'block';
                     fetchBtn.disabled = true;
-                    
+
                     try {
                         const response = await fetch('/api/fetch-questions', { method: 'POST' });
                         const result = await response.json();
-                        
+
                         if (response.ok) {
                             showAlert('success', result.message);
                             setTimeout(() => window.location.reload(), 1000);
@@ -378,34 +393,34 @@
                     }
                 });
             }
-            
+
             // Create vector store
             const createVectorStoreBtn = document.getElementById('createVectorStoreBtn');
             if (createVectorStoreBtn) {
                 createVectorStoreBtn.addEventListener('click', async () => {
                     const originalText = createVectorStoreBtn.innerHTML;
-                    
+
                     // Show loading state
                     createVectorStoreBtn.disabled = true;
                     createVectorStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Vector Store...';
-                    
+
                     try {
                         console.log('🔥 Starting vector store creation...');
-                        
+
                         const response = await fetch('/vector-store/create', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             }
                         });
-                        
+
                         const result = await response.json();
                         console.log('Vector store response:', result);
-                        
+
                         if (response.ok) {
                             console.log('✅ Vector store created successfully');
                             console.log('📊 Vector Store Stats:', result.stats);
-                            
+
                             // Log detailed statistics
                             if (result.stats) {
                                 console.log('🔢 === Vector Store Statistics ===');
@@ -419,20 +434,20 @@
                                 console.log('🏷️ Tags:', result.stats.tags);
                                 console.log('================================');
                             }
-                            
+
                             showAlert('success', `${result.message}<br><small>Using Ollama nomic-embed-text model • Check console for detailed statistics</small>`);
                         } else {
                             console.error('❌ Vector store creation failed:', result.detail);
-                            
+
                             // Provide specific help for Ollama-related errors
                             let errorMessage = result.detail || 'Failed to create vector store';
                             if (errorMessage.includes('Cannot connect to Ollama')) {
                                 errorMessage += '<br><br><strong>Setup Instructions:</strong><br>' +
-                                              '1. Install Ollama: <code>curl -fsSL https://ollama.ai/install.sh | sh</code><br>' +
-                                              '2. Pull nomic-embed-text model: <code>ollama pull nomic-embed-text</code><br>' +
-                                              '3. Ensure Ollama is running: <code>ollama serve</code>';
+                                    '1. Install Ollama: <code>curl -fsSL https://ollama.ai/install.sh | sh</code><br>' +
+                                    '2. Pull nomic-embed-text model: <code>ollama pull nomic-embed-text</code><br>' +
+                                    '3. Ensure Ollama is running: <code>ollama serve</code>';
                             }
-                            
+
                             showAlert('danger', errorMessage);
                         }
                     } catch (error) {
@@ -445,24 +460,24 @@
                     }
                 });
             }
-            
+
             // Save system prompt
             const saveBtn = document.getElementById('saveSystemPromptBtn');
             if (saveBtn) {
                 saveBtn.addEventListener('click', async () => {
                     const textArea = document.getElementById('systemPromptText');
                     if (!textArea) return;
-                    
+
                     try {
                         const formData = new FormData();
                         formData.append('prompt', textArea.value);
-                        
+
                         const response = await fetch('/system-prompt', {
                             method: 'POST',
                             body: formData
                         });
                         const result = await response.json();
-                        
+
                         if (response.ok) {
                             showAlert('success', result.message || 'System prompt saved');
                             hideModal('systemPromptModal');
@@ -474,51 +489,53 @@
                     }
                 });
             }
-            
+
             // Search functionality
             const searchInput = document.getElementById('searchInput');
             const clearSearchBtn = document.getElementById('clearSearch');
             const questionCount = document.getElementById('questionCount');
             const filteredCount = document.getElementById('filteredCount');
-            
+
             if (searchInput) {
                 // Search input event listener
-                searchInput.addEventListener('input', function(e) {
+                searchInput.addEventListener('input', function (e) {
                     const searchTerm = e.target.value.toLowerCase().trim();
                     filterQuestions(searchTerm);
                 });
-                
+
                 // Clear search button
                 if (clearSearchBtn) {
-                    clearSearchBtn.addEventListener('click', function() {
+                    clearSearchBtn.addEventListener('click', function () {
                         searchInput.value = '';
                         filterQuestions('');
                         searchInput.focus();
                     });
                 }
-                
+
                 // Search on Enter key
-                searchInput.addEventListener('keydown', function(e) {
+                searchInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Escape') {
                         searchInput.value = '';
                         filterQuestions('');
                     }
                 });
             }
-            
+
             // Filter questions function
             function filterQuestions(searchTerm) {
                 const questionCards = document.querySelectorAll('#questionsContainer [data-question-id]');
                 let visibleCount = 0;
-                
+
                 questionCards.forEach(card => {
                     const questionText = card.querySelector('.question-text')?.textContent.toLowerCase() || '';
-                    const questionType = card.querySelector('.question-type-badge')?.textContent.toLowerCase() || '';
-                    
-                    const matches = searchTerm === '' || 
-                                  questionText.includes(searchTerm) || 
-                                  questionType.includes(searchTerm);
-                    
+
+                    // --- FIX: Search question text *and* objective count ---
+                    const objectiveCount = card.querySelector('.question-type-badge')?.textContent.toLowerCase() || '';
+
+                    const matches = searchTerm === '' ||
+                        questionText.includes(searchTerm) ||
+                        objectiveCount.includes(searchTerm); // Use the new badge text
+
                     if (matches) {
                         card.style.display = 'block';
                         visibleCount++;
@@ -526,7 +543,7 @@
                         card.style.display = 'none';
                     }
                 });
-                
+
                 // Update count badges
                 if (searchTerm === '') {
                     if (filteredCount) filteredCount.style.display = 'none';
@@ -537,14 +554,14 @@
                     }
                 }
             }
-            
+
             // Delete functionality with Bootstrap fallback
             document.addEventListener('click', async (e) => {
                 if (e.target.closest('.delete-btn')) {
                     e.preventDefault();
                     const target = e.target.closest('.delete-btn');
                     const questionId = target.dataset.questionId;
-                    
+
                     // Check if Bootstrap modal is available
                     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                         // Use Bootstrap modal
@@ -554,25 +571,26 @@
                         // Fallback to native confirm dialog
                         console.log('⚠️ Bootstrap not available, using native confirm dialog');
                         const confirmed = confirm('Are you sure you want to delete this question? This action cannot be undone.');
-                        
+
                         if (confirmed) {
                             await deleteQuestion(questionId);
                         }
                     }
                 }
             });
-            
+
             // Extracted delete function for reuse
             async function deleteQuestion(questionId) {
                 // Show loading state
                 showAlert('info', 'Deleting question...');
-                
+
                 try {
+                    // This route is already correct!
                     const response = await fetch(`/questions/${questionId}`, {
                         method: 'DELETE'
                     });
                     const result = await response.json();
-                    
+
                     if (response.ok) {
                         showAlert('success', result.message || 'Question deleted successfully');
                         // Remove the question card from the page
@@ -588,12 +606,12 @@
                     showAlert('danger', 'Network error: ' + error.message);
                 }
             }
-            
+
             const confirmDeleteBtn = document.getElementById('confirmDelete');
             if (confirmDeleteBtn) {
                 confirmDeleteBtn.addEventListener('click', async () => {
                     if (!questionToDelete) return;
-                    
+
                     await deleteQuestion(questionToDelete);
                     hideModal('deleteModal');
                     questionToDelete = null;
@@ -602,11 +620,13 @@
         });
     </script>
 </head>
+
 <body>
-    
-    <!-- Sticky Header -->
+
+    <!-- Sticky Header (Unchanged) -->
     <div class="sticky-header">
         <div class="container-fluid">
+            <!-- ... (all your header buttons are correct) ... -->
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="h2 mb-0"><i class="fas fa-question-circle text-primary"></i> Canvas Quiz Manager</h1>
                 <div class="header-buttons">
@@ -620,20 +640,23 @@
                         <i class="fas fa-sync-alt"></i> Refresh List
                     </button>
                     <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="moreOptionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="moreOptionsDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-ellipsis-h"></i> More Options
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="moreOptionsDropdown">
                             <li><a class="dropdown-item" href="/objectives">
-                                <i class="fas fa-bullseye"></i> Learning Objectives
-                            </a></li>
+                                    <i class="fas fa-bullseye"></i> Learning Objectives
+                                </a></li>
                             <li><a class="dropdown-item" href="/system-prompt">
-                                <i class="fas fa-cog"></i> Feedback System Prompt
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
+                                    <i class="fas fa-cog"></i> Feedback System Prompt
+                                </a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><button class="dropdown-item" id="createVectorStoreBtn">
-                                <i class="fas fa-database"></i> Create Vector Store
-                            </button></li>
+                                    <i class="fas fa-database"></i> Create Vector Store
+                                </button></li>
                         </ul>
                     </div>
                 </div>
@@ -643,137 +666,157 @@
 
     <div class="container-fluid py-3">
 
-                <!-- Configuration Panel -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-cog"></i> Canvas Configuration
-                        </h6>
+        <!-- Configuration Panel (Unchanged) -->
+        <!-- This will now work because main.py is passing course_id and quiz_id -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cog"></i> Canvas Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="courseSelect" class="form-label">Course:</label>
+                        <select id="courseSelect" class="form-select">
+                            <option value="">Loading courses...</option>
+                        </select>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label for="courseSelect" class="form-label">Course:</label>
-                                <select id="courseSelect" class="form-select">
-                                    <option value="">Loading courses...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="quizSelect" class="form-label">Quiz:</label>
-                                <select id="quizSelect" class="form-select" disabled>
-                                    <option value="">Select a course first</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button id="applyConfigBtn" class="btn" disabled>
-                                    <i class="fas fa-check"></i> Apply Configuration
-                                </button>
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button class="btn btn-primary" id="fetchBtn">
-                                    <i class="fas fa-download"></i> Fetch Questions
-                                </button>
-                            </div>
+                    <div class="col-md-4">
+                        <label for="quizSelect" class="form-label">Quiz:</label>
+                        <select id="quizSelect" class="form-select" disabled>
+                            <option value="">Select a course first</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button id="applyConfigBtn" class="btn" disabled>
+                            <i class="fas fa-check"></i> Apply Configuration
+                        </button>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary" id="fetchBtn">
+                            <i class="fas fa-download"></i> Fetch Questions
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        Current: Course ID: <span id="currentCourseId">{{ course_id }}</span>,
+                        Quiz ID: <span id="currentQuizId">{{ quiz_id }}</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading indicator (Unchanged) -->
+        <div id="loading" class="text-center py-4 loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Fetching questions from Canvas...</p>
+        </div>
+
+        <!-- Alert container (Unchanged) -->
+        <div id="alertContainer"></div>
+
+        <!-- Search bar (Unchanged) -->
+        <!-- This will now work because 'questions' is a valid list -->
+        {% if questions %}
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search questions..."
+                            autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                    <span class="badge bg-secondary" id="questionCount">{{ questions|length }} questions loaded</span>
+                    <span class="badge bg-info ms-2" id="filteredCount" style="display: none;">0 matches</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Questions list -->
+        <div class="row" id="questionsContainer">
+            {% if not questions %}
+            <!-- This 'if' block is unchanged and correct -->
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    No questions loaded. Your database is empty.
+                    (Note: The "Fetch Questions" button is part of a different feature.)
+                </div>
+            </div>
+            {% else %}
+
+            <!-- --- === THIS IS THE CORE FIX === --- -->
+            {% for question in questions %}
+            <div class="col-lg-6 col-xl-4 mb-4" data-question-id="{{ question.id }}">
+                <div class="card question-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+
+                        <!-- --- FIX 1 --- -->
+                        <!-- Replaced 'question.question_type' with 'question.objective_count' -->
+                        <span class="badge bg-primary question-type-badge">
+                            {{ question.objective_count }} Objectives
+                        </span>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <!-- This link is now correct and uses the UUID -->
+                                <li><a class="dropdown-item" href="/questions/{{ question.id }}">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item text-danger delete-btn" href="#"
+                                        data-question-id="{{ question.id }}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- This click handler is now correct and uses the UUID -->
+                    <div class="card-body" onclick="window.location.href='/questions/{{ question.id }}'">
+                        <div class="question-text">
+                            <!-- --- FIX 2 --- -->
+                            <!-- Replaced 'question.question_text_html' with 'question.question_text' -->
+                            <!-- We also remove '| safe' as it's just text now -->
+                            {{ question.question_text }}
                         </div>
                         <div class="mt-2">
                             <small class="text-muted">
-                                Current: Course ID: <span id="currentCourseId">{{ course_id }}</span>, 
-                                Quiz ID: <span id="currentQuizId">{{ quiz_id }}</span>
+                                <!-- --- FIX 3 --- -->
+                                <!-- Replaced 'points_possible' and 'answers' with 'created_at' -->
+                                <i class="fas fa-calendar-alt"></i> Created: {{ question.created_at[:10] }}
                             </small>
                         </div>
                     </div>
                 </div>
-
-                <!-- Loading indicator -->
-                <div id="loading" class="text-center py-4 loading">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Fetching questions from Canvas...</p>
-                </div>
-
-                <!-- Alert container -->
-                <div id="alertContainer"></div>
-
-                <!-- Search bar -->
-                {% if questions %}
-                <div class="mb-3">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" id="searchInput" class="form-control" 
-                                       placeholder="Search questions..." 
-                                       autocomplete="off">
-                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6 d-flex align-items-center">
-                            <span class="badge bg-secondary" id="questionCount">{{ questions|length }} questions loaded</span>
-                            <span class="badge bg-info ms-2" id="filteredCount" style="display: none;">0 matches</span>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Questions list -->
-                <div class="row" id="questionsContainer">
-                    {% if not questions %}
-                    <div class="col-12">
-                        <div class="alert alert-warning text-center">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            No questions loaded. Click "Fetch Questions" to load from Canvas.
-                        </div>
-                    </div>
-                    {% else %}
-                    {% for question in questions %}
-                    <div class="col-lg-6 col-xl-4 mb-4" data-question-id="{{ question.id }}">
-                        <div class="card question-card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <span class="badge bg-primary question-type-badge">
-                                    {{ question.question_type.replace('_', ' ').title() }}
-                                </span>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="/questions/{{ question.id }}">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger delete-btn" href="#" data-question-id="{{ question.id }}">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="card-body" onclick="window.location.href='/questions/{{ question.id }}'">
-                                <div class="question-text">
-                                    {{ question.question_text_html  | safe }}
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-star"></i> {{ question.points_possible }} points
-                                        {% if question.answers %}
-                                        | <i class="fas fa-list"></i> {{ question.answers|length }} answers
-                                        {% endif %}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                </div>
             </div>
+            {% endfor %}
+            <!-- --- === END OF THE FIX === --- -->
+
+            {% endif %}
         </div>
     </div>
+    </div>
+    </div>
 
+    <!-- All Modals (System Prompt, Delete) are unchanged and correct -->
     <!-- System Prompt Modal -->
     <div class="modal fade" id="systemPromptModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -788,12 +831,12 @@
                             <label for="systemPromptText" class="form-label">
                                 System Prompt for AI Feedback Generation:
                             </label>
-                            <textarea id="systemPromptText" name="prompt" class="form-control" rows="10" 
+                            <textarea id="systemPromptText" name="prompt" class="form-control" rows="10"
                                 placeholder="Enter the system prompt that will be used to generate feedback for quiz questions...&#10;&#10;Example:&#10;You are an expert educator creating helpful feedback for quiz questions. Generate constructive, educational feedback that helps students learn from their answers. Be encouraging but informative."></textarea>
                         </div>
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            This prompt will be sent to the AI model when generating feedback for questions. 
+                            This prompt will be sent to the AI model when generating feedback for questions.
                             Make it clear and specific about the type of feedback you want.
                         </div>
                     </form>
@@ -824,7 +867,11 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
-{#    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>#}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q"
+        crossorigin="anonymous"></script>
+    {#
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>#}
 </body>
+
 </html>

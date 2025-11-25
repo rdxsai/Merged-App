@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 class Config:
     """Centralized configuration management for the Question App."""
@@ -48,10 +49,13 @@ class Config:
         self.APP_TITLE: str = "Canvas Quiz Manager"
         self.LOG_FILE: str = "canvas_app.log"
 
-
         #ChromaDB Configuration
         self.CHROMA_HOST : str = os.getenv("CHROMA_HOST" , "localhost")
         self.CHROMA_PORT : int = int(os.getenv("CHROMA_PORT" , 8000))
+
+        self.db_path: str = os.path.join(BASE_DIR, "data" , "socratic_tutor.db")
+
+
 
     def validate_canvas_config(self) -> bool:
         """Validate that Canvas configuration is complete."""

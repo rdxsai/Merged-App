@@ -26,10 +26,11 @@ QUESTIONS_JSON = "data/quiz_questions.json"
 #Initialize the DB
 db = DatabaseManager(db_path=DB_PATH)
 
-def get_all_objective_ids():
-    cursor = db.get_connection().cursor()
-    cursor.execute("SELECT id FROM learning_objectives")
-    return [row[0] for row in cursor.fetchall()]
+
+def get_all_objective_ids(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM learning_objective")
+    return  [row[0] for row in cursor.fetchall()]
 
 
 #loading and inserting learning objectives from json into DB
@@ -41,10 +42,11 @@ try:
         cursor = conn.cursor()
         for obj_text in objectives:
             cursor.execute(
-                "INSERT OR IGNORE INTO learning_objectives(id, text, created_at) VALUES (?, ?, ?)",
+                "INSERT OR IGNORE INTO learning_objective(id, text, created_at) VALUES (?, ?, ?)",
                 (str(uuid.uuid4()), obj_text, datetime.now().isoformat()),
             )
-            conn.commit()
+        
+        conn.commit()
 except Exception as e:
     print(f"Error loading objectives : {e}")
 
@@ -62,7 +64,7 @@ try:
         for q in questions:
             q_id = str(uuid.uuid4())
             cursor.execute(
-                "INSERT OR IGNORE INTO questions (id, question_text, created_at) VALUES (?, ?, ?)",
+                "INSERT OR IGNORE INTO question (id, question_text, created_at) VALUES (?, ?, ?)",
                 (q_id , q['question_text'], datetime.now().isoformat())
             )
 
@@ -70,7 +72,7 @@ try:
                 a_id = str(uuid.uuid4())
                 cursor.execute(
                     """
-                    INSERT OR IGNORE INTO answers 
+                    INSERT OR IGNORE INTO answer
                     (id, question_id, text, is_correct, feedback_text, feedback_approved) 
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
@@ -84,7 +86,7 @@ try:
                 for obj_id in assigned_ids:
                     cursor.execute(
                                                 """
-                        INSERT OR IGNORE INTO question_objective_associations 
+                        INSERT OR IGNORE INTO question_objective_association 
                         (id, question_id, objective_id) VALUES (?, ?, ?)
                         """,
                         (str(uuid.uuid4()) , q_id , obj_id)

@@ -45,13 +45,15 @@ Recent Improvements (v0.3.0):
 import uvicorn
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse
-import markdown2
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 # Import core modules
 from .core import config, create_app, get_logger, get_templates, register_routers
 
-# Import utility functions from organized modules
-from .utils import load_questions
+
+#Import DB Manager
+from .services.database import DatabaseManager
 
 # TODO: Test fastapi_mpc https://github.com/tadata-org/fastapi_mcp
 # TODO: Offload vector store to S3 Vector Bucket
@@ -59,6 +61,10 @@ from .utils import load_questions
 
 # Set up logging
 logger = get_logger(__name__)
+
+#Initialize DB
+logger.info(f"Initializing Database Manager for main app...")
+db = DatabaseManager(config.db_path)
 
 # Create and configure the application
 app = create_app()
@@ -88,32 +94,19 @@ async def home(request: Request):
         The template receives questions data, course ID, and quiz ID for display.
     """
     try:
-        questions = load_questions()
+        questions = db.list_all_questions()
         templates = get_templates(app)
 
-        for q in questions:
-            q['question_text_html'] = markdown2.markdown(
-                q.get('question_text', ''),
-                extras = ["fenced-code-blocks"]
-            )
-
-        # Create response with cache-busting headers
-        response = templates.TemplateResponse(
+        return templates.TemplateResponse(
             "index.html",
             {
-                "request": request,
-                "questions": questions,
-                "course_id": config.COURSE_ID,
-                "quiz_id": config.QUIZ_ID,
-            },
+                "request" : request,
+                "app_title" : config.APP_TITLE,
+                "questions" : questions,
+                "course_id" : config.COURSE_ID,
+                "quiz_id" : config.QUIZ_ID
+            }
         )
-
-        # Add cache-busting headers to prevent browser caching issues
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-
-        return response
     except Exception as e:
         logger.error(f"Error loading home page: {e}")
         raise HTTPException(

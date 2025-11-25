@@ -5,7 +5,7 @@
 import json
 import logging
 import os
-import sqlite3database
+import sqlite3
 import uuid
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field

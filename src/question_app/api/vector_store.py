@@ -34,7 +34,7 @@ class ChromaVectorStoreService(VectorStoreInterface):
         try:
             self.client = chromadb.HttpClient(
                 host = os.getenv("CHROMA_HOST" , config.CHROMA_HOST or "localhost"),
-                port = os.getenv("CHROMA_PORT" , config.CHROMA_PORT or "8001")
+                port = os.getenv("CHROMA_PORT" , config.CHROMA_PORT or "8000")
             )
 
             self.collection = self.client.get_or_create_collection(
