@@ -1,13 +1,6 @@
 """
 Chat API module for the Question App.
-
-This module contains all RAG-based chat functionality including:
-- Chat interface endpoints
-- Vector store operations
-- Embedding generation
-- Semantic search
-- Chat system prompt management
-- Welcome message management
+(This is the corrected version that fixes initialization and student creation)
 """
 
 from typing import Dict
@@ -18,21 +11,18 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from docs import conf
-
 from ..core import config, get_logger
 from ..utils import (
     get_default_chat_system_prompt,
     get_default_welcome_message,
     load_chat_system_prompt,
-    load_welcome_message,
+    load_welcome_message,       # <-- We will use this
     save_chat_system_prompt,
     save_welcome_message,
 )
-from .vector_store import search_vector_store
 from ..services.tutor.hybrid_system import HybridCrewAISocraticSystem
 from ..api.vector_store import ChromaVectorStoreService
-from question_app.api import vector_store
+
 
 logger = get_logger(__name__)
 
@@ -41,6 +31,34 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Templates setup
 templates = Jinja2Templates(directory="templates")
+
+# --- === (This initialization is correct) === ---
+try:
+    vector_service = ChromaVectorStoreService()
+    
+    azure_config = {
+        "api_key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
+        "endpoint": config.AZURE_OPENAI_ENDPOINT,
+        "deployment_name": config.AZURE_OPENAI_DEPLOYMENT_ID,
+        "api_version": config.AZURE_OPENAI_API_VERSION
+    }
+
+    tutor_system = HybridCrewAISocraticSystem(
+        azure_config=azure_config,
+        vector_store_service=vector_service,
+        db_path=config.db_path 
+    )
+    logger.info("Chat API: HybridCrewAISocraticSystem initialized successfully.")
+
+except ValueError as e:
+    logger.critical(f"Failed to initialize ChromaDB client: {e}")
+    logger.critical("Please ensure the ChromaDB server is running. Try: 'chroma run'")
+    tutor_system = None
+except Exception as e:
+    logger.critical(f"Failed to initialize HybridCrewAISocraticSystem: {e}", exc_info=True)
+    tutor_system = None
+# --- === END OF INITIALIZATION === ---
+
 
 # Chat endpoints
 @router.get("/", response_class=HTMLResponse)
@@ -52,33 +70,84 @@ async def chat_page(request: Request):
 #Define a pydantic model for incoming request body
 class ChatMessage(BaseModel):
     message : str
-    student_id : str
+    student_id: str | None = None 
+
+# --- Constants for our new default student ---
+DEFAULT_STUDENT_ID = "default-student"
+DEFAULT_STUDENT_NAME = "Default Student"
+DEFAULT_TOPIC = "Web Accessibility"
 
 @router.post("/message")
 async def handle_chat_message(chat_message : ChatMessage):
-    logger.info(f"Received chat message for student_id: {chat_message.student_id}")
-    try:
-        vector_service = ChromaVectorStoreService() #creating the tool that will search the vector store
-        tutor_system = HybridCrewAISocraticSystem(
-            azure_config={
-                "api_key": config.AZURE_OPENAI_SUBSCRIPTION_KEY,
-                "endpoint" : config.AZURE_OPENAI_ENDPOINT,
-                "deployment_name": config.AZURE_OPENAI_DEPLOYMENT_ID,
-                "api_version": config.AZURE_OPENAI_API_VERSION
-            },
-            vector_store_service=vector_service,
-            db_path="socratic_tutor.db"
-        )
+    """
+    Handles a single chat message via POST request.
+    (This is the updated, corrected version)
+    """
+    
+    if not tutor_system:
+        logger.error("Tutor system is not initialized. ChromaDB might be offline.")
+        raise HTTPException(status_code=503, detail="Tutor system is offline. Please check server logs.")
 
+    try:
+        # --- (Default student logic is correct) ---
+        student_id = chat_message.student_id or DEFAULT_STUDENT_ID
+        
+        profile = tutor_system.get_student_profile(student_id)
+        if not profile:
+            logger.warning(f"Student profile '{student_id}' not found. Creating a default profile.")
+            try:
+                tutor_system.create_student_profile(
+                    name=DEFAULT_STUDENT_NAME,
+                    topic=DEFAULT_TOPIC,
+                    student_id_override=student_id 
+                )
+                # After creating, we must load the profile again to use it
+                profile = tutor_system.get_student_profile(student_id)
+                if not profile: # Still not found? Something is wrong.
+                    raise Exception("Failed to create or load default student profile.")
+            except Exception as create_e:
+                logger.error(f"Failed to create default student profile: {create_e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to create student profile.")
+        # --- (End of default student logic) ---
+
+        
+        # --- === THIS IS THE NEW FIX === ---
+        # If the message is "START_SESSION", just send the welcome message.
+        if chat_message.message == "START_SESSION":
+            logger.info(f"Handling new conversation start for student_id: {student_id}")
+            welcome_message = load_welcome_message() # Use the existing utility
+            
+            # We increment the session count
+            if profile:
+                profile.total_sessions += 1
+                tutor_system.db.save_student_profile(profile)
+                
+            return {
+                "response": welcome_message,
+                "student_id": student_id,
+                "session_metadata": {
+                    "session_number": profile.total_sessions if profile else 1,
+                    "intent_executed": "start_session",
+                    "analysis": {}, "progress": {} # Send empty metadata
+                }
+            }
+        # --- === END OF NEW FIX === ---
+
+        
+        # If the message is not "START_SESSION", proceed with the normal AI workflow
+        logger.info(f"Received chat message for student_id: {student_id}")
+        
         result = await tutor_system.conduct_socratic_session(
-            student_id=chat_message.student_id,
+            student_id=student_id,
             student_response=chat_message.message
         )
 
         if result.get("status") == "error":
             raise HTTPException(status_code=500 , detail = result.get("error" , "An unknown error occured in tutoring session"))
+        
         return {
             "response" : result.get("tutor_response"),
+            "student_id": student_id, 
             "session_metadata" : result.get("session_metadata")
         }
     except HTTPException as e:
@@ -90,7 +159,8 @@ async def handle_chat_message(chat_message : ChatMessage):
             status_code=500 , detail = f"Failed to process chat message : {str(e)}"
         )
 
-# Chat system prompt management endpoints
+# (The rest of your file for /system-prompt and /welcome-message is unchanged and correct)
+# ...
 @router.get("/system-prompt", response_class=HTMLResponse)
 async def chat_system_prompt_page(request: Request):
     """Chat system prompt edit page"""
@@ -139,7 +209,6 @@ async def get_default_chat_system_prompt_endpoint():
     return {"default_prompt": get_default_chat_system_prompt()}
 
 
-# Welcome message management endpoints
 @router.get("/welcome-message")
 async def get_chat_welcome_message():
     """Get the current chat welcome message"""
@@ -155,7 +224,6 @@ async def get_chat_welcome_message():
 async def save_chat_welcome_message(request: Request):
     """Save chat welcome message"""
     try:
-        # Check if it's JSON or form data
         content_type = request.headers.get("content-type", "")
 
         if "application/json" in content_type:
