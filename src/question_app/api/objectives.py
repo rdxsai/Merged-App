@@ -1,73 +1,137 @@
 """
 Learning objectives management API endpoints.
-
-This module contains FastAPI endpoints for managing learning objectives,
-including viewing and saving objectives.
+--- THIS IS THE FINAL, CORRECTED VERSION ---
+(With the 'draft' endpoints and NEW LOGGING)
 """
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, ValidationError # Import ValidationError
+from typing import List
 
-from ..core import get_logger
-from ..models.objective import ObjectivesUpdate
-from ..utils.file_utils import load_objectives, save_objectives
+from ..core import get_logger, config
+from ..services.database import DatabaseManager
+from ..services.ai_service import AIGeneratorService
 
-# Configure logging
+from ..models.objective import (
+    ObjectiveCreate, 
+    ObjectiveUpdate, 
+    ObjectiveInDB,
+    QuestionDraft
+)
+
 logger = get_logger(__name__)
-
-# Create router
 router = APIRouter(prefix="/objectives", tags=["objectives"])
-
-# Templates
 templates = Jinja2Templates(directory="templates")
 
+db = DatabaseManager(config.db_path)
+ai_generator = AIGeneratorService()
 
 @router.get("/", response_class=HTMLResponse)
 async def objectives_page(request: Request):
+    """ (Unchanged) Learning objectives management page. """
+    try:
+        objectives = db.list_all_objectives_with_counts() 
+        return templates.TemplateResponse(
+            "objectives.html", {"request": request, "objectives": objectives}
+        )
+    except Exception as e:
+        logger.error(f"Error loading objectives page: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not load objectives.")
+
+
+@router.post("/", response_class=ObjectiveInDB)
+async def create_new_objective(objective_data: ObjectiveCreate):
+    """ (Unchanged) Creates a single new learning objective. """
+    try:
+        new_obj_dict = db.create_objective(
+            text=objective_data.text,
+            blooms_level='understand',
+            priority='medium'
+        )
+        return ObjectiveInDB.model_validate(new_obj_dict)
+    except Exception as e:
+        logger.error(f"Error creating objective: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create objective.")
+
+
+@router.put("/{objective_id}", response_class=JSONResponse)
+async def update_existing_objective(objective_id: str, objective_data: ObjectiveUpdate):
+    """ (Unchanged) Updates an existing objective. """
+    try:
+        success = db.update_objective(
+            objective_id,
+            objective_data.text,
+            objective_data.blooms_level,
+            objective_data.priority
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="Objective not found.")
+        return {"success": True, "message": "Objective updated."}
+    except Exception as e:
+        logger.error(f"Error updating objective {objective_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update objective.")
+
+
+@router.delete("/{objective_id}", response_class=JSONResponse)
+async def delete_existing_objective(objective_id: str):
+    """ (Unchanged) Deletes an existing objective. """
+    try:
+        success = db.delete_objective(objective_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Objective not found.")
+        return {"success": True, "message": "Objective deleted."}
+    except Exception as e:
+        logger.error(f"Error deleting objective {objective_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete objective.")
+
+
+@router.post("/{objective_id}/generate-question-draft", response_class=JSONResponse)
+async def generate_question_draft_for_objective(objective_id: str):
+    """ (Unchanged) Calls the AI to generate a DRAFT of a question. """
+    try:
+        objective = db.get_objective(objective_id)
+        if not objective:
+            raise HTTPException(status_code=404, detail="Objective not found")
+        
+        ai_draft_json = await ai_generator.generate_question_from_objective(objective['text'])
+        
+        return ai_draft_json
+    except Exception as e:
+        logger.error(f"Error generating question draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) # Pass full error
+
+
+@router.post("/{objective_id}/create-question-from-draft", response_class=JSONResponse)
+async def create_question_from_ai_draft(objective_id: str, question_draft: QuestionDraft):
     """
-    Learning objectives management page.
-
-    Returns:
-        HTMLResponse: Rendered objectives management page with current
-        objectives.
-    """
-    objectives = load_objectives()
-    return templates.TemplateResponse(
-        "objectives.html", {"request": request, "objectives": objectives}
-    )
-
-
-@router.post("/")
-async def save_objectives_endpoint(objectives_data: ObjectivesUpdate):
-    """
-    Save learning objectives.
-
-    Args:
-        objectives_data (ObjectivesUpdate): The objectives data to save.
-
-    Returns:
-        dict: Success response with message.
-
-    Raises:
-        HTTPException: If saving fails.
+    Receives an EDUCATOR-APPROVED draft from the UI.
+    Saves the new question, answers, and association to the DB.
     """
     try:
-        # Convert Pydantic models to dictionaries
-        objectives_list = [obj.model_dump() for obj in objectives_data.objectives]
+        # Pydantic has *already validated* the 'question_draft' data
+        # If the data was bad, FastAPI would have already returned a 422.
+        
+        new_question_id = db.create_question_from_ai(
+            question_data=question_draft.model_dump(),
+            objective_id=objective_id
+        )
+        
+        if not new_question_id:
+            raise Exception("Database failed to create new question.")
+            
+        return {"new_question_id": new_question_id}
 
-        if save_objectives(objectives_list):
-            logger.info(f"Saved {len(objectives_list)} learning objectives")
-            return {
-                "success": True,
-                "message": (
-                    f"Successfully saved {len(objectives_list)} " f"learning objectives"
-                ),
-            }
-        else:
-            raise HTTPException(
-                status_code=500, detail="Failed to save learning objectives"
-            )
+    # --- === THIS IS THE NEW LOGGING CODE === ---
+    # We are overriding the default 422 error to add logging
+    except ValidationError as e:
+        logger.error(f"--- VALIDATION ERROR (422) ---")
+        logger.error(f"Received bad data from client: {e.json()}")
+        logger.error(f"---------------------------------")
+        raise HTTPException(status_code=422, detail=e.errors())
+    # --- === END OF NEW CODE === ---
+    
     except Exception as e:
-        logger.error(f"Error saving objectives: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error creating question from draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save approved question.")

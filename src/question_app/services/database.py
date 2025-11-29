@@ -2,6 +2,7 @@
 Database Manager
 Handles all SQLite database operations for the Socratic Tutor.
 Manages schema and CRUD operations for all data models.
+--- THIS IS THE FULLY UPDATED VERSION ---
 """
 import sqlite3
 import json
@@ -21,21 +22,19 @@ from ..models.tutor import (
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:
-    # --- FIX 1: Path is relative to project root ---
     def __init__(self, db_path: str = "data/socratic_tutor.db"):
         self.db_path = db_path
+        logger.info(f"Initializing Database Manager for: {db_path}")
         self._init_database() 
 
     def _init_database(self):
         """
         Initializes all 5 tables in the database.
         """
-        # --- FIX: Added use_row_factory=False ---
         with self.get_connection(use_row_factory=False) as conn: 
             cursor = conn.cursor()
             
-            # (Your table creation code is correct)
-            # 1. Student Profiles Table
+            # 1. Student Profiles Table (Unchanged)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS student_profiles (
@@ -57,17 +56,25 @@ class DatabaseManager:
                 )
             """
             )
-            # 2. Learning Objective Table
+            
+            # --- === THIS IS THE FIX YOU ASKED ABOUT === ---
+            # 2. Learning Objective Table (Updated)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS learning_objective (
                     id TEXT PRIMARY KEY,
                     text TEXT NOT NULL UNIQUE,
-                    created_at TEXT
+                    created_at TEXT,
+                    
+                    -- These columns are new, for your objectives.html UI --
+                    blooms_level TEXT DEFAULT 'understand',
+                    priority TEXT DEFAULT 'medium'
                 )
             """
             )
-            # 3. Question Table
+            # --- === END OF FIX === ---
+            
+            # 3. Question Table (Unchanged)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS question (
@@ -77,7 +84,7 @@ class DatabaseManager:
                 )
             """
             )
-            # 4. Answer Table
+            # 4. Answer Table (Unchanged)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS answer (
@@ -91,7 +98,7 @@ class DatabaseManager:
                 )
             """
             )
-            # 5. Association Table
+            # 5. Association Table (Unchanged)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS question_objective_association (
@@ -105,8 +112,8 @@ class DatabaseManager:
             """
             )
             conn.commit()
+            logger.info("Database tables initialized successfully.")
 
-    # --- FIX 2: Updated get_connection to use row_factory ---
     @contextmanager
     def get_connection(self, use_row_factory: bool = True):
         """
@@ -122,6 +129,8 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    # --- Question & Answer CRUD ---
+
     def get_answers_for_questions(self, question_id:str) -> List[Dict]:
         """ Gets all answers for a given question ID. """
         with self.get_connection() as conn:
@@ -129,15 +138,6 @@ class DatabaseManager:
             cursor.execute(
                 "SELECT * FROM answer WHERE question_id = ? ORDER BY id",
                 (question_id,)
-            )
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def list_all_objectives(self) -> List[Dict]:
-        """ Gets all objectives for dropdowns. """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-               "SELECT id, text FROM learning_objective ORDER BY text" 
             )
             return [dict(row) for row in cursor.fetchall()]
     
@@ -150,7 +150,6 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM question WHERE id = ?" , (question_id,))
-                # --- FIX 3: Use fetchone() for a single item, not fetchall() ---
                 question_row = cursor.fetchone() 
                 if not question_row:
                     return None
@@ -168,12 +167,46 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error loading question details for {question_id} : {e}" , exc_info=True)
             return None
+    
+    # --- === THIS IS THE UPDATED `list_all_questions` === ---
+    # (Fulfills Req 2.10 for the ⚠️ icon on the home page)
+    def list_all_questions(self) -> List[Dict]:
+        """
+        Fetches all questions from the database for the home page.
         
+        This query joins with the association table to get a *count*
+        of how many objectives are linked to each question.
+        """
+        logger.info("Fetching all questions from database for home page...")
+        try:
+            with self.get_connection() as conn: # This will use the row_factory
+                cursor = conn.cursor()
+                query = """
+                    SELECT
+                        q.id,
+                        q.question_text,
+                        q.created_at,
+                        COUNT(qoa.objective_id) AS objective_count
+                    FROM
+                        question q
+                    LEFT JOIN
+                        question_objective_association qoa ON q.id = qoa.question_id
+                    GROUP BY
+                        q.id, q.question_text, q.created_at
+                    ORDER BY
+                        q.created_at DESC;
+                """
+                cursor.execute(query)
+                questions = [dict(row) for row in cursor.fetchall()]
+                logger.info(f"Found {len(questions)} questions.")
+                return questions
+        except Exception as e:
+            logger.error(f"Error listing all questions: {e}", exc_info=True)
+            return []
     
     def update_question_and_answers(self, question_id:str , data:QuestionUpdate) -> bool:
         """ Updates a question and its answers from the Pydantic model. """
         try:
-            # --- FIX: Added use_row_factory=False ---
             with self.get_connection(use_row_factory=False) as conn: 
                 cursor = conn.cursor()
                 cursor.execute(
@@ -182,7 +215,6 @@ class DatabaseManager:
                 )
 
                 for answer in data.answers:
-                    # --- FIX 4: Added 'answer.feedback_approved' to tuple ---
                     cursor.execute(
                         """
                         UPDATE answer 
@@ -193,7 +225,7 @@ class DatabaseManager:
                             answer.text,
                             answer.is_correct,
                             answer.feedback_text,
-                            answer.feedback_approved, # This was missing
+                            answer.feedback_approved,
                             answer.id,
                             question_id
                         )
@@ -245,7 +277,160 @@ class DatabaseManager:
             logger.error(f"Error deleting question {question_id} : {e}" , exc_info=True)
             return False
 
-    # --- Student Profile Methods ---
+    # --- === NEW Learning Objective CRUD Methods === ---
+    # (These are all the new functions for Phase 1)
+
+    def list_all_objectives(self) -> List[Dict]:
+        """ Gets all objectives for dropdowns (a simple list). """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+               "SELECT id, text FROM learning_objective ORDER BY text" 
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def list_all_objectives_with_counts(self) -> List[Dict]:
+        """
+        Fetches all objectives and counts their associated questions.
+        (Fulfills Req 2.11 for the ⚠️ icon on the objectives page)
+        """
+        logger.info("Fetching all objectives with question counts...")
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                query = """
+                    SELECT
+                        lo.id,
+                        lo.text,
+                        lo.created_at,
+                        lo.blooms_level,
+                        lo.priority,
+                        COUNT(qoa.question_id) AS question_count
+                    FROM
+                        learning_objective lo
+                    LEFT JOIN
+                        question_objective_association qoa ON lo.id = qoa.objective_id
+                    GROUP BY
+                        lo.id, lo.text, lo.created_at, lo.blooms_level, lo.priority
+                    ORDER BY
+                        lo.created_at ASC;
+                """
+                cursor.execute(query)
+                objectives = [dict(row) for row in cursor.fetchall()]
+                logger.info(f"Found {len(objectives)} objectives.")
+                return objectives
+        except Exception as e:
+            logger.error(f"Error listing all objectives: {e}", exc_info=True)
+            return []
+
+    def create_objective(self, text: str, blooms_level: str, priority: str) -> Dict:
+        """Creates a new objective and returns it."""
+        logger.info(f"Creating new objective...")
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                new_id = str(uuid.uuid4())
+                created_at = datetime.now().isoformat()
+                cursor.execute(
+                    """
+                    INSERT INTO learning_objective (id, text, created_at, blooms_level, priority)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (new_id, text, created_at, blooms_level, priority)
+                )
+                conn.commit()
+                # Return a dict that matches the structure from list_all_objectives_with_counts
+                return {
+                    "id": new_id, "text": text, "created_at": created_at,
+                    "blooms_level": blooms_level, "priority": priority, "question_count": 0
+                }
+        except Exception as e:
+            logger.error(f"Error creating objective in DB: {e}", exc_info=True)
+            raise
+
+    def get_objective(self, obj_id: str) -> Optional[Dict]:
+        """Fetches a single objective by its ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM learning_objective WHERE id = ?", (obj_id,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting objective {obj_id}: {e}", exc_info=True)
+            return None
+
+    def update_objective(self, obj_id: str, text: str, blooms_level: str, priority: str) -> bool:
+        """Updates an existing objective."""
+        try:
+            with self.get_connection(use_row_factory=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    UPDATE learning_objective
+                    SET text = ?, blooms_level = ?, priority = ?
+                    WHERE id = ?
+                    """,
+                    (text, blooms_level, priority, obj_id)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating objective {obj_id}: {e}", exc_info=True)
+            return False
+
+    def delete_objective(self, obj_id: str) -> bool:
+        """Deletes an objective. ON DELETE CASCADE will handle associations."""
+        try:
+            with self.get_connection(use_row_factory=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM learning_objective WHERE id = ?", (obj_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error deleting objective {obj_id}: {e}", exc_info=True)
+            return False
+
+    def create_question_from_ai(self, question_data: Dict, objective_id: str) -> str:
+        """Saves an AI-generated question and its answers to the DB. (Req 7.4)"""
+        try:
+            with self.get_connection(use_row_factory=False) as conn:
+                cursor = conn.cursor()
+                
+                # 1. Create the Question
+                new_q_id = str(uuid.uuid4())
+                created_at = datetime.now().isoformat()
+                cursor.execute(
+                    "INSERT INTO question (id, question_text, created_at) VALUES (?, ?, ?)",
+                    (new_q_id, question_data['question_text'], created_at)
+                )
+                
+                # 2. Create the Answers
+                for ans in question_data['answers']:
+                    new_a_id = str(uuid.uuid4())
+                    cursor.execute(
+                        """
+                        INSERT INTO answer (id, question_id, text, is_correct, feedback_text, feedback_approved)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (new_a_id, new_q_id, ans['text'], ans['is_correct'], "Generated by AI.", False)
+                    )
+                
+                # 3. Create the Association
+                new_assoc_id = str(uuid.uuid4())
+                cursor.execute(
+                    "INSERT INTO question_objective_association (id, question_id, objective_id) VALUES (?, ?, ?)",
+                    (new_assoc_id, new_q_id, objective_id)
+                )
+                
+                conn.commit()
+                logger.info(f"AI-generated question {new_q_id} saved and linked to objective {objective_id}")
+                return new_q_id
+        except Exception as e:
+            logger.error(f"Error saving AI-generated question: {e}", exc_info=True)
+            raise
+
+    # --- Student Profile Methods (Unchanged) ---
     def load_student_profile(self, student_id: str) -> Optional[StudentProfile]:
         try:
             with self.get_connection() as conn:
@@ -255,7 +440,6 @@ class DatabaseManager:
                 )
                 row = cursor.fetchone()
                 if row:
-                    # This is a bit different from your version, but safer
                     return StudentProfile(
                         id=row["id"],
                         name=row["name"],
@@ -331,40 +515,4 @@ class DatabaseManager:
                 return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"Error listing students: {e}", exc_info=True)
-            return []
-    
-    # --- === THIS IS THE NEW METHOD YOU NEED === ---
-    
-    def list_all_questions(self) -> List[Dict]:
-        """
-        Fetches all questions from the database for the home page.
-        
-        This query joins with the association table to get a *count*
-        of how many objectives are linked to each question.
-        """
-        logger.info("Fetching all questions from database for home page...")
-        try:
-            with self.get_connection() as conn: # This will use the row_factory
-                cursor = conn.cursor()
-                query = """
-                    SELECT
-                        q.id,
-                        q.question_text,
-                        q.created_at,
-                        COUNT(qoa.objective_id) AS objective_count
-                    FROM
-                        question q
-                    LEFT JOIN
-                        question_objective_association qoa ON q.id = qoa.question_id
-                    GROUP BY
-                        q.id, q.question_text, q.created_at
-                    ORDER BY
-                        q.created_at DESC;
-                """
-                cursor.execute(query)
-                questions = [dict(row) for row in cursor.fetchall()]
-                logger.info(f"Found {len(questions)} questions.")
-                return questions
-        except Exception as e:
-            logger.error(f"Error listing all questions: {e}", exc_info=True)
             return []
