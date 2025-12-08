@@ -388,7 +388,7 @@ This section provides step-by-step instructions to set up the RAG (Retrieval-Aug
      --name socratic_chroma \
      -p 8001:8000 \
      -v "$(pwd)/data:/chroma/data" \
-     chromadb/chroma:latest
+     chromadb/chroma:0.4.24
    ```
 
    This starts the ChromaDB service in a Docker container with persistent storage mounted to your local `data` directory.
@@ -438,66 +438,3 @@ This section provides step-by-step instructions to set up the RAG (Retrieval-Aug
    ```
 
    You should see success messages in the terminal where the backend is running.
-
-7. **Verify Vector Store Creation**
-
-   In the same terminal where you ran the vector store creation command, verify the setup:
-
-   ```bash
-   curl http://localhost:8080/vector-store/status | jq
-   ```
-
-   Expected output should look similar to:
-
-   ```json
-   [
-     {
-       "id": "8da6c836-8ef2-485c-9002-cbcda04fa4b6",
-       "name": "default_collection",
-       "metadata": {},
-       "dimension": 768,
-       "tenant": "default_tenant",
-       "database": "default_database"
-     }
-   ]
-   ```
-
-   **Optional: Test Chunk Retrieval**
-
-   To see the chunks retrieved from the vector store, you can run:
-
-   ```bash
-   curl -X POST http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections/<collection_id>/query \
-     -H "Content-Type: application/json" \
-     -d '{
-           "query_embeddings": [],
-           "query_texts": ["What purpose does document role serve?"],
-           "n_results": 5
-         }' | jq
-   ```
-
-8. **Start CLI Interface**
-
-   Open a final **new terminal instance** and start the CLI:
-
-   ```bash
-   poetry run python cli.py
-   ```
-
-   You should now see options for interacting with the Socratic tutor through the command-line interface.
-
-### Terminal Summary
-
-After setup, you should have the following terminals running:
-- Terminal 1: ChromaDB Docker container (can be closed after step 2)
-- Terminal 2: Ollama service (`ollama serve`)
-- Terminal 3: Backend application (`poetry run dev`)
-- Terminal 4: CLI interface (`poetry run python cli.py`)
-
-## 🙏 Acknowledgments
-
-- Canvas LMS API
-- Azure OpenAI
-- FastAPI
-- ChromaDB
-- Ollama
