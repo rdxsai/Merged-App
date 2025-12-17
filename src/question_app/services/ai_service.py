@@ -15,6 +15,7 @@ import asyncio
 
 from ..core import config, get_logger
 from ..services.database import DatabaseManager
+from ..utils.file_utils import load_feedback_prompt_from_json
 
 logger = get_logger(__name__)
 
@@ -79,17 +80,7 @@ class AIGeneratorService:
         logger.info(f"Generating feedback for answer: {answer_text[:30]}...")
 
         if is_correct:
-            system_prompt = """
-            You are an expert instructional designer. A student has selected the
-            CORRECT answer to a multiple-choice question.
-            
-            Your task is to:
-            1.  Affirm that their answer is correct.
-            2.  Provide a detailed explanation (at least 4-5 sentences) of *why* this answer is correct.
-            3.  You should tie the concept back to the core learning objective.
-            
-            Respond *only* with the feedback text. Do not add any extra titles or "Feedback:" prefix.
-            """
+            system_prompt = load_feedback_prompt_from_json("feedback_correct")
             user_prompt = f"""
             Question: "{question_text}"
             Correct Answer : "{answer_text}"
@@ -98,24 +89,14 @@ class AIGeneratorService:
             """
             max_tokens = 400
         else:
-            system_prompt = """
-            You are an expert instructional designer. A student has selected the
-            INCORRECT answer to a multiple-choice question.
-            
-            Your task is to:
-            1.  Affirm that their answer is incorrect.
-            2.  Generate one (1) probing socratic questions (2-3 sentences) that gently guides them to reconsider their choice.
-            3.  Your question should make them think about the *concept* that makes their answers incorrect.
-            
-            Respond *only* with the feedback text. Do not add any extra titles or "Feedback:" prefix.
-            """
+            system_prompt = load_feedback_prompt_from_json("feedback_incorrect")
             user_prompt = f"""
             Question: "{question_text}"
             Incorrect Answer Selected : "{answer_text}"
 
             Generate the feedback:
             """
-            max_tokens = 400 # This was 150, but your old prompt used 400. Let's use 400.
+            max_tokens = 400
 
         payload = {
             "messages" : [

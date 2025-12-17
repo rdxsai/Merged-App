@@ -1,237 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit System Prompt - Canvas Quiz Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <title>Edit System & Feedback Prompts - Canvas Quiz Manager</title>
+
+    <!-- Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- SimpleMDE CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+
     <style>
-        .editor-container {
-            margin: 20px 0;
+        body {
+            padding-bottom: 80px;
         }
+
         .btn-container {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            z-index: 1000;
             background-color: white;
-            padding: 10px 20px;
             box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
             display: flex;
-            gap: 10px;
             justify-content: center;
+            gap: 10px;
+            padding: 10px;
         }
-        .alert-container {
+
+        .editor-container {
             margin-top: 20px;
         }
-        body {
-            padding-bottom: 80px; /* Add space for sticky buttons */
+
+        .alert-container {
+            margin-top: 10px;
         }
     </style>
 </head>
+
 <body>
     <div class="container py-4">
-        <div class="row">
-            <div class="col-12">
-                <!-- Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2">
-                        <i class="fas fa-cog text-primary"></i> Edit System Prompt
-                    </h1>
-                    <a href="/" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Questions
-                    </a>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2"><i class="fas fa-cog text-primary"></i> Edit AI Prompts</h1>
+            <a href="/" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back to Questions</a>
+        </div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" id="promptTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#mainPrompt"
+                    type="button" role="tab">Main System Prompt</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="correct-tab" data-bs-toggle="tab" data-bs-target="#correctPrompt"
+                    type="button" role="tab">Feedback Prompt – Correct</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="incorrect-tab" data-bs-toggle="tab" data-bs-target="#incorrectPrompt"
+                    type="button" role="tab">Feedback Prompt – Incorrect</button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3" id="promptTabsContent">
+            <!-- Main System Prompt -->
+            <div class="tab-pane fade show active" id="mainPrompt" role="tabpanel">
+                <textarea id="mainEditor"></textarea>
+                <div class="alert alert-info mt-2">
+                    <i class="fas fa-info-circle"></i>
+                    This prompt controls the overall system behavior (e.g., chat assistant tone).
                 </div>
+            </div>
 
-                <!-- Alert container for messages -->
-                <div id="alertContainer" class="alert-container"></div>
-
-                <!-- Form -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-edit"></i> System Prompt Configuration
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="systemPromptForm">
-                            <div class="mb-3">
-                                <label for="systemPromptEditor" class="form-label">
-                                    System Prompt for AI Feedback Generation:
-                                </label>
-                                <textarea id="systemPromptEditor" name="prompt" placeholder="Enter the system prompt that will be used to generate feedback for quiz questions...
-
-Example:
-You are an expert educator creating helpful feedback for quiz questions. Generate constructive, educational feedback that helps students learn from their answers. Be encouraging but informative.">{{ current_prompt if current_prompt else '' }}</textarea>
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i>
-                                <strong>About System Prompts:</strong> This prompt will be sent to the AI model when generating feedback for questions. 
-                                Make it clear and specific about the type of feedback you want. You can use Markdown formatting for better structure.
-                            </div>
-                        </form>
-                    </div>
+            <!-- Correct Feedback Prompt -->
+            <div class="tab-pane fade" id="correctPrompt" role="tabpanel">
+                <textarea id="correctEditor"></textarea>
+                <div class="alert alert-success mt-2">
+                    <i class="fas fa-check-circle"></i>
+                    This prompt is used when generating feedback for correct answers.
                 </div>
+            </div>
 
-                <!-- Action buttons -->
-                <div class="btn-container">
-                    <button type="button" class="btn btn-primary" id="saveBtn">
-                        <i class="fas fa-save"></i> Save Prompt
-                    </button>
-                    <a href="/" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
+            <!-- Incorrect Feedback Prompt -->
+            <div class="tab-pane fade" id="incorrectPrompt" role="tabpanel">
+                <textarea id="incorrectEditor"></textarea>
+                <div class="alert alert-danger mt-2">
+                    <i class="fas fa-times-circle"></i>
+                    This prompt is used when generating feedback for incorrect answers.
                 </div>
             </div>
         </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" class="alert-container"></div>
+
+        <!-- Fixed Bottom Buttons -->
+        <div class="btn-container">
+            <button type="button" class="btn btn-primary" id="saveBtn">
+                <i class="fas fa-save"></i> Save Current Prompt
+            </button>
+            <a href="/" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLlvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
-    <!-- SimpleMDE JS -->
+    <!-- JS Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
-    
-    <script>
-        // Initialize SimpleMDE markdown editor
-        const simplemde = new SimpleMDE({
-            element: document.getElementById("systemPromptEditor"),
-            spellChecker: false,
-            placeholder: "Enter your system prompt here...",
-            toolbar: [
-                "bold", "italic", "heading", "|",
-                "quote", "unordered-list", "ordered-list", "|",
-                "link", "code", "|",
-                {
-                    name: "preview",
-                    action: function customPreviewAction(editor) {
-                        SimpleMDE.togglePreview(editor);
-                        updatePreviewButton(editor);
-                    },
-                    className: "fa fa-eye no-disable",
-                    title: "Toggle Preview"
-                }, "guide"
-            ],
-            status: ["lines", "words", "cursor"],
-            insertTexts: {
-                horizontalRule: ["", "\n\n-----\n\n"],
-                image: ["![](http://", ")"],
-                link: ["[", "](http://)"],
-                table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text     | Text     |\n\n"],
-            },
-        });
 
-        // Function to update preview button appearance based on current mode
-        function updatePreviewButton(editor) {
-            const toolbar = editor.toolbar;
-            const previewButton = toolbar.find(item => item && item.name === 'preview');
-            
-            if (previewButton) {
-                const isPreviewActive = editor.isPreviewActive();
-                const buttonElement = previewButton;
-                
-                if (isPreviewActive) {
-                    buttonElement.className = "fa fa-pencil no-disable";
-                    buttonElement.title = "Edit (Currently in Preview)";
-                } else {
-                    buttonElement.className = "fa fa-eye no-disable";
-                    buttonElement.title = "Preview (Currently in Edit)";
+    <script>
+        // Initialize editors after DOM fully loads
+        const editors = {
+            main: null,
+            correct: null,
+            incorrect: null
+        };
+
+        const endpoints = {
+            main: { get: '/system-prompt/api', post: '/system-prompt' },
+            correct: { get: '/system-prompt/feedback/correct', post: '/system-prompt/feedback/correct' },
+            incorrect: { get: '/system-prompt/feedback/incorrect', post: '/system-prompt/feedback/incorrect' }
+        };
+
+        // Delay hydration fix for text lag
+        async function loadPrompt(type) {
+            try {
+                const res = await fetch(endpoints[type].get);
+                const data = await res.json();
+                if (data.prompt) {
+                    // Wait until editor is ready before setting value
+                    const waitForEditor = () => {
+                        if (editors[type]) {
+                            editors[type].value(data.prompt);
+                        } else {
+                            setTimeout(waitForEditor, 150);
+                        }
+                    };
+                    waitForEditor();
                 }
+            } catch (err) {
+                console.error("Failed to load", type, err);
             }
         }
 
-        // Helper function to show alerts
+        async function savePrompt(type) {
+            const text = editors[type].value().trim();
+            if (!text) return showAlert('warning', 'Prompt cannot be empty!');
+            const formData = new FormData();
+            formData.append('prompt', text);
+            try {
+                const res = await fetch(endpoints[type].post, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (res.ok) showAlert('success', data.message || `${type} prompt saved.`);
+                else showAlert('danger', data.detail || 'Error saving prompt.');
+            } catch {
+                showAlert('danger', 'Failed to connect to server.');
+            }
+        }
+
         function showAlert(type, message) {
             const alertContainer = document.getElementById('alertContainer');
             const alert = document.createElement('div');
             alert.className = `alert alert-${type} alert-dismissible fade show`;
-            alert.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+            alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
             alertContainer.appendChild(alert);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 5000);
+            setTimeout(() => alert.remove(), 4000);
         }
 
-        // Load current system prompt when page loads
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Loading current system prompt...');
-            try {
-                const response = await fetch('/system-prompt/api');
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.prompt) {
-                        simplemde.value(result.prompt);
-                        console.log('System prompt loaded successfully');
-                    }
-                } else {
-                    console.warn('Could not load current system prompt');
-                }
-            } catch (error) {
-                console.error('Error loading system prompt:', error);
-            }
+        // Initialize editors after slight delay (ensures SimpleMDE attaches correctly)
+        document.addEventListener('DOMContentLoaded', async () => {
+            setTimeout(() => {
+                editors.main = new SimpleMDE({ element: document.getElementById("mainEditor"), spellChecker: false, placeholder: "Main system prompt..." });
+                editors.correct = new SimpleMDE({ element: document.getElementById("correctEditor"), spellChecker: false, placeholder: "Feedback prompt for correct answers..." });
+                editors.incorrect = new SimpleMDE({ element: document.getElementById("incorrectEditor"), spellChecker: false, placeholder: "Feedback prompt for incorrect answers..." });
+
+                // Now load data
+                loadPrompt('main');
+                loadPrompt('correct');
+                loadPrompt('incorrect');
+            }, 250); // <-- ensures no flicker before data loads
         });
 
-        // Save button functionality
-        document.getElementById('saveBtn').addEventListener('click', async function() {
-            const saveBtn = this;
-            const originalText = saveBtn.innerHTML;
-            
-            // Show loading state
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            
-            try {
-                const prompt = simplemde.value();
-                
-                if (!prompt.trim()) {
-                    showAlert('warning', 'Please enter a system prompt before saving.');
-                    return;
-                }
-                
-                const formData = new FormData();
-                formData.append('prompt', prompt);
-                
-                const response = await fetch('/system-prompt', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showAlert('success', result.message || 'System prompt saved successfully!');
-                    console.log('System prompt saved successfully');
-                } else {
-                    showAlert('danger', result.detail || 'Failed to save system prompt. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error saving system prompt:', error);
-                showAlert('danger', 'An error occurred while saving. Please try again.');
-            } finally {
-                // Restore button state
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalText;
-            }
-        });
-
-        // Handle Ctrl+S to save
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                document.getElementById('saveBtn').click();
-            }
+        // Save current tab’s prompt
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const activeTab = document.querySelector('#promptTabs .nav-link.active').id;
+            const type = activeTab.includes('correct') ? 'correct' :
+                activeTab.includes('incorrect') ? 'incorrect' : 'main';
+            await savePrompt(type);
         });
     </script>
 </body>
+
 </html>

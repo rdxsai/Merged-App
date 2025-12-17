@@ -18,6 +18,9 @@ OBJECTIVES_FILE = "data/learning_objectives.json"
 SYSTEM_PROMPT_FILE = "config/system_prompt.txt"
 CHAT_SYSTEM_PROMPT_FILE = "config/chat_system_prompt.txt"
 WELCOME_MESSAGE_FILE = "config/chat_welcome_message.txt"
+FEEDBACK_PROMPT_CORRECT_FILE = "config/feedback_prompt_correct.txt"
+FEEDBACK_PROMPT_INCORRECT_FILE = "config/feedback_prompt_incorrect.txt"
+SYSTEM_PROMPTS_JSON = "data/system_prompts.json"
 
 
 def load_questions() -> List[Dict[str, Any]]:
@@ -295,6 +298,96 @@ Your capabilities include:
 When providing responses, use the context from the quiz questions database to give accurate and relevant information. Always be helpful, educational, and supportive in your responses. Focus on learning outcomes and educational value."""
 
 
+def load_feedback_prompt_correct() -> str:
+    """
+    Load the feedback prompt for correct answers.
+
+    Returns:
+        str: The feedback prompt for correct answers.
+    """
+    try:
+        if os.path.exists(FEEDBACK_PROMPT_CORRECT_FILE):
+            with open(FEEDBACK_PROMPT_CORRECT_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        return """You are an expert instructional designer. A student has selected the
+CORRECT answer to a multiple-choice question.
+
+Your task is to:
+1.  Affirm that their answer is correct.
+2.  Provide a detailed explanation (at least 4-5 sentences) of *why* this answer is correct.
+3.  You should tie the concept back to the core learning objective.
+
+Respond *only* with the feedback text. Do not add any extra titles or "Feedback:" prefix."""
+    except Exception as e:
+        logger.error(f"Error loading correct feedback prompt: {e}")
+        return ""
+
+
+def save_feedback_prompt_correct(prompt: str) -> bool:
+    """
+    Save the feedback prompt for correct answers.
+
+    Args:
+        prompt (str): The feedback prompt content to save.
+
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+    """
+    try:
+        os.makedirs(os.path.dirname(FEEDBACK_PROMPT_CORRECT_FILE), exist_ok=True)
+        with open(FEEDBACK_PROMPT_CORRECT_FILE, "w", encoding="utf-8") as f:
+            f.write(prompt)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving correct feedback prompt: {e}")
+        return False
+
+
+def load_feedback_prompt_incorrect() -> str:
+    """
+    Load the feedback prompt for incorrect answers.
+
+    Returns:
+        str: The feedback prompt for incorrect answers.
+    """
+    try:
+        if os.path.exists(FEEDBACK_PROMPT_INCORRECT_FILE):
+            with open(FEEDBACK_PROMPT_INCORRECT_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        return """You are an expert instructional designer. A student has selected the
+INCORRECT answer to a multiple-choice question.
+
+Your task is to:
+1.  Affirm that their answer is incorrect.
+2.  Generate one (1) probing socratic questions (2-3 sentences) that gently guides them to reconsider their choice.
+3.  Your question should make them think about the *concept* that makes their answers incorrect.
+
+Respond *only* with the feedback text. Do not add any extra titles or "Feedback:" prefix."""
+    except Exception as e:
+        logger.error(f"Error loading incorrect feedback prompt: {e}")
+        return ""
+
+
+def save_feedback_prompt_incorrect(prompt: str) -> bool:
+    """
+    Save the feedback prompt for incorrect answers.
+
+    Args:
+        prompt (str): The feedback prompt content to save.
+
+    Returns:
+        bool: True if the save operation was successful, False otherwise.
+    """
+    try:
+        os.makedirs(os.path.dirname(FEEDBACK_PROMPT_INCORRECT_FILE), exist_ok=True)
+        with open(FEEDBACK_PROMPT_INCORRECT_FILE, "w", encoding="utf-8") as f:
+            f.write(prompt)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving incorrect feedback prompt: {e}")
+        return False
+
+
 def get_default_welcome_message() -> str:
     """
     Get the default chat welcome message.
@@ -311,3 +404,34 @@ I'm here to help you with:
 - Improving your study strategies
 
 Feel free to ask me anything about the quiz questions or educational content. I'm here to support your learning journey!"""
+
+
+
+def load_feedback_prompt_from_json(prompt_type: str) -> str:
+    """Generic loader for feedback prompts (correct/incorrect) from a single JSON file."""
+    try:
+        if os.path.exists(SYSTEM_PROMPTS_JSON):
+            with open(SYSTEM_PROMPTS_JSON, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get(prompt_type, "").strip()
+        return ""
+    except Exception as e:
+        logger.error(f"Error loading feedback prompt ({prompt_type}): {e}")
+        return ""
+
+
+def save_feedback_prompt_to_json(prompt_type: str, prompt_text: str) -> bool:
+    """Generic saver for feedback prompts to a single JSON file."""
+    try:
+        os.makedirs(os.path.dirname(SYSTEM_PROMPTS_JSON), exist_ok=True)
+        data = {}
+        if os.path.exists(SYSTEM_PROMPTS_JSON):
+            with open(SYSTEM_PROMPTS_JSON, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        data[prompt_type] = prompt_text
+        with open(SYSTEM_PROMPTS_JSON, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving feedback prompt ({prompt_type}): {e}")
+        return False
