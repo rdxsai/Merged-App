@@ -61,7 +61,7 @@ class SocraticAgent:
         self.client = client
         logger.info(f"Initialized {role} agent")
 
-    def execute_task(self, task_description: str, context: str = "") -> str:
+    def execute_task(self, task_description: str, context: str = "", history : Optional[List[Dict[str , str]]] = None) -> str:
         system_prompt = f"""You are a {self.role}.
         Your goal: {self.goal}
         Background: {self.backstory}
@@ -70,11 +70,13 @@ class SocraticAgent:
         {context}
         ---
         Task: {task_description}
-        Provide a comprehensive response following your role and the Socratic method principles."""
+        Provide clear, direct and comprehensive responses."""
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": task_description},
         ]
+        if history:
+            messages.extend(history[-4:])
+        messages.append({"role": "user" , "content": task_description})
         try:
             response = self.client.chat(messages, temperature=0.7)
             logger.info(f"{self.role} completed task successfully")
@@ -98,22 +100,32 @@ class CoordinatorAgent(SocraticAgent):
             client = client
         )
 
-    def decide_intent(self, student_response : str) -> str:
+    def decide_intent(self, student_response : str, history:Optional[List[Dict[str, str]]] = None) -> str:
         # --- === FIX 2: UPDATE THE TASK PROMPT === ---
         task_description = f"""
-        Analyze the following user input. Classify it as one of three intents:
-        1. 'conceptual_question': For general questions, statements, or answers about web accessibility concepts (e.g., "what is alt text?", "I think it's for screen readers", "What is RGAA?").
-        2. 'code_analysis_request': If the user has included a code snippet (HTML, CSS, JS) for review or has asked a question directly about a piece of code.
-        3. 'off_topic': If the user is asking a random question not related to web accessibility (e.g., "what is the capital of France?", "who are you?", "hello").
+Analyze the following user input in the context of the ongoing conversation. Classify it as one of three intents:
 
-        User Input: "{student_response}"
+1. 'conceptual_question': For general questions, statements, answers, or follow-up requests about web accessibility concepts. 
+   This includes:
+   - Direct questions (e.g., "what is alt text?")
+   - Follow-up clarifications (e.g., "can you explain more simply?", "give me an example")
+   - Requests to change response style (e.g., "answer directly", "be more detailed")
+   - Statements or partial answers (e.g., "I think it's for screen readers")
 
-        Respond with ONLY a JSON object in this exact format:
-        {{"intent": "YOUR_CLASSIFICATION_HERE"}}
-        """
+2. 'code_analysis_request': If the user has included a code snippet (HTML, CSS, JS) for review or has asked a question directly about a piece of code.
+
+3. 'off_topic': ONLY if the user is asking about something completely unrelated to web accessibility AND it's not a follow-up to the current discussion (e.g., "what is the capital of France?", "tell me about cooking recipes").
+
+IMPORTANT: If this appears to be a follow-up or continuation of the previous conversation, classify it as 'conceptual_question' even if it doesn't explicitly mention web accessibility.
+
+User Input: "{student_response}"
+
+Respond with ONLY a JSON object in this exact format:
+{{"intent": "YOUR_CLASSIFICATION_HERE"}}
+"""
         # --- === END OF FIX 2 === ---
         try:
-            repsonse_json = self.execute_task(task_description , context = "")
+            repsonse_json = self.execute_task(task_description , context = "", history=history)
             intent = json.loads(repsonse_json).get("intent" , "conceptual_question")
 
             # Add the new intent to the valid list
@@ -138,12 +150,11 @@ class ResponseAnalystAgent(SocraticAgent):
             backstory="""You are an expert at analyzing student responses using the Socratic method. 
             You determine response types (correct/partially_correct/incorrect/dont_know/frustrated),
             assess understanding levels (recall/understanding/application/analysis/synthesis),
-            identify misconceptions and learning gaps, and recommend intervention strategies.
-            You NEVER give direct answers - only provide analysis to guide strategic questioning.""",
+            identify misconceptions and learning gaps, and recommend appropriate explanations and clarifications.""",
             client=client,
         )
     def analyze_response(
-        self, student_response: str, profile: StudentProfile, context : str = ""
+        self, student_response: str, profile: StudentProfile, context : str = "", history : Optional[List[Dict[str , str]]] = None
     ) -> Dict[str, Any]:
         task_description = f"""Analyze this student response following Socratic method principles:
         Student Profile:
@@ -165,7 +176,7 @@ class ResponseAnalystAgent(SocraticAgent):
             "engagement_indicators": "high|medium|low"
         }}"""
         try:
-            response = self.execute_task(task_description , context=context)
+            response = self.execute_task(task_description , context=context, history=history)
             if hasattr(response, "__class__") and "MagicMock" in str(response.__class__):
                 return {
                     "response_type": "partially_correct", "understanding_level": profile.knowledge_level.value,
@@ -200,7 +211,7 @@ class ProgressTrackerAgent(SocraticAgent):
             client=client,
         )
     def assess_progress(
-        self, analysis: Dict[str, Any], profile: StudentProfile, context : str = ""
+        self, analysis: Dict[str, Any], profile: StudentProfile, context : str = "", history:Optional[List[Dict[str , str]]] = None
     ) -> Dict[str, Any]:
         task_description = f"""Assess learning progress based on response analysis:
         Current Student State:
@@ -216,7 +227,7 @@ class ProgressTrackerAgent(SocraticAgent):
         4. Any interventions needed?
         Return JSON with advancement recommendations."""
         try:
-            response = self.execute_task(task_description , context=context)
+            response = self.execute_task(task_description , context=context, history=history)
             response_correct = analysis.get("response_type") in ["correct", "partially_correct"]
             new_consecutive = profile.consecutive_correct + 1 if response_correct else 0
             advancement_ready = new_consecutive >= 3
@@ -251,12 +262,12 @@ class QuestionGeneratorAgent(SocraticAgent):
             role="Master Socratic Questioner",
             goal="Generate strategic Socratic questions that guide students to discover knowledge",
             backstory="""You are a master of strategic Socratic questioning. You craft questions that:
-            1. PREDICTION: "What do you think would happen if...?" - Test understanding
-            2. PROBING: "What makes you think that?" - Explore reasoning
-            3. CLARIFICATION: "What do you mean by...?" - Ensure precision
-            4. COUNTEREXAMPLE: Present conflicting cases - Challenge assumptions
-            5. CONNECTION: "How is this similar to...?" - Build relationships
-            You NEVER give direct answers - only ask strategic questions that guide discovery.""",
+            1. Clear definations and explanations.
+            2. Practical examples when helpful.
+            3. Step by step breakdown for complex topics.
+            4. Direct answers to questions without unnecessary explanations.
+            5. References to WCAG guidelines when relevant
+            You communicate in a friendly but professional tone, ensuring the student understands the concept fully.""",
             client=client,
         )
     def generate_questions(
@@ -265,9 +276,10 @@ class QuestionGeneratorAgent(SocraticAgent):
         progress: Dict[str, Any],
         profile: StudentProfile,
         student_response: str,
-        context : str = ""
+        context : str = "",
+        history:Optional[List[Dict[str, str]]] = None
     ) -> str:
-        task_description = f"""Generate strategic Socratic questions based on comprehensive analysis:
+        task_description = f"""Provide a clear, direct answer based on the student's question:
         Student Context:
         - Topic: {profile.current_topic}
         - Knowledge Level: {profile.knowledge_level.value}
@@ -281,15 +293,15 @@ class QuestionGeneratorAgent(SocraticAgent):
         - Advancement Ready: {progress.get('advancement_ready', False)}
         - Recommended Phase: {progress.get('recommended_phase', 'opening')}
         Generate 1-2 strategic Socratic questions that:
-        1. Guide discovery without giving answers
-        2. Are appropriate for their knowledge level
-        3. Address any misconceptions through questioning
-        4. Build on their correct understanding
-        5. Maintain engagement and curiosity
-        Choose the most effective question type (prediction, probing, clarification, counterexample, connection).
-        IMPORTANT: Only return the questions, not explanations."""
+        1. Answer the question directly and clearly
+        2. Use the knowledge base context provided above
+        3. Adjust complexity based on their knowledge level ({profile.knowledge_level.value})
+        4. Include practical examples if helpful
+        5.  Keep the response concise but complete (2-4 sentences typically)
+        6. If they're incorrect, gently correct and explain the right answer
+        IMPORTANT: Provide the answer directly. Do not ask questions back."""
         try:
-            response = self.execute_task(task_description , context = context)
+            response = self.execute_task(task_description , context = context, history=history)
             if hasattr(response, "__class__") and "MagicMock" in str(response.__class__):
                 return "What makes you think that? Can you tell me more about your reasoning?"
             return response
@@ -302,10 +314,9 @@ class SessionOrchestratorAgent(SocraticAgent):
         super().__init__(
             role="Socratic Session Orchestrator",
             goal="Coordinate complete Socratic dialogue flow and maintain optimal learning conditions",
-            backstory="""You coordinate Socratic tutoring sessions by synthesizing insights from
-            response analysis, progress tracking, and strategic questioning. You create cohesive,
-            natural Socratic dialogue that maintains the principle of guided discovery while
-            implementing appropriate interventions and maintaining student engagement.""",
+            backstory="""You coordinate tutoring sessions by synthesizing insights from
+        response analysis and expert answers. You create clear, friendly responses that
+        directly address the student's questions while maintaining engagement and understanding.""",
             client=client,
         )
     def orchestrate_response(
@@ -314,27 +325,31 @@ class SessionOrchestratorAgent(SocraticAgent):
         progress: Dict[str, Any],
         questions: str,
         profile: StudentProfile,
-        context : str = ""
+        context : str = "",
+        history:Optional[List[Dict[str, str]]] = None
     ) -> str:
-        task_description = f"""Create a complete Socratic tutoring response by synthesizing:
-        Response Analysis: {json.dumps(analysis, indent=2)}
-        Progress Assessment: {json.dumps(progress, indent=2)}
-        Strategic Questions: {questions}
-        Student Context:
-        - Name: {profile.name}
-        - Topic: {profile.current_topic}
-        - Knowledge Level: {profile.knowledge_level.value}
-        - Engagement: {analysis.get('engagement_indicators', 'medium')}
-        Create a response that:
-        1. Briefly acknowledges their thinking (without giving direct answers)
-        2. Implements any needed interventions naturally
-        3. Presents the strategic question(s) in an engaging way
-        4. Maintains encouraging, curious tone
-        5. Guides discovery rather than explaining
-        Keep the response concise and natural - like a master Socratic teacher.
-        IMPORTANT: End with a question, never give direct answers or explanations."""
+        task_description = f"""Create a complete tutoring response by synthesizing:
+
+Response Analysis: {json.dumps(analysis, indent=2)}
+Progress Assessment: {json.dumps(progress, indent=2)}
+Expert Answer: {questions}  # ← This now contains the answer, not questions
+
+Student Context:
+- Name: {profile.name}
+- Topic: {profile.current_topic}
+- Knowledge Level: {profile.knowledge_level.value}
+- Engagement: {analysis.get('engagement_indicators', 'medium')}
+
+Create a response that:
+1. Provides the answer clearly and directly
+2. Uses a friendly, encouraging tone
+3. Acknowledges their question or attempt
+4. Includes the expert answer seamlessly
+5. Keeps the response natural and conversational
+
+IMPORTANT: Provide direct answers. Do not end with questions."""
         try:
-            response = self.execute_task(task_description , context = context)
+            response = self.execute_task(task_description , context = context, history=history)
             if hasattr(response, "__class__") and "MagicMock" in str(response.__class__):
                 return questions 
             return response
@@ -375,7 +390,7 @@ class CodeAnalyzerAgent(SocraticAgent):
 # HYBRID CREWAI SYSTEM
 # ============================================================================
 
-MIN_COSINE_SIMILARITY = 0.3
+MIN_COSINE_SIMILARITY = 0.7
 class HybridCrewAISocraticSystem:
     def __init__(
         self, azure_config: Dict[str, str], vector_store_service : VectorStoreInterface ,db_path: str = "socratic_tutor.db"
@@ -386,9 +401,13 @@ class HybridCrewAISocraticSystem:
             deployment=azure_config["deployment_name"],
             api_key=azure_config["api_key"],
             api_version=azure_config.get("api_version", "2024-02-15-preview"),
+
         )
         self.vector_store = vector_store_service
         self.db = DatabaseManager(db_path)
+        self.memory_file = "conversation_memory.json"
+        self.conversation_memory : Dict[str, List[Dict[str , str]]] = {}
+        self._load_conversation_memory()
         self.db_path = db_path
         self.coordinator_agent = CoordinatorAgent(self.client)
         self.response_analyst = ResponseAnalystAgent(self.client)
@@ -504,6 +523,35 @@ class HybridCrewAISocraticSystem:
         else:
             raise RuntimeError(f"Failed to save student profile for {name}")
 
+        # -----------------------------------------------------------------------
+    # MEMORY MANAGEMENT
+    # -----------------------------------------------------------------------
+    def _save_conversation_memory(self):
+        try:
+            with open(self.memory_file, "w") as f:
+                json.dump(self.conversation_memory, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save memory: {e}")
+
+    def _load_conversation_memory(self):
+        if os.path.exists(self.memory_file):
+            try:
+                with open(self.memory_file, "r") as f:
+                    self.conversation_memory = json.load(f)
+                    logger.info("Loaded persistent conversation memory.")
+            except Exception as e:
+                logger.error(f"Failed to load memory: {e}")
+
+    def get_conversation_history(self, student_id: str) -> List[Dict[str, str]]:
+        return self.conversation_memory.get(student_id, [])
+
+    def append_to_conversation(self, student_id: str, role: str, content: str):
+        self.conversation_memory.setdefault(student_id, [])
+        self.conversation_memory[student_id].append({"role": role, "content": content})
+        # keep only last 10 turns
+        self.conversation_memory[student_id] = self.conversation_memory[student_id][-10:]
+        self._save_conversation_memory()
+
     async def get_rag_context(self, query:str) -> str:
             # (This method is unchanged)
             logger.info(f"Retrieving Context for : {query[:50]}...")
@@ -527,9 +575,11 @@ class HybridCrewAISocraticSystem:
                 raise ValueError(f"Student {student_id} not found")
             logger.info(f"Starting Session for {profile.name}")
             profile.total_sessions +=1 # Moved this here, was incrementing even on "START_SESSION"
+            history = self.get_conversation_history(student_id)
+            self.append_to_conversation(student_id, "user", student_response)
 
             try:
-                intent = self.coordinator_agent.decide_intent(student_response)
+                intent = self.coordinator_agent.decide_intent(student_response, history=history)
 
                 final_response = ""
                 analysis = {}
@@ -540,15 +590,15 @@ class HybridCrewAISocraticSystem:
                     logger.info("Executing Workflow A")
                     rag_context = await self.get_rag_context(student_response)
                     analysis = self.response_analyst.analyze_response(
-                        student_response , profile, context=rag_context
+                        student_response , profile, context=rag_context, history = history
                     )
                     progress = self.progress_tracker.assess_progress(
-                        analysis, profile , context=rag_context
+                        analysis, profile , context=rag_context, history = history
                     )
                     questions = self.question_generator.generate_questions(
-                        analysis, progress, profile, student_response, context = rag_context
+                        analysis, progress, profile, student_response, context = rag_context, history = history
                     )
-                    final_response = self.session_orchestrator.orchestrate_response( analysis, progress, questions, profile, context = rag_context)
+                    final_response = self.session_orchestrator.orchestrate_response( analysis, progress, questions, profile, context = rag_context, history = history)
 
                 elif intent == "code_analysis_request":
                     logger.info("Executing Workflow B")
@@ -572,8 +622,8 @@ class HybridCrewAISocraticSystem:
                     Socratic question that will guide the student to discover one
                     of these errors on their own. Do not give the answer.
                     """
-                    questions = self.question_generator.execute_task(task_for_questioner, context=rag_context)
-                    final_response = self.session_orchestrator.orchestrate_response(analysis , progress , questions , profile , context= rag_context)
+                    questions = self.question_generator.execute_task(task_for_questioner, context=rag_context, history = history)
+                    final_response = self.session_orchestrator.orchestrate_response(analysis , progress , questions , profile , context= rag_context, history = history)
                 
                 # --- === FIX 3: HANDLE THE NEW 'off_topic' INTENT === ---
                 elif intent == "off_topic":
@@ -588,6 +638,7 @@ class HybridCrewAISocraticSystem:
                 
                 # Save the updated profile (session count, etc.)
                 self.db.save_student_profile(profile)
+                self.append_to_conversation(student_id, "assistant", final_response)
 
                 return {
                     "tutor_response" : final_response,
