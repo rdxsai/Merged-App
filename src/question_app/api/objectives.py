@@ -41,6 +41,17 @@ async def objectives_page(request: Request):
         raise HTTPException(status_code=500, detail="Could not load objectives.")
 
 
+@router.get("/list", response_class=JSONResponse)
+async def list_all_objectives_json():
+    """ Returns all objectives as JSON with full text. """
+    try:
+        objectives = db.list_all_objectives()
+        return {"objectives": objectives}
+    except Exception as e:
+        logger.error(f"Error listing objectives: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch objectives.")
+
+
 @router.post("/", response_class=ObjectiveInDB)
 async def create_new_objective(objective_data: ObjectiveCreate):
     """ (Unchanged) Creates a single new learning objective. """

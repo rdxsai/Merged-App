@@ -162,8 +162,13 @@
                             rows="4">{{ question.question_text }}</textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="learningObjectiveSelect" class="form-label"><strong>Learning
-                                Objectives:</strong></label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="learningObjectiveSelect" class="form-label mb-0"><strong>Learning
+                                    Objectives:</strong></label>
+                            <button type="button" id="associateObjectivesBtn" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-magic"></i> Associate Objectives
+                            </button>
+                        </div>
                         <select id="learningObjectiveSelect" name="objective_ids" class="form-select" multiple size="5">
                             <option value="">Select Objectives...</option>
                             {% for objective in all_objectives %}
@@ -254,21 +259,61 @@
     <!-- Configuration data (Unchanged) -->
     <div id="app-config" data-question-id="{{ question.id }}" style="display: none;"></div>
 
+    <!-- Objectives Association Modal -->
+    <div class="modal fade" id="objectivesModal" tabindex="-1" aria-labelledby="objectivesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="objectivesModalLabel">
+                        <i class="fas fa-lightbulb text-warning"></i> Associate Learning Objectives
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="objectivesLoadingSpinner" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">AI is analyzing the question and finding relevant objectives...</p>
+                    </div>
+                    <div id="objectivesListContainer" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Objectives with high similarity scores (≥60%) are pre-selected based on AI analysis. 
+                            You can modify the selection below.
+                        </div>
+                        <div id="objectivesList" class="mt-3"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" id="saveObjectivesBtn" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
 
     <!-- --- JAVASCRIPT "BRAIN" --- -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Config (Unchanged)
+            // Config
             const questionId = document.getElementById('app-config').dataset.questionId;
+            const isNewQuestion = questionId === 'new';  // Check if this is a new question
+
             let saveTimeout;
             let isSaving = false;
             const toastElement = document.getElementById('autoSaveIndicator');
             const autoSaveToast = new bootstrap.Toast(toastElement, { delay: 2000 });
             const toastMessage = document.getElementById('toastMessage');
 
-            // --- Initialize Editors (Unchanged) ---
+            // --- Initialize Editors ---
             let simpleMDEConfig = {
                 spellChecker: false,
                 status: false,
@@ -282,7 +327,9 @@
             });
             questionTextEditor.codemirror.on("change", () => {
                 updateQuestionPreview();
-                scheduleAutoSave();
+                if (!isNewQuestion) {  // Only auto-save for existing questions
+                    scheduleAutoSave();
+                }
             });
 
             const answerTextEditors = [];
@@ -290,78 +337,199 @@
                 const editor = new SimpleMDE({ element: textarea, ...simpleMDEConfig });
                 editor.codemirror.on("change", () => {
                     updateQuestionPreview();
-                    scheduleAutoSave();
+                    if (!isNewQuestion) {
+                        scheduleAutoSave();
+                    }
                 });
-                answerTextEditors.push({ editor: editor, name: textarea.name, answerId: textarea.name.split('_').pop() });
+                // FIX: Get the answer ID from the parent answer-item element instead
+                const answerItem = textarea.closest('.answer-item');
+                const answerId = answerItem ? answerItem.dataset.answerId : textarea.name.split('_').pop();
+                answerTextEditors.push({ editor: editor, name: textarea.name, answerId: answerId });
             });
 
             const answerFeedbackEditors = [];
             document.querySelectorAll('.answer-feedback-editor').forEach(textarea => {
                 const editor = new SimpleMDE({ element: textarea, ...simpleMDEConfig });
-                editor.codemirror.on("change", scheduleAutoSave);
-                answerFeedbackEditors.push({ editor: editor, name: textarea.name, answerId: textarea.name.split('_').pop() });
+                editor.codemirror.on("change", () => {
+                    if (!isNewQuestion) {
+                        scheduleAutoSave();
+                    }
+                });
+                // FIX: Get the answer ID from the parent answer-item element instead
+                const answerItem = textarea.closest('.answer-item');
+                const answerId = answerItem ? answerItem.dataset.answerId : textarea.name.split('_').pop();
+                answerFeedbackEditors.push({ editor: editor, name: textarea.name, answerId: answerId });
             });
 
-            // --- === THIS IS BUG FIX #1 (The 'forEach' bug) === ---
-            // Generate Feedback Button
-            document.getElementById('generateAllUnapprovedBtn').addEventListener('click', async () => {
-                const btn = document.getElementById('generateAllUnapprovedBtn');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-                showToast('Generating AI feedback...', 'bg-info');
+            // --- NEW: Save Button for New Questions ---
+            if (isNewQuestion) {
+                // Hide the "Generate Feedback" button for new questions
+                const generateBtn = document.getElementById('generateAllUnapprovedBtn');
+                if (generateBtn) {
+                    generateBtn.style.display = 'none';
+                }
+
+                // Add a "Save Question" button
+                const navigationButtons = document.querySelector('.navigation-buttons');
+                const saveButton = document.createElement('button');
+                saveButton.className = 'btn btn-primary';
+                saveButton.id = 'saveNewQuestionBtn';
+                saveButton.innerHTML = '<i class="fas fa-save"></i> Save Question';
+                navigationButtons.insertBefore(saveButton, navigationButtons.firstChild);
+
+                // Save button click handler
+                saveButton.addEventListener('click', async () => {
+                    await saveNewQuestion();
+                });
+            } else {
+                // Associate Objectives Button Handler
+                document.getElementById('associateObjectivesBtn').addEventListener('click', async () => {
+                    await loadObjectiveSuggestions();
+                });
+
+                // Generate Feedback Button (for existing questions only)
+                document.getElementById('generateAllUnapprovedBtn').addEventListener('click', async () => {
+                    const btn = document.getElementById('generateAllUnapprovedBtn');
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                    showToast('Generating AI feedback...', 'bg-info');
+
+                    try {
+                        await autoSave(true);
+
+                        const response = await fetch(`/questions/${questionId}/generate-feedback`, {
+                            method: 'POST'
+                        });
+
+                        const result = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(result.detail || 'Failed to generate feedback');
+                        }
+
+                        showToast('AI feedback generated successfully. Reloading page...', 'bg-success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+
+                    } catch (error) {
+                        console.error('Error generating feedback:', error);
+                        showToast(error.message, 'bg-danger');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                });
+            }
+
+            // --- NEW: Save New Question Function ---
+            // --- NEW: Save New Question Function ---
+            // --- NEW: Save New Question Function ---
+            // --- NEW: Save New Question Function ---
+            async function saveNewQuestion() {
+                // Validate
+                const questionText = questionTextEditor.value().trim();
+                if (!questionText) {
+                    showToast('Please enter question text', 'bg-danger');
+                    return;
+                }
+
+                const saveBtn = document.getElementById('saveNewQuestionBtn');
+                const originalText = saveBtn.innerHTML;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
                 try {
-                    // First, do an immediate auto-save to save any "Approved" checkbox
-                    // changes before we call the API.
-                    await autoSave(true);
+                    const objectiveSelect = document.getElementById('learningObjectiveSelect');
+                    const selectedObjectives = Array.from(objectiveSelect.selectedOptions)
+                        .map(opt => opt.value)
+                        .filter(val => val.length > 0);
 
-                    const response = await fetch(`/questions/${questionId}/generate-feedback`, {
-                        method: 'POST'
+                    const answers = [];
+
+                    // Collect all answers with text - USE THE EDITORS DIRECTLY
+                    answerTextEditors.forEach(editorObj => {
+                        const text = editorObj.editor.value().trim();
+                        const answerId = editorObj.answerId;
+
+                        if (text) {
+                            // Find the corresponding answer item
+                            const answerItem = document.querySelector(`[data-answer-id="${answerId}"]`);
+                            if (answerItem) {
+                                const correctnessToggle = answerItem.querySelector('.correctness-toggle');
+                                if (correctnessToggle) {
+                                    const isCorrect = correctnessToggle.checked;
+                                    answers.push({
+                                        text: text,
+                                        is_correct: isCorrect
+                                    });
+                                    console.log(`✓ Added answer ${answerId}:`, { text, isCorrect });
+                                } else {
+                                    console.error(`✗ Could not find correctness toggle for ${answerId}`);
+                                    // Add with default value
+                                    answers.push({
+                                        text: text,
+                                        is_correct: false
+                                    });
+                                }
+                            } else {
+                                console.error(`✗ Could not find answer item for ${answerId}`);
+                            }
+                        }
                     });
 
-                    // We get the JSON result whether it's an error or success
+                    console.log(`Total answers collected: ${answers.length}`);
+
+                    // Validate we have at least one answer
+                    if (answers.length === 0) {
+                        showToast('Please enter at least one answer', 'bg-danger');
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = originalText;
+                        return;
+                    }
+
+                    const data = {
+                        question_text: questionText,
+                        objective_ids: selectedObjectives,
+                        answers: answers
+                    };
+
+                    console.log('Sending data:', data);
+
+                    const response = await fetch('/questions/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
                     const result = await response.json();
 
                     if (!response.ok) {
-                        // If the response is not OK, 'result' is {"detail": "..."}
-                        // We throw this error to be caught by the 'catch' block.
-                        throw new Error(result.detail || 'Failed to generate feedback');
+                        throw new Error(result.detail || 'Failed to save question');
                     }
 
-                    // --- THIS IS THE FIX ---
-                    // The old code had 'result.updated_answers.forEach(...)', which
-                    // crashed because 'result' is now `{"success": true, ...}`.
-                    // The simplest, safest fix is to just reload the page
-                    // to see the new feedback.
-
-                    showToast('AI feedback generated successfully. Reloading page...', 'bg-success');
+                    showToast('Question saved successfully! Redirecting...', 'bg-success');
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 1500); // Give user time to read the toast
+                        window.location.href = `/questions/${result.question_id}`;
+                    }, 1500);
 
                 } catch (error) {
-                    // This block will now correctly catch the error
-                    // and show the *real* message (e.g., "Content filter violation")
-                    console.error('Error generating feedback:', error);
+                    console.error('Save error:', error);
                     showToast(error.message, 'bg-danger');
-                } finally {
-                    // This will run even after the error
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
                 }
-            });
-            // --- === END OF BUG FIX #1 === ---
-
-            // Auto-Save Logic (Unchanged)
+            }
+            // Auto-Save Logic (only for existing questions)
             function scheduleAutoSave() {
-                if (isSaving) return;
+                if (isSaving || isNewQuestion) return;
                 if (saveTimeout) clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(() => autoSave(false), 2000);
             }
 
             async function autoSave(immediate = false) {
-                if (isSaving && !immediate) return;
+                if ((isSaving && !immediate) || isNewQuestion) return;
                 isSaving = true;
                 clearTimeout(saveTimeout);
 
@@ -369,7 +537,7 @@
                     showToast('Saving...', 'bg-info');
                 }
 
-                const formData = collectFormData(); // This calls the *fixed* function below
+                const formData = collectFormData();
 
                 try {
                     const response = await fetch(`/questions/${questionId}`, {
@@ -380,7 +548,6 @@
 
                     if (!response.ok) {
                         const error = await response.json();
-                        // This 422 error will no longer happen
                         throw new Error(error.detail || 'Save failed');
                     }
 
@@ -397,7 +564,6 @@
                 }
             }
 
-            // --- === THIS IS BUG FIX #2 (The '422' bug) === ---
             function collectFormData() {
                 const objectiveSelect = document.getElementById('learningObjectiveSelect');
                 const selectedObjectives = Array.from(objectiveSelect.selectedOptions)
@@ -418,22 +584,17 @@
 
                     data.answers.push({
                         id: answerId,
-                        // --- THIS IS THE FIX ---
-                        // We must use .editor.value() to get the text,
-                        // not .value() which is for a plain textarea.
                         text: textEditor ? textEditor.editor.value() : '',
                         is_correct: item.querySelector('.correctness-toggle').checked,
                         feedback_text: feedbackEditor ? feedbackEditor.editor.value() : '',
-                        // --- END OF FIX ---
                         feedback_approved: item.querySelector('.feedback-approve-toggle').checked
                     });
                 });
 
                 return data;
             }
-            // --- === END OF BUG FIX #2 === ---
 
-            // Toast Notification (Unchanged)
+            // Toast Notification
             function showToast(message, bgClass) {
                 toastMessage.textContent = message;
                 toastElement.classList.remove('bg-success', 'bg-danger', 'bg-info');
@@ -441,7 +602,7 @@
                 autoSaveToast.show();
             }
 
-            // Live UI Updates (Unchanged, but now safe)
+            // Live UI Updates
             document.getElementById('questionForm').addEventListener('change', (e) => {
                 if (e.target.classList.contains('correctness-toggle')) {
                     const answerItem = e.target.closest('.answer-item');
@@ -453,7 +614,7 @@
                         answerItem.classList.remove('correct-answer');
                     }
                     updateQuestionPreview();
-                    scheduleAutoSave();
+                    if (!isNewQuestion) scheduleAutoSave();
                 }
 
                 if (e.target.classList.contains('feedback-approve-toggle')) {
@@ -463,20 +624,176 @@
                     } else {
                         feedbackArea.classList.remove('feedback-approved');
                     }
-                    scheduleAutoSave();
+                    if (!isNewQuestion) scheduleAutoSave();
                 }
 
                 if (e.target.id === 'learningObjectiveSelect') {
-                    scheduleAutoSave();
+                    if (!isNewQuestion) scheduleAutoSave();
                 }
             });
 
-            // Update Preview Function (Unchanged, but now safe)
+            // --- Associate Objectives Functions ---
+            async function loadObjectiveSuggestions() {
+                const modal = new bootstrap.Modal(document.getElementById('objectivesModal'));
+                const spinner = document.getElementById('objectivesLoadingSpinner');
+                const container = document.getElementById('objectivesListContainer');
+                const listDiv = document.getElementById('objectivesList');
+                
+                // Show modal with spinner
+                spinner.style.display = 'block';
+                container.style.display = 'none';
+                modal.show();
+                
+                try {
+                    // Fetch AI suggestions
+                    const response = await fetch(`/questions/${questionId}/suggest-objectives`, {
+                        method: 'POST'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch suggestions');
+                    }
+                    
+                    const data = await response.json();
+                    const suggestions = data.suggestions || [];
+                    
+                    console.log('🔍 Suggestions from API:', suggestions);
+                    
+                    // Fetch ALL objectives with full text from the new API endpoint
+                    const objectivesResponse = await fetch('/objectives/list');
+                    const objectivesData = await objectivesResponse.json();
+                    const allObjectives = objectivesData.objectives || [];
+                    
+                    console.log('🔍 All objectives with full text:', allObjectives);
+                    
+                    // Get currently selected objectives
+                    const currentlySelected = Array.from(
+                        document.getElementById('learningObjectiveSelect').selectedOptions
+                    ).map(opt => opt.value);
+                    
+                    // Create a map of suggested IDs with scores only
+                    const scoreMap = new Map(
+                        suggestions.map(s => [s.id, s.score])
+                    );
+                    
+                    // Build the objectives list HTML
+                    listDiv.innerHTML = '';
+                    allObjectives.forEach(obj => {
+                        const score = scoreMap.get(obj.id);
+                        const isHighScore = score && score >= 60;
+                        const isCurrentlySelected = currentlySelected.includes(obj.id);
+                        const shouldCheck = isHighScore || isCurrentlySelected;
+                        
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'form-check mb-3 p-3 border rounded';
+                        itemDiv.style.overflow = 'visible';
+                        if (isHighScore) {
+                            itemDiv.classList.add('border-success', 'bg-light');
+                        }
+                        
+                        const truncatedText = obj.text.length > 80 ? obj.text.substring(0, 80) + '...' : obj.text;
+                        
+                        itemDiv.innerHTML = `
+                            <div class="d-flex align-items-start">
+                                <input class="form-check-input mt-1 me-2 flex-shrink-0" type="checkbox" 
+                                       value="${obj.id}" 
+                                       id="obj_${obj.id}"
+                                       ${shouldCheck ? 'checked' : ''}>
+                                <div class="flex-grow-1" style="overflow: visible; min-width: 0;">
+                                    <span class="objective-text" 
+                                          style="cursor: pointer; display: block; word-wrap: break-word; white-space: normal; overflow: visible; text-overflow: clip; max-width: none;" 
+                                          data-full-text="${obj.text.replace(/"/g, '&quot;')}"
+                                          data-truncated="${truncatedText.replace(/"/g, '&quot;')}"
+                                          title="Click to expand/collapse">
+                                        ${truncatedText}
+                                    </span>
+                                </div>
+                                ${score ? `
+                                    <span class="badge bg-success ms-2 flex-shrink-0">
+                                        ${score}% match
+                                    </span>
+                                ` : ''}
+                            </div>
+                        `;
+                        
+                        // Attach click event listener after element is created
+                        const textSpan = itemDiv.querySelector('.objective-text');
+                        if (textSpan) {
+                            console.log('📝 Setting up click handler for:', obj.text.substring(0, 50));
+                            textSpan.addEventListener('click', function(event) {
+                                console.log('🖱️ Text clicked!');
+                                event.stopPropagation();
+                                event.preventDefault();
+                                
+                                const fullText = this.getAttribute('data-full-text');
+                                const truncatedText = this.getAttribute('data-truncated');
+                                const currentText = this.textContent.trim();
+                                
+                                console.log('Current:', currentText.substring(0, 50));
+                                console.log('Truncated:', truncatedText.substring(0, 50));
+                                console.log('Full:', fullText.substring(0, 50));
+                                console.log('Match:', currentText === truncatedText);
+                                
+                                if (currentText === truncatedText) {
+                                    console.log('✅ Expanding to full text');
+                                    this.textContent = fullText;
+                                } else {
+                                    console.log('✅ Collapsing to truncated text');
+                                    this.textContent = truncatedText;
+                                }
+                            });
+                        } else {
+                            console.error('❌ Could not find text span for:', obj.text.substring(0, 50));
+                        }
+                        
+                        listDiv.appendChild(itemDiv);
+                    });
+                    
+                    // Hide spinner, show list
+                    spinner.style.display = 'none';
+                    container.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error loading objectives:', error);
+                    showToast('Failed to load objective suggestions', 'bg-danger');
+                    modal.hide();
+                }
+            }
+
+            // Save Objectives Selection
+            document.getElementById('saveObjectivesBtn').addEventListener('click', () => {
+                // Get all checked checkboxes
+                const checkedBoxes = document.querySelectorAll('#objectivesList input[type="checkbox"]:checked');
+                const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                
+                // Update the main select dropdown
+                const selectElement = document.getElementById('learningObjectiveSelect');
+                Array.from(selectElement.options).forEach(option => {
+                    if (option.value === '') return; // Skip the placeholder
+                    option.selected = selectedIds.includes(option.value);
+                });
+                
+                // Trigger auto-save if not a new question
+                if (!isNewQuestion) {
+                    scheduleAutoSave();
+                }
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('objectivesModal')).hide();
+                
+                showToast('Objectives updated successfully', 'bg-success');
+            });
+
+            // Update Preview Function
+            // Update Preview Function
             function updateQuestionPreview() {
-                document.getElementById('questionTextPreview').innerHTML =
-                    SimpleMDE.prototype.markdown(questionTextEditor.value());
+                const questionPreviewElement = document.getElementById('questionTextPreview');
+                if (questionPreviewElement) {
+                    questionPreviewElement.innerHTML = SimpleMDE.prototype.markdown(questionTextEditor.value());
+                }
 
                 const previewList = document.getElementById('answersPreviewList');
+                if (!previewList) return;
 
                 document.querySelectorAll('.answer-item').forEach(item => {
                     const answerId = item.dataset.answerId;
@@ -485,20 +802,22 @@
 
                     let textHtml = '';
                     if (textEditor) {
-                        // This now correctly gets the value from the editor
                         textHtml = SimpleMDE.prototype.markdown(textEditor.editor.value());
                     }
 
                     const previewSpan = previewList.querySelector(`.answer-preview-text[data-answer-id="${answerId}"]`);
-                    const previewIcon = previewSpan ? previewSpan.closest('.fw-bold').querySelector('i') : null;
 
-                    if (previewSpan && previewIcon) {
+                    // FIX: Only update if the preview element exists
+                    if (previewSpan) {
+                        const previewIcon = previewSpan.closest('.fw-bold')?.querySelector('i');
+
                         previewSpan.innerHTML = textHtml;
-                        previewIcon.className = isCorrect ? 'fas fa-check-circle text-success' : 'fas fa-circle text-muted';
+                        if (previewIcon) {
+                            previewIcon.className = isCorrect ? 'fas fa-check-circle text-success' : 'fas fa-circle text-muted';
+                        }
                     }
                 });
             }
-
         });
     </script>
 </body>

@@ -389,7 +389,8 @@ class CodeAnalyzerAgent(SocraticAgent):
 # ============================================================================
 # HYBRID CREWAI SYSTEM
 # ============================================================================
-
+#If the min cosine similarity is set to 0, the RAG pipeline will just use the vector DB
+#If the min cosine similarity is set to 1, the RAG pipeline will default to using LLM's general knowledge.
 MIN_COSINE_SIMILARITY = 0.7
 class HybridCrewAISocraticSystem:
     def __init__(

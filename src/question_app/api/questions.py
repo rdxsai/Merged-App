@@ -11,11 +11,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import httpx 
 import markdown # <-- 1. ADD THIS IMPORT
+import uuid
+from datetime import datetime
+
 
 from ..core import config, get_logger
 from ..services.database import DatabaseManager
 from ..models import QuestionUpdate
 from ..services.ai_service import AIGeneratorService 
+from ..models import QuestionUpdate, NewQuestion
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -24,6 +28,112 @@ templates = Jinja2Templates(directory="templates")
 # Initialize services
 db = DatabaseManager(config.db_path)
 ai_generator = AIGeneratorService()
+
+
+@router.get("/new", response_class=HTMLResponse)
+async def new_question_page(request: Request):
+    """
+    Serves the page for creating a new question.
+    """
+    logger.info("Loading new question creation page")
+    try:
+        all_objectives = db.list_all_objectives()
+        
+        # Create an empty question structure
+        empty_question = {
+            'id': 'new',  # Special marker for new questions
+            'question_text': '',
+            'question_text_html': '',
+            'objective_ids': [],
+            'answers': [
+                {'id': 'new_1', 'text': '', 'text_html': '', 'is_correct': False, 'feedback_text': '', 'feedback_approved': False},
+                {'id': 'new_2', 'text': '', 'text_html': '', 'is_correct': False, 'feedback_text': '', 'feedback_approved': False},
+                {'id': 'new_3', 'text': '', 'text_html': '', 'is_correct': False, 'feedback_text': '', 'feedback_approved': False},
+                {'id': 'new_4', 'text': '', 'text_html': '', 'is_correct': False, 'feedback_text': '', 'feedback_approved': False},
+            ]
+        }
+        
+        return templates.TemplateResponse(
+            "edit_question.html",
+            {
+                "request": request,
+                "question": empty_question,
+                "all_objectives": all_objectives,
+                "is_new": True  # Flag to tell template this is a new question
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error loading new question page: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not load new question page.")
+
+
+@router.post("/", response_class=JSONResponse)
+async def create_question(data: NewQuestion):
+    """
+    Creates a new question in the database.
+    Validates that question_text and at least one answer are provided.
+    """
+    logger.info("Creating new question")
+    
+    # Validation
+    if not data.question_text or not data.question_text.strip():
+        raise HTTPException(status_code=400, detail="Question text is required")
+    
+    if not data.answers or len(data.answers) == 0:
+        raise HTTPException(status_code=400, detail="At least one answer is required")
+    
+    # Check if any answer text is provided
+    if not any(answer.text.strip() for answer in data.answers):
+        raise HTTPException(status_code=400, detail="At least one answer must have text")
+    
+    try:
+        # Create new question with UUID
+        new_question_id = str(uuid.uuid4())
+        created_at = datetime.now().isoformat()
+        
+        with db.get_connection(use_row_factory=False) as conn:
+            cursor = conn.cursor()
+            
+            # 1. Insert question
+            cursor.execute(
+                "INSERT INTO question (id, question_text, created_at) VALUES (?, ?, ?)",
+                (new_question_id, data.question_text, created_at)
+            )
+            
+            # 2. Insert answers (only ones with text)
+            for answer in data.answers:
+                if answer.text.strip():  # Only save answers with content
+                    answer_id = str(uuid.uuid4())
+                    cursor.execute(
+                        """
+                        INSERT INTO answer (id, question_id, text, is_correct, feedback_text, feedback_approved)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (answer_id, new_question_id, answer.text, answer.is_correct, '', False)
+                    )
+            
+            # 3. Insert objective associations
+            if data.objective_ids:
+                for obj_id in data.objective_ids:
+                    if obj_id:
+                        assoc_id = str(uuid.uuid4())
+                        cursor.execute(
+                            "INSERT INTO question_objective_association (id, question_id, objective_id) VALUES (?, ?, ?)",
+                            (assoc_id, new_question_id, obj_id)
+                        )
+            
+            conn.commit()
+        
+        logger.info(f"Successfully created question {new_question_id}")
+        return {
+            "success": True, 
+            "message": "Question created successfully",
+            "question_id": new_question_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating question: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create question")
 
 @router.get("/{question_id}", response_class=HTMLResponse)
 async def edit_question_page(request: Request, question_id: str):
@@ -173,3 +283,4 @@ async def suggest_objectives(question_id: str):
     except Exception as e:
         logger.error(f"Error suggesting objectives: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to suggest objectives.")
+
