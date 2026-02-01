@@ -148,6 +148,14 @@ async def edit_question_page(request: Request, question_id: str):
         
         all_objectives = db.list_all_objectives()
         
+        # Get associated objectives with full text
+        associated_objectives = []
+        if question_data.get('objective_ids'):
+            all_objectives_dict = {obj['id']: obj for obj in all_objectives}
+            for obj_id in question_data['objective_ids']:
+                if obj_id in all_objectives_dict:
+                    associated_objectives.append(all_objectives_dict[obj_id])
+        
         # --- === 2. THIS IS THE FIX FOR THE BLANK PREVIEW === ---
         # The template 'edit_question.html' (your original one)
         # expects HTML-converted text. We must do that conversion here.
@@ -174,6 +182,7 @@ async def edit_question_page(request: Request, question_id: str):
                 "request": request,
                 "question": question_data,  # <-- This dict now has the _html fields
                 "all_objectives": all_objectives,
+                "associated_objectives": associated_objectives,
             },
         )
     except Exception as e:
@@ -283,4 +292,137 @@ async def suggest_objectives(question_id: str):
     except Exception as e:
         logger.error(f"Error suggesting objectives: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to suggest objectives.")
+
+
+@router.post("/{question_id}/generate-objective", response_class=JSONResponse)
+async def generate_objective_for_question(question_id: str):
+    """
+    Generates a learning objective for a question using AI and computes similarity score.
+    """
+    logger.info(f"Generating learning objective for question_id: {question_id}")
+    try:
+        question_data = db.load_question_details(question_id)
+        if not question_data:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        question_text = question_data.get('question_text', '')
+        if not question_text:
+            raise HTTPException(status_code=400, detail="Question text is empty")
+        
+        # Generate objective using AI
+        objective_text = await ai_generator.generate_objective_from_question(question_text)
+        
+        # Compute similarity score between question and generated objective
+        similarity_score = await ai_generator.compute_similarity_score(question_text, objective_text)
+        
+        return {
+            "objective": objective_text, 
+            "score": similarity_score,
+            "success": True
+        }
+    except Exception as e:
+        logger.error(f"Error generating objective: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate objective.")
+
+
+@router.post("/{question_id}/check-objective-similarity", response_class=JSONResponse)
+async def check_objective_similarity(question_id: str, data: dict):
+    """
+    Computes similarity score between a question and a provided objective text.
+    """
+    logger.info(f"Checking objective similarity for question_id: {question_id}")
+    try:
+        question_data = db.load_question_details(question_id)
+        if not question_data:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        question_text = question_data.get('question_text', '')
+        if not question_text:
+            raise HTTPException(status_code=400, detail="Question text is empty")
+        
+        objective_text = data.get('objective_text', '').strip()
+        if not objective_text:
+            raise HTTPException(status_code=400, detail="Objective text is required")
+        
+        if len(objective_text) < 20:
+            raise HTTPException(status_code=400, detail="Objective text must be at least 20 characters")
+        
+        # Compute similarity score
+        similarity_score = await ai_generator.compute_similarity_score(question_text, objective_text)
+        
+        return {
+            "score": similarity_score,
+            "success": True
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking similarity: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to compute similarity score.")
+
+
+@router.get("/{question_id}/associate-objectives", response_class=HTMLResponse)
+async def associate_objectives_page(request: Request, question_id: str):
+    """
+    Renders the associate objectives page for a question.
+    Shows all objectives with AI suggestions pre-selected.
+    """
+    logger.info(f"Loading associate objectives page for question_id: {question_id}")
+    try:
+        question_data = db.load_question_details(question_id)
+        if not question_data:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        return templates.TemplateResponse(
+            "associate_objectives.html",
+            {
+                "request": request,
+                "question": question_data,
+                "current_objective_ids": question_data.get('objective_ids', [])
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error loading associate objectives page: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to load page.")
+
+
+@router.post("/{question_id}/associate-objectives", response_class=JSONResponse)
+async def save_objective_associations(question_id: str, data: dict):
+    """
+    Saves the objective associations for a question.
+    Receives a list of objective IDs and updates the associations.
+    """
+    logger.info(f"Saving objective associations for question_id: {question_id}")
+    try:
+        question = db.load_question_details(question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        objective_ids = data.get('objective_ids', [])
+        logger.info(f"Updating question {question_id} with {len(objective_ids)} objectives")
+        
+        # Delete existing associations
+        with db.get_connection(use_row_factory=False) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM question_objective_association WHERE question_id = ?",
+                (question_id,)
+            )
+            
+            # Insert new associations
+            for obj_id in objective_ids:
+                if obj_id:
+                    cursor.execute(
+                        "INSERT INTO question_objective_association (id, question_id, objective_id) VALUES (?, ?, ?)",
+                        (str(uuid.uuid4()), question_id, obj_id)
+                    )
+            
+            conn.commit()
+        
+        logger.info(f"Successfully updated objective associations for question {question_id}")
+        return {"success": True, "message": "Objectives updated successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error saving objective associations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save objectives.")
 

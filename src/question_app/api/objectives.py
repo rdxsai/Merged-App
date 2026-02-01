@@ -52,16 +52,17 @@ async def list_all_objectives_json():
         raise HTTPException(status_code=500, detail="Failed to fetch objectives.")
 
 
-@router.post("/", response_class=ObjectiveInDB)
+@router.post("/", response_class=JSONResponse)
 async def create_new_objective(objective_data: ObjectiveCreate):
-    """ (Unchanged) Creates a single new learning objective. """
+    """ Creates a single new learning objective and returns it as JSON. """
     try:
         new_obj_dict = db.create_objective(
             text=objective_data.text,
             blooms_level='understand',
             priority='medium'
         )
-        return ObjectiveInDB.model_validate(new_obj_dict)
+        objective = ObjectiveInDB.model_validate(new_obj_dict)
+        return objective.model_dump()  # Return as JSON dict
     except Exception as e:
         logger.error(f"Error creating objective: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create objective.")
@@ -112,6 +113,36 @@ async def generate_question_draft_for_objective(objective_id: str):
     except Exception as e:
         logger.error(f"Error generating question draft: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) # Pass full error
+
+
+@router.post("/{objective_id}/generate-and-create-question", response_class=JSONResponse)
+async def generate_and_create_question_for_objective(objective_id: str):
+    """
+    Generates a question using AI and immediately creates it in the database.
+    Returns the new question ID for redirect to edit page.
+    """
+    try:
+        objective = db.get_objective(objective_id)
+        if not objective:
+            raise HTTPException(status_code=404, detail="Objective not found")
+        
+        # Generate AI draft
+        ai_draft_json = await ai_generator.generate_question_from_objective(objective['text'])
+        
+        # Immediately create question in DB
+        new_question_id = db.create_question_from_ai(
+            question_data=ai_draft_json,
+            objective_id=objective_id
+        )
+        
+        if not new_question_id:
+            raise Exception("Database failed to create new question.")
+            
+        return {"new_question_id": new_question_id}
+    
+    except Exception as e:
+        logger.error(f"Error generating and creating question: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate question.")
 
 
 @router.post("/{objective_id}/create-question-from-draft", response_class=JSONResponse)

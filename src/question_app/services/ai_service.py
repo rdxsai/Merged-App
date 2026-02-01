@@ -208,6 +208,106 @@ class AIGeneratorService:
             logger.error(f"Error parsing AI response for question gen: {e}")
             raise
 
+    async def generate_objective_from_question(self, question_text: str) -> str:
+        """
+        Generates a learning objective for a given question using AI.
+        """
+        logger.info(f"Generating learning objective for question: {question_text[:50]}...")
+        try:
+            system_prompt = "You are an expert at identifying core learning competencies in web accessibility education."
+            
+            user_prompt = f"""Based on this question, what is the fundamental web accessibility competency being tested?
+
+Question: {question_text}
+
+Generate a learning objective that captures the core competency, not the specific question scenario. The objective should be:
+- Broad enough to cover multiple related questions
+- Focused on understanding principles, not memorizing facts
+- Actionable and measurable
+
+Return only the objective text, starting with action verbs like: Understand, Apply, Analyze, Evaluate, Create, Explain, Demonstrate."""
+
+            payload = {
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.7
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.api_url, headers=self.headers, json=payload)
+                response.raise_for_status()
+                
+                json_response = response.json()
+
+                if not json_response.get("choices"):
+                    logger.warning(f"AI response had no choices: {json_response}")
+                    raise Exception("AI returned an invalid response.")
+
+                choice = json_response["choices"][0]
+                finish_reason = choice.get("finish_reason")
+                
+                if finish_reason == "content_filter":
+                    logger.error("AI objective generation was blocked by the content filter.")
+                    raise Exception("AI response was blocked by the content filter.")
+                
+                content = choice["message"].get("content")
+                if not content:
+                    logger.error(f"AI returned an empty message. Finish reason: {finish_reason}")
+                    raise Exception(f"AI returned an empty response (Reason: {finish_reason}).")
+                
+                objective_text = content.strip()
+                logger.info(f"Generated objective: {objective_text}")
+                return objective_text
+            
+        except Exception as e:
+            logger.error(f"Error generating objective from question: {e}", exc_info=True)
+            raise Exception("Failed to generate learning objective using AI")
+
+    async def compute_similarity_score(self, question_text: str, objective_text: str) -> float:
+        """
+        Computes similarity score between a question and a single objective text.
+        Returns score as percentage (0-100).
+        """
+        logger.info(f"Computing similarity between question and objective...")
+        try:
+            # Generate embeddings
+            question_embedding = (await get_ollama_embeddings([question_text]))[0]
+            objective_embedding = (await get_ollama_embeddings([objective_text]))[0]
+            
+            q_vec = np.array(question_embedding)
+            o_vec = np.array(objective_embedding)
+            
+            # Normalize vectors with safety checks
+            q_norm = np.linalg.norm(q_vec)
+            o_norm = np.linalg.norm(o_vec)
+            
+            if q_norm == 0 or o_norm == 0:
+                logger.warning("Zero-length vector detected, returning 0 score")
+                return 0.0
+            
+            q_vec_norm = q_vec / q_norm
+            o_vec_norm = o_vec / o_norm
+            
+            # Compute cosine similarity
+            score = np.dot(o_vec_norm, q_vec_norm)
+            
+            # Handle NaN or infinite values
+            if np.isnan(score) or np.isinf(score):
+                logger.warning("Invalid similarity score, returning 0")
+                return 0.0
+            
+            # Convert to percentage
+            score_percentage = round(float(score) * 100, 1)
+            logger.info(f"Similarity score: {score_percentage}%")
+            return score_percentage
+            
+        except Exception as e:
+            logger.error(f"Error computing similarity score: {e}", exc_info=True)
+            return 0.0
+
     async def suggest_objectives_for_question(self, question_text: str) -> List[Dict]:
         # (This function is correct)
         logger.info(f"Suggesting objectives for question: {question_text[:30]}...")
@@ -229,18 +329,20 @@ class AIGeneratorService:
             
             scores = np.dot(o_vecs_norm, q_vec_norm)
             
+            # Return ALL objectives with their scores (not filtered)
             suggestions = []
             for i, score in enumerate(scores):
-                if score >= 0.60: 
-                    suggestions.append({
-                        "id": all_objectives[i]['id'],
-                        "text": all_objectives[i]['text'],
-                        "score": round(float(score) * 100, 1)
-                    })
+                suggestions.append({
+                    "id": all_objectives[i]['id'],
+                    "text": all_objectives[i]['text'],
+                    "score": round(float(score) * 100, 1)
+                })
             
-            top_suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)[:5]
-            logger.info(f"Found {len(top_suggestions)} good matches for objectives.")
-            return top_suggestions
+            # Sort by score (high to low) but return ALL, not just top 5
+            all_suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
+            high_score_count = len([s for s in all_suggestions if s['score'] >= 60])
+            logger.info(f"Computed scores for {len(all_suggestions)} objectives. {high_score_count} above 60% threshold.")
+            return all_suggestions
         except Exception as e:
             logger.error(f"Error in suggest_objectives: {e}", exc_info=True)
             return []

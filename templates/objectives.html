@@ -168,12 +168,10 @@
                                         {% endif %}
                                     </small>
 
-                                    {% if objective.question_count == 0 %}
                                     <button class="btn btn-sm btn-outline-success generate-question"
                                         data-objective-id="{{ objective.id }}" title="Generate Question with AI">
                                         <i class="fas fa-magic"></i> Generate Question
                                     </button>
-                                    {% endif %}
                                 </div>
 
                                 <div class="row mt-2">
@@ -423,11 +421,6 @@
             const warningIcon = (objective.question_count || 0) === 0
                 ? '<span class="ms-2" title="No questions associated"><i class="fas fa-exclamation-triangle text-warning"></i></span>'
                 : '';
-            const generateBtn = (objective.question_count || 0) === 0
-                ? `<button class="btn btn-sm btn-outline-success generate-question" data-objective-id="${objective.id}" title="Generate Question">
-                       <i class="fas fa-magic"></i> Generate Question
-                   </button>`
-                : '';
 
             return `
                 <div class="objective-item" data-objective-id="${objective.id}">
@@ -441,7 +434,9 @@
                                     Questions: <span class="badge bg-secondary">${objective.question_count || 0}</span>
                                     ${warningIcon}
                                 </small>
-                                ${generateBtn}
+                                <button class="btn btn-sm btn-outline-success generate-question" data-objective-id="${objective.id}" title="Generate Question with AI">
+                                    <i class="fas fa-magic"></i> Generate Question
+                                </button>
                             </div>
                             <div class="row mt-2">
                                 <div class="col-md-6">
@@ -545,43 +540,32 @@
         // --- === === NEW AI GENERATION FUNCTIONS (Req 7.4) === === ---
 
         /**
-         * Step 1: User clicks "Generate Question".
-         * This shows the modal and fetches the AI draft.
+         * User clicks "Generate Question".
+         * This generates the question with AI and redirects to edit page.
          */
         async function handleGenerateQuestion(objectiveId, btn) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
-            // Reset modal to "loading" state
-            generateModalBody.innerHTML = `
-                <div class="text-center p-4">
-                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                    <p class="mt-2">Generating AI draft... this may take a moment.</p>
-                </div>`;
-            generateModalFooter.innerHTML =
-                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>';
-
-            generateQuestionModal.show();
-
             try {
-                const response = await fetch(`/objectives/${objectiveId}/generate-question-draft`, {
+                const response = await fetch(`/objectives/${objectiveId}/generate-and-create-question`, {
                     method: 'POST'
                 });
 
-                const draft = await response.json();
+                const result = await response.json();
 
                 if (response.ok) {
-                    // Step 2: Render the approval form
-                    renderQuestionDraftForm(objectiveId, draft);
+                    // Redirect to edit question page
+                    window.location.href = `/questions/${result.new_question_id}`;
                 } else {
-                    throw new Error(draft.detail || 'Failed to generate draft');
+                    throw new Error(result.detail || 'Failed to generate question');
                 }
 
             } catch (error) {
-                generateModalBody.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                showAlert('danger', `Error: ${error.message}`);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic"></i> Generate Question';
             }
-            // We don't re-enable the button in 'finally'
-            // because the modal is now open. A page refresh will reset it.
         }
 
         /**
