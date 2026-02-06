@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # BACKEND SERVICE (FastAPI Application)
+  # ============================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: question-app-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Bind mounts for hot reload (code changes reflect immediately)
+      - ./src:/app/src:ro                    # Source code (read-only)
+      - ./templates:/app/templates:ro        # HTML templates (read-only)
+      - ./static:/app/static:ro              # Static files (read-only)
+      - ./config:/app/config:ro              # Config files (read-only)
+      
+      # Bind mounts for persistent data (always on host machine)
+      - ./data:/app/data                     # SQLite database (bind mount - safe from docker-compose down -v)
+      - ./logs:/app/logs                     # Application logs
+    environment:
+      # Database configuration
+      - DATABASE_PATH=/app/data/socratic_tutor.db
+      
+      # ChromaDB configuration (using service name for host)
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      
+      # Ollama configuration (using service name for host)
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+      
+      # Azure OpenAI configuration (from host .env file)
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT_ID=${AZURE_OPENAI_DEPLOYMENT_ID}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-02-15-preview}
+      - AZURE_OPENAI_SUBSCRIPTION_KEY=${AZURE_OPENAI_SUBSCRIPTION_KEY}
+      
+      # Canvas LMS configuration (from host .env file)
+      - CANVAS_BASE_URL=${CANVAS_BASE_URL}
+      - CANVAS_API_TOKEN=${CANVAS_API_TOKEN}
+      - COURSE_ID=${COURSE_ID}
+      - QUIZ_ID=${QUIZ_ID}
+      
+      # Python configuration
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      chromadb:
+        condition: service_started
+      ollama:
+        condition: service_started
+    networks:
+      - app-network
+    command: poetry run dev
+    restart: unless-stopped
+
+  # ============================================================================
+  # CHROMADB SERVICE (Vector Database)
+  # ============================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: question-app-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma           # Persistent vector store data
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # ============================================================================
+  # OLLAMA SERVICE (Embedding Generation)
+  # ============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: question-app-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama          # Persistent model storage
+    networks:
+      - app-network
+    # Pull the embedding model on first start
+    # The model will be cached in the volume for subsequent starts
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Start Ollama server in background
+        ollama serve &
+        
+        # Wait for server to be ready
+        echo "Waiting for Ollama server to start..."
+        sleep 10
+        
+        # Check if model exists, if not pull it
+        if ! ollama list | grep -q "nomic-embed-text"; then
+          echo "Pulling nomic-embed-text model..."
+          ollama pull nomic-embed-text
+          echo "Model pulled successfully!"
+        else
+          echo "Model nomic-embed-text already exists."
+        fi
+        
+        # Keep container running
+        wait
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+# ============================================================================
+# VOLUMES (Persistent Data Storage)
+# ============================================================================
+# Note: SQLite database and logs now use bind mounts (./data and ./logs)
+# so they persist on your host machine and survive docker-compose down -v
+volumes:
+  chroma_data:
+    driver: local
+    name: question-app-chroma-data
+  
+  ollama_models:
+    driver: local
+    name: question-app-ollama-models
+
+# ============================================================================
+# NETWORKS (Service Communication)
+# ============================================================================
+networks:
+  app-network:
+    driver: bridge
+    name: question-app-network

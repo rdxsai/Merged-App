@@ -173,3 +173,6 @@ data/learning_objectives.json
 # Temporary files
 *.tmp
 *.temp
+
+# Database backups
+backups/

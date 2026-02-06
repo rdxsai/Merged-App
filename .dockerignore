@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+.windsurf/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment files (use Docker env vars instead)
+.env
+.env.*
+
+# Logs
+*.log
+canvas_app.log
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests
+tests/
+pytest.ini
+
+# Development files
+scripts/
+.cursorignore
+
+# Database files (will use volumes)
+*.db
+*.db-journal
+*.db-wal
+data/*.db
+
+# Vector store (will use volumes)
+vector_store/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+conversation_memory.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (don't need these inside the image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

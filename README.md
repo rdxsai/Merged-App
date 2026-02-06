@@ -123,6 +123,173 @@ questionapp/
    poetry run start
    ```
 
+## 🐳 Docker Setup (Recommended)
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (2.0+)
+
+### Quick Start with Docker
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd Merged-App
+   ```
+
+2. **Configure environment variables:**
+   ```bash
+   # Copy the template
+   cp .env.docker.template .env
+   
+   # Edit .env and add your API credentials:
+   # - AZURE_OPENAI_ENDPOINT
+   # - AZURE_OPENAI_DEPLOYMENT_ID
+   # - AZURE_OPENAI_SUBSCRIPTION_KEY
+   # - CANVAS_BASE_URL
+   # - CANVAS_API_TOKEN
+   # - COURSE_ID
+   # - QUIZ_ID
+   nano .env  # or use your preferred editor
+   ```
+
+3. **Start all services:**
+   ```bash
+   docker-compose up -d --build
+   ```
+   
+   This will:
+   - Build the FastAPI backend with all dependencies
+   - Pull and start ChromaDB (vector database)
+   - Pull and start Ollama (downloads ~274MB embedding model)
+   - Load your existing database from `./data/socratic_tutor.db`
+
+4. **Access the application:**
+   - **Application:** http://localhost:8080
+   - ChromaDB: http://localhost:8000
+   - Ollama: http://localhost:11434
+
+**That's it!** Your application is ready with all existing questions and data.
+
+### Docker Commands Reference
+
+```bash
+# Start services
+docker-compose up              # Foreground (see logs)
+docker-compose up -d           # Background (detached)
+
+# Stop services
+docker-compose down            # Stop and remove containers
+docker-compose down -v         # Stop and remove containers + volumes (⚠️ deletes data)
+
+# View logs
+docker-compose logs            # All services
+docker-compose logs backend    # Specific service
+docker-compose logs -f         # Follow logs (live)
+
+# Rebuild after code changes
+docker-compose up --build      # Rebuild and start
+
+# Execute commands in containers
+docker-compose exec backend poetry run test        # Run tests
+docker-compose exec backend poetry run lint        # Run linter
+docker-compose exec backend bash                   # Open shell
+
+# Check service status
+docker-compose ps              # List running services
+docker-compose top             # Show running processes
+
+# Restart specific service
+docker-compose restart backend
+```
+
+### Docker Development Workflow
+
+**Hot Reload Enabled:** Code changes in `src/`, `templates/`, and `static/` are automatically reflected without rebuilding.
+
+**Persistent Data:**
+- **SQLite database:** Stored in `./data/` on your host machine (bind mount) - survives `docker-compose down -v`
+- **ChromaDB vectors:** Stored in Docker volume `question-app-chroma-data`
+- **Ollama models:** Stored in Docker volume `question-app-ollama-models`
+
+**Service Communication:** Services communicate using Docker DNS:
+- Backend connects to `chromadb:8000` (not `localhost:8000`)
+- Backend connects to `ollama:11434` (not `localhost:11434`)
+
+### Database Management
+
+**Database Location:**
+- Your SQLite database is stored in `./data/socratic_tutor.db`
+- This file is **included in the repository** with existing questions and data
+- Uses bind mount (not Docker volume) - safe from `docker-compose down -v`
+
+**Create a backup:**
+```bash
+# Automated backup script (recommended)
+./backup-database.sh
+
+# Manual backup
+cp data/socratic_tutor.db backups/backup-$(date +%Y%m%d).db
+```
+
+**Restore from backup:**
+```bash
+# Stop backend
+docker-compose stop backend
+
+# Restore database
+cp backups/socratic_tutor-TIMESTAMP.db data/socratic_tutor.db
+
+# Start backend
+docker-compose start backend
+```
+
+### Troubleshooting Docker Setup
+
+**Issue: Port already in use**
+```bash
+# Check what's using the port
+lsof -i :8080  # or :8000, :11434
+
+# Stop the conflicting service or change port in docker-compose.yml
+```
+
+**Issue: Ollama model not downloading**
+```bash
+# Check Ollama logs
+docker-compose logs ollama
+
+# Manually pull model
+docker-compose exec ollama ollama pull nomic-embed-text
+```
+
+**Issue: Permission errors with SQLite**
+```bash
+# Fix permissions on host machine
+chmod 664 data/socratic_tutor.db
+
+# Or inside container
+docker-compose exec backend chmod 664 /app/data/socratic_tutor.db
+```
+
+**Issue: Services can't communicate**
+```bash
+# Check network
+docker network inspect question-app-network
+
+# Verify service names resolve
+docker-compose exec backend ping chromadb
+docker-compose exec backend ping ollama
+```
+
+**Clean slate (⚠️ deletes all data):**
+```bash
+# Remove everything and start fresh
+docker-compose down -v
+docker-compose up --build
+```
+
 ## 🛠️ Development
 
 ### VS Code Configuration
